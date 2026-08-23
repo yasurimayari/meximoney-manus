@@ -28,6 +28,8 @@ import {
 } from "../drizzle/schema";
 import { hashPassword, verifyPassword } from "./credentials";
 import { deleteAllFinancialData, deleteOwnedRow, getFinanceSnapshot, getProfile, requireDb, resolveWorkspaceAccess } from "./db";
+import { storagePut } from "./storage";
+import { requiresPersonalProfileConsent } from "./profilePrivacy";
 import { calculateMonthlyStatement, monthBounds } from "./finance";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM } from "./_core/llm";
@@ -236,6 +238,11 @@ export const appRouter = router({
       get: protectedProcedure.query(({ ctx }) => getProfile(ctx.user.id)),
       save: privateFinanceProcedure.input(z.object({
         currency: z.string().length(3).default("MXN"),
+        displayName: z.string().trim().min(1).max(140).nullable().optional(),
+        birthDate: optionalDate,
+        residenceCity: z.string().trim().max(120).nullable().optional(),
+        contactEmail: z.string().trim().email().max(320).nullable().optional(),
+        personalProfileConsent: z.boolean().optional(),
         residenceCountry: z.string().max(80).nullable().optional(),
         taxResidence: z.string().max(120).nullable().optional(),
         householdSize: z.number().int().min(1).default(1),
@@ -247,9 +254,26 @@ export const appRouter = router({
         riskTolerance: z.enum(["low", "medium_low", "medium", "medium_high", "high"]).nullable().optional(),
         notes: z.string().max(3000).nullable().optional(),
       })).mutation(async ({ ctx, input }) => {
+        if (requiresPersonalProfileConsent(input, input.personalProfileConsent)) throw new TRPCError({ code: "BAD_REQUEST", message: "Confirma el consentimiento para guardar datos personales privados." });
         const db = await requireDb();
-        const { futureTaxDueAt, ...profileValues } = input;
-        await db.insert(financialProfiles).values({ userId: ctx.user.id, ...profileValues, futureTaxDueAt: asDate(futureTaxDueAt) }).onDuplicateKeyUpdate({ set: { ...profileValues, futureTaxDueAt: asDate(futureTaxDueAt) } });
+        const { futureTaxDueAt, birthDate, ...profileValues } = input;
+        await db.insert(financialProfiles).values({ userId: ctx.user.id, ...profileValues, birthDate: asDate(birthDate), futureTaxDueAt: asDate(futureTaxDueAt) }).onDuplicateKeyUpdate({ set: { ...profileValues, birthDate: asDate(birthDate), futureTaxDueAt: asDate(futureTaxDueAt) } });
+        return { success: true };
+      }),
+      uploadAvatar: privateFinanceProcedure.input(z.object({ dataUrl: z.string().min(32).max(1_600_000), confirmedPersonalDataConsent: z.literal(true) })).mutation(async ({ ctx, input }) => {
+        const match = input.dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/);
+        if (!match) throw new TRPCError({ code: "BAD_REQUEST", message: "Selecciona una imagen PNG, JPEG o WebP válida." });
+        const bytes = Buffer.from(match[2], "base64");
+        if (bytes.length > 1_000_000) throw new TRPCError({ code: "PAYLOAD_TOO_LARGE", message: "La foto debe pesar menos de 1 MB." });
+        const extension = match[1] === "image/jpeg" ? "jpg" : match[1].split("/")[1];
+        const uploaded = await storagePut(`profiles/${ctx.user.id}/avatar.${extension}`, bytes, match[1]);
+        const db = await requireDb();
+        await db.insert(financialProfiles).values({ userId: ctx.user.id, avatarKey: uploaded.key, avatarUrl: uploaded.url, personalProfileConsent: true }).onDuplicateKeyUpdate({ set: { avatarKey: uploaded.key, avatarUrl: uploaded.url, personalProfileConsent: true } });
+        return { url: uploaded.url };
+      }),
+      removeAvatar: privateFinanceProcedure.mutation(async ({ ctx }) => {
+        const db = await requireDb();
+        await db.update(financialProfiles).set({ avatarKey: null, avatarUrl: null }).where(eq(financialProfiles.userId, ctx.user.id));
         return { success: true };
       }),
     }),

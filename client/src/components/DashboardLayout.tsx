@@ -36,7 +36,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Panel", path: "/" },
   { icon: ArrowLeftRight, label: "Registros", path: "/movimientos" },
   { icon: Target, label: "Planificación", path: "/planificacion" },
-  { icon: CircleCheckBig, label: "Calidad", path: "/calidad" },
+  { icon: CircleCheckBig, label: "Perfil y privacidad", path: "/calidad" },
   { icon: BarChart3, label: "Analítica", path: "/analitica" },
   { icon: CalendarDays, label: "Calendario", path: "/calendario" },
   { icon: BookOpenCheck, label: "Estados", path: "/estados" },

@@ -77,3 +77,12 @@
 - [x] Ejecutar QA funcional de Calendario según el estado propio del evento documentado.
 - [x] Verificar una cuenta filtrada junto con movimiento y documento en Registros.
 - [x] Extraer y comprobar el texto del PDF filtrado durante la QA.
+- [x] Corregir la maquetación de los pasos 1, 2 y 3 del onboarding para escritorio y móvil, evitando columnas colapsadas, superposiciones y contenido cortado.
+- [x] Añadir validaciones de foco, etiquetas y navegación de los tres pasos de onboarding tras la corrección visual.
+- [x] Crear un perfil privado editable con nombre, foto opcional, fecha de nacimiento, ciudad de residencia, email de contacto y notas personales opcionales.
+- [x] Implementar consentimiento y controles de privacidad para los nuevos datos de perfil, con opción de eliminar la foto y actualizar los campos.
+- [x] Validar el perfil, el flujo de onboarding, la vista móvil y las pruebas de regresión antes de publicar.
+- [x] Verificar visualmente e interactuar en los pasos 2 y 3 del onboarding a anchos de escritorio y móvil.
+- [x] Ejecutar QA de teclado, foco, etiquetas y navegación entre los tres pasos del onboarding.
+- [x] Endurecer en servidor el consentimiento obligatorio cuando se guarden datos personales o una foto de perfil.
+- [x] Ejecutar QA funcional del perfil privado: guardar, recargar, subir y retirar foto opcional.
