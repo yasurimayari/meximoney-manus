@@ -64,6 +64,30 @@ export const financialProfiles = mysqlTable("financialProfiles", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const notificationPreferences = mysqlTable("notificationPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  inAppEnabled: boolean("inAppEnabled").notNull().default(true),
+  calendarEnabled: boolean("calendarEnabled").notNull().default(true),
+  documentsEnabled: boolean("documentsEnabled").notNull().default(true),
+  debtsEnabled: boolean("debtsEnabled").notNull().default(true),
+  reviewsEnabled: boolean("reviewsEnabled").notNull().default(true),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const financeNotifications = mysqlTable("financeNotifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: varchar("type", { length: 40 }).notNull(),
+  title: varchar("title", { length: 180 }).notNull(),
+  message: text("message").notNull(),
+  relatedEntityType: varchar("relatedEntityType", { length: 40 }),
+  relatedEntityId: int("relatedEntityId"),
+  occurredAt: timestamp("occurredAt").defaultNow().notNull(),
+  readAt: timestamp("readAt"),
+  dismissedAt: timestamp("dismissedAt"),
+});
+
 export const workspaceEntities = mysqlTable("workspaceEntities", {
   id: int("id").autoincrement().primaryKey(),
   ownerId: int("ownerId").notNull(),

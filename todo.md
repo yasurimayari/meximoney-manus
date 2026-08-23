@@ -86,3 +86,8 @@
 - [x] Ejecutar QA de teclado, foco, etiquetas y navegación entre los tres pasos del onboarding.
 - [x] Endurecer en servidor el consentimiento obligatorio cuando se guarden datos personales o una foto de perfil.
 - [x] Ejecutar QA funcional del perfil privado: guardar, recargar, subir y retirar foto opcional.
+- [x] Definir preferencias privadas de notificación por tipo de recordatorio y por canal dentro de Meximoney.
+- [x] Implementar una bandeja de notificaciones personalizadas con lectura y descarte manual.
+- [x] Generar notificaciones para próximas fechas de calendario, documentos, deudas y movimientos pendientes de revisión.
+- [x] Añadir controles de privacidad y consentimiento para notificaciones, sin enviar detalles financieros por canales externos.
+- [x] Validar notificaciones, accesibilidad, aislamiento por usuaria y vista móvil antes de publicar.

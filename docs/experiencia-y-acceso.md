@@ -21,6 +21,7 @@ El inicio de sesión OAuth anterior puede depender de un servicio de autenticaci
 | Calendario | Muestra importes estimados en la moneda indicada en cada evento. | Presenta el mes elegido y recurrencias manuales mensuales, trimestrales o anuales. | Cada evento manual puede asociarse a entidad y proyecto, además de mostrar fechas derivadas del espacio. |
 | Estados | Usa la moneda base del perfil en resultados, flujo, activos, pasivos, patrimonio y liquidez; excluye divisas pendientes de conversión. | Cada cierre se guarda para un mes definido. | El selector calcula y archiva por ámbito y, opcionalmente, por entidad. |
 | Exportar | El CSV conserva moneda original, moneda e importe de reporte, tipo de cambio y estado de revisión; el PDF usa la moneda base sin sumar pendientes. | El PDF incluye el periodo del informe. | Los archivos incluyen entidad, proyecto y ámbito cuando existen, sin contener credenciales bancarias. |
+| Notificaciones | No consolida importes ni muestra saldos: presenta recordatorios mínimos de una fecha, documento, deuda o revisión. | Identifica próximas fechas manuales dentro de los siguientes 7 días al abrir la bandeja. | Las preferencias y los avisos quedan aislados por persona usuaria y requieren el consentimiento financiero privado existente. |
 
 ## Controles de interacción
 
@@ -29,6 +30,14 @@ Los formularios muestran estados vacíos, límites de caracteres, mensajes de er
 Los documentos permiten clasificar referencias de residencia, fiscalidad, seguros, testamento o sucesión, propiedades, instrumentos de inversión, créditos y contratos. Los vínculos con activos y deudas se guardan como referencia explícita dentro de Meximoney. En cambio, los documentos de seguros u obligaciones fiscales se **clasifican y recuerdan manualmente**: no se vinculan a una aseguradora, al SAT ni a ninguna entidad externa, y no activan trámites, pagos o avisos automáticos.
 
 La aceptación del consentimiento explícito es necesaria antes de guardar o analizar información financiera. La pantalla de Calidad permite también eliminar todos los datos financieros manuales del espacio, sin convertir esta acción en un pago, transferencia o cambio de inversión.
+
+## Notificaciones privadas dentro del sitio
+
+La pantalla **Notificaciones** permite activar o silenciar la bandeja interna y cada categoría: fechas de Calendario, documentos próximos a vencer, vencimientos de deudas y movimientos pendientes de revisión humana. Los avisos se generan al abrir o consultar la bandeja, se deduplican por elemento relacionado y pueden marcarse como leídos o descartarse manualmente.
+
+> No son notificaciones push, correo, SMS ni un proceso programado. Meximoney no envía información financiera a servicios externos, no ejecuta pagos y no realiza acciones sobre bancos, documentos o deudas desde un aviso.
+
+Al desactivar la bandeja global, no se genera ni muestra ninguna alerta. Al desactivar una categoría, sus alertas quedan ocultas y dejan de generarse hasta volver a activarla. La persona usuaria puede volver a habilitarlas desde su propio perfil; una cuenta no puede leer, modificar o descartar notificaciones de otra.
 
 ## Espacio, colaboración y multi-moneda de Fase A
 
