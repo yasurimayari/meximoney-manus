@@ -18,3 +18,10 @@
 - [ ] Verificar con sesión autenticada las vistas de panel, registros, planificación, calidad y asistente en escritorio y móvil, y corregir hallazgos visuales.
 - [ ] Documentar la presencia consistente de moneda, periodo y separación personal/empresarial en las vistas principales.
 - [ ] Reforzar y verificar los mensajes de error, la validación de formularios y la navegación accesible de los flujos protegidos.
+- [x] Implementar registro e inicio de sesión visibles con correo y contraseña como alternativa al acceso OAuth actual.
+- [x] Crear un panel analítico con gráficos interactivos para ingresos, gastos, ahorro, impuestos futuros, patrimonio e inversiones manuales.
+- [x] Añadir exportación descargable de registros y un informe financiero en PDF basado solo en datos manuales.
+- [x] Confirmar en la interfaz el acceso al asistente Mexi y sus límites de análisis interno sin ejecución financiera.
+- [ ] Probar los nuevos flujos de acceso, analítica y exportación, y documentar el error OAuth como dependencia externa del acceso previo.
+- [x] Añadir visualizaciones explícitas de patrimonio neto e impuestos futuros o reserva fiscal dentro del panel analítico.
+- [ ] Verificar con sesión autenticada que los gráficos interactivos representan todos los conceptos analíticos prometidos.

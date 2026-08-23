@@ -25,6 +25,15 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
+export const localCredentials = mysqlTable("localCredentials", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const financialProfiles = mysqlTable("financialProfiles", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
@@ -35,6 +44,8 @@ export const financialProfiles = mysqlTable("financialProfiles", {
   dependents: int("dependents").notNull().default(0),
   minimumLiquidityCents: int("minimumLiquidityCents").notNull().default(0),
   referenceEssentialExpensesCents: int("referenceEssentialExpensesCents").notNull().default(0),
+  futureTaxReserveCents: int("futureTaxReserveCents").notNull().default(0),
+  futureTaxDueAt: timestamp("futureTaxDueAt"),
   riskTolerance: mysqlEnum("riskTolerance", ["low", "medium_low", "medium", "medium_high", "high"]),
   notes: text("notes"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

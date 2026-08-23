@@ -9,6 +9,8 @@ import Records from "./pages/Records";
 import Planning from "./pages/Planning";
 import Quality from "./pages/Quality";
 import Assistant from "./pages/Assistant";
+import Analytics from "./pages/Analytics";
+import Reports from "./pages/Reports";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
@@ -20,6 +22,8 @@ function Router() {
       <Route path={"/planificacion"}><DashboardLayout><Planning /></DashboardLayout></Route>
       <Route path={"/calidad"}><DashboardLayout><Quality /></DashboardLayout></Route>
       <Route path={"/asistente"}><DashboardLayout><Assistant /></DashboardLayout></Route>
+      <Route path={"/analitica"}><DashboardLayout><Analytics /></DashboardLayout></Route>
+      <Route path={"/exportar"}><DashboardLayout><Reports /></DashboardLayout></Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

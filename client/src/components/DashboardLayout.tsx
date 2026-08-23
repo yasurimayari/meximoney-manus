@@ -19,10 +19,14 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { startLogin } from "@/const";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/useMobile";
-import { ArrowLeftRight, BotMessageSquare, CircleCheckBig, EyeOff, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, ShieldCheck, Target } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { ArrowLeftRight, BarChart3, BotMessageSquare, CircleCheckBig, EyeOff, FileDown, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, ShieldCheck, Target } from "lucide-react";
+import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
@@ -32,7 +36,9 @@ const menuItems = [
   { icon: ArrowLeftRight, label: "Registros", path: "/movimientos" },
   { icon: Target, label: "Planificación", path: "/planificacion" },
   { icon: CircleCheckBig, label: "Calidad", path: "/calidad" },
+  { icon: BarChart3, label: "Analítica", path: "/analitica" },
   { icon: BotMessageSquare, label: "Asistente", path: "/asistente" },
+  { icon: FileDown, label: "Exportar", path: "/exportar" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -76,20 +82,7 @@ export default function DashboardLayout({
               <span><ShieldCheck className="size-4" /> Decisiones explicables</span>
             </div>
           </section>
-          <section className="auth-card">
-            <div className="auth-card-icon"><ShieldCheck className="size-5" /></div>
-            <p className="auth-card-kicker">Acceso protegido</p>
-            <h2>Tu espacio financiero es privado</h2>
-            <p>Inicia sesión para consultar tus registros, planes y revisiones en Meximoney.</p>
-            <Button
-              onClick={() => startLogin()}
-              size="lg"
-              className="w-full btn-primary"
-            >
-              Iniciar sesión
-            </Button>
-            <div className="auth-card-footer"><span>0 conexiones bancarias</span><i /> <span>0 pagos ejecutados</span></div>
-          </section>
+          <LocalAuthCard />
         </div>
       </div>
     );
@@ -108,6 +101,44 @@ export default function DashboardLayout({
       </DashboardLayoutContent>
     </SidebarProvider>
   );
+}
+
+function LocalAuthCard() {
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const utils = trpc.useUtils();
+  const onSuccess = async (message: string) => {
+    await utils.auth.me.invalidate();
+    toast.success(message);
+    window.location.assign("/");
+  };
+  const login = trpc.auth.login.useMutation({ onSuccess: () => onSuccess("Sesión iniciada"), onError: error => toast.error(error.message) });
+  const register = trpc.auth.register.useMutation({ onSuccess: () => onSuccess("Cuenta creada"), onError: error => toast.error(error.message) });
+  const isPending = login.isPending || register.isPending;
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (mode === "register") register.mutate({ name, email, password });
+    else login.mutate({ email, password });
+  };
+
+  return <section className="auth-card">
+    <div className="auth-card-icon"><ShieldCheck className="size-5" /></div>
+    <p className="auth-card-kicker">Acceso protegido</p>
+    <h2>{mode === "login" ? "Entra a tu espacio privado" : "Crea tu espacio privado"}</h2>
+    <p>{mode === "login" ? "Usa tu correo y contraseña para abrir tus registros, planes y revisiones." : "Regístrate con correo y contraseña. Tus datos financieros comienzan vacíos y bajo tu control."}</p>
+    <Tabs value={mode} onValueChange={value => setMode(value as "login" | "register")} className="mt-5">
+      <TabsList className="auth-tabs"><TabsTrigger value="login">Iniciar sesión</TabsTrigger><TabsTrigger value="register">Registrarme</TabsTrigger></TabsList>
+    </Tabs>
+    <form className="auth-form" onSubmit={submit}>
+      {mode === "register" ? <div className="form-field"><Label htmlFor="auth-name">Nombre</Label><Input id="auth-name" autoComplete="name" required value={name} onChange={event => setName(event.target.value)} /></div> : null}
+      <div className="form-field"><Label htmlFor="auth-email">Correo electrónico</Label><Input id="auth-email" type="email" autoComplete="email" required value={email} onChange={event => setEmail(event.target.value)} /></div>
+      <div className="form-field"><Label htmlFor="auth-password">Contraseña</Label><Input id="auth-password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={12} required value={password} onChange={event => setPassword(event.target.value)} />{mode === "register" ? <small>Usa al menos 12 caracteres.</small> : null}</div>
+      <Button type="submit" size="lg" className="w-full btn-primary" disabled={isPending}>{isPending ? "Procesando…" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}</Button>
+    </form>
+    <div className="auth-card-footer"><span>0 conexiones bancarias</span><i /> <span>0 pagos ejecutados</span></div>
+  </section>;
 }
 
 type DashboardLayoutContentProps = {

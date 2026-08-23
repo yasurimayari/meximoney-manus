@@ -1,6 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { and, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   accounts,
@@ -14,11 +15,15 @@ import {
   financialProfiles,
   financialTransactions,
   monthlyReviews,
+  localCredentials,
   privacyConsents,
+  users,
 } from "../drizzle/schema";
+import { hashPassword, verifyPassword } from "./credentials";
 import { deleteAllFinancialData, deleteOwnedRow, getFinanceSnapshot, getProfile, requireDb } from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM } from "./_core/llm";
+import { sdk } from "./_core/sdk";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 
@@ -26,6 +31,18 @@ const scopeSchema = z.enum(["personal", "business", "mixed"]);
 const moneySchema = z.number().int().min(0);
 const optionalDate = z.number().int().positive().nullable().optional();
 const manualOnlyNotice = "Meximoney trabaja solo con tus registros manuales. No tiene acceso a bancos ni puede ejecutar acciones financieras.";
+const credentialInput = z.object({
+  email: z.string().trim().email().max(320).transform(value => value.toLowerCase()),
+  password: z.string().min(12, "La contraseña debe tener al menos 12 caracteres.").max(128),
+});
+
+async function setLocalSession(ctx: { req: any; res: any }, user: { openId: string; name: string | null }) {
+  const token = await sdk.createSessionToken(user.openId, { name: user.name || "Usuario Meximoney" });
+  ctx.res.cookie(COOKIE_NAME, token, {
+    ...getSessionCookieOptions(ctx.req),
+    maxAge: 365 * 24 * 60 * 60 * 1000,
+  });
+}
 
 const privateFinanceProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   const db = await requireDb();
@@ -66,6 +83,36 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    register: publicProcedure.input(credentialInput.extend({ name: z.string().trim().min(2).max(120) })).mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      const existing = await db.select({ id: localCredentials.id }).from(localCredentials).where(eq(localCredentials.email, input.email)).limit(1);
+      if (existing.length > 0) throw new TRPCError({ code: "CONFLICT", message: "Ya existe una cuenta con este correo." });
+
+      const openId = `local_${randomUUID().replace(/-/g, "")}`;
+      await db.insert(users).values({
+        openId,
+        name: input.name,
+        email: input.email,
+        loginMethod: "email_password",
+        lastSignedIn: new Date(),
+      });
+      const user = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+      if (!user[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No se pudo crear la cuenta." });
+      await db.insert(localCredentials).values({ userId: user[0].id, email: input.email, passwordHash: await hashPassword(input.password) });
+      await setLocalSession(ctx, user[0]);
+      return { success: true, user: { name: user[0].name, email: user[0].email } };
+    }),
+    login: publicProcedure.input(credentialInput).mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      const result = await db.select({ user: users, credential: localCredentials }).from(localCredentials).innerJoin(users, eq(localCredentials.userId, users.id)).where(eq(localCredentials.email, input.email)).limit(1);
+      const record = result[0];
+      if (!record || !(await verifyPassword(input.password, record.credential.passwordHash))) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Correo o contraseña incorrectos." });
+      }
+      await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, record.user.id));
+      await setLocalSession(ctx, record.user);
+      return { success: true, user: { name: record.user.name, email: record.user.email } };
+    }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -86,11 +133,14 @@ export const appRouter = router({
         dependents: z.number().int().min(0).default(0),
         minimumLiquidityCents: moneySchema.default(0),
         referenceEssentialExpensesCents: moneySchema.default(0),
+        futureTaxReserveCents: moneySchema.default(0),
+        futureTaxDueAt: optionalDate,
         riskTolerance: z.enum(["low", "medium_low", "medium", "medium_high", "high"]).nullable().optional(),
         notes: z.string().max(3000).nullable().optional(),
       })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
-        await db.insert(financialProfiles).values({ userId: ctx.user.id, ...input }).onDuplicateKeyUpdate({ set: { ...input } });
+        const { futureTaxDueAt, ...profileValues } = input;
+        await db.insert(financialProfiles).values({ userId: ctx.user.id, ...profileValues, futureTaxDueAt: asDate(futureTaxDueAt) }).onDuplicateKeyUpdate({ set: { ...profileValues, futureTaxDueAt: asDate(futureTaxDueAt) } });
         return { success: true };
       }),
     }),
