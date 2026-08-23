@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   deleteOwnedRow: vi.fn(),
   getFinanceSnapshot: vi.fn(),
   requireDb: vi.fn(),
+  resolveWorkspaceAccess: vi.fn(),
 }));
 
 vi.mock("./db", () => ({
@@ -13,6 +14,7 @@ vi.mock("./db", () => ({
   getFinanceSnapshot: mocks.getFinanceSnapshot,
   getProfile: vi.fn(),
   requireDb: mocks.requireDb,
+  resolveWorkspaceAccess: mocks.resolveWorkspaceAccess,
 }));
 
 import { appRouter } from "./routers";
@@ -41,6 +43,8 @@ describe("finance.dashboard", () => {
     mocks.deleteOwnedRow.mockResolvedValue({ success: true });
     mocks.getFinanceSnapshot.mockReset();
     mocks.requireDb.mockReset();
+    mocks.resolveWorkspaceAccess.mockReset();
+    mocks.resolveWorkspaceAccess.mockResolvedValue({ ownerId: 27, role: "owner", canCreateDrafts: true, canReview: true });
     mocks.getFinanceSnapshot.mockResolvedValue({ dashboard: {}, accounts: [], transactions: [] });
   });
 
@@ -76,5 +80,48 @@ describe("finance.dashboard", () => {
 
     expect(mocks.deleteOwnedRow).toHaveBeenCalledTimes(3);
     expect(mocks.deleteOwnedRow.mock.calls.map(call => [call[1], call[2]])).toEqual([[81, 27], [82, 27], [83, 27]]);
+  });
+
+  it("impide que un revisor sin permiso cree borradores en el espacio de otra persona", async () => {
+    mocks.resolveWorkspaceAccess.mockResolvedValue({ ownerId: 73, role: "reviewer", canCreateDrafts: false, canReview: true });
+    mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }) });
+    const caller = appRouter.createCaller(createContext(91));
+
+    await expect(caller.finance.workspace.transactionSave({ type: "income", scope: "business", amountCents: 15000, currency: "USD", reportCurrency: "MXN", reportAmountCents: null, exchangeRateMicros: null, exchangeRateDate: null, incomeNature: "business_revenue", entityId: null, projectId: null, accountId: null, categoryId: null, goalId: null, debtId: null, occurredAt: Date.now(), isEssential: false, status: "confirmed", transferGroupId: null, notes: "Cobro" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("guarda el borrador de un gestor bajo la propietaria y exige revisión humana", async () => {
+    const inserted = vi.fn();
+    mocks.resolveWorkspaceAccess.mockResolvedValue({ ownerId: 73, role: "manager", canCreateDrafts: true, canReview: false });
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
+      insert: () => ({ values: inserted }),
+    });
+    const caller = appRouter.createCaller(createContext(91));
+    await caller.finance.workspace.transactionSave({ type: "income", scope: "business", amountCents: 15000, currency: "USD", reportCurrency: "MXN", reportAmountCents: 270000, exchangeRateMicros: 18000000, exchangeRateDate: Date.now(), incomeNature: "business_revenue", entityId: 4, projectId: null, accountId: null, categoryId: null, goalId: null, debtId: null, occurredAt: Date.now(), isEssential: false, status: "confirmed", transferGroupId: null, notes: "Cobro" });
+
+    expect(inserted).toHaveBeenCalledWith(expect.objectContaining({ userId: 73, createdByUserId: 91, reviewStatus: "pending_review", status: "needs_review" }));
+  });
+
+  it("permite a la propietaria revocar una colaboración sin afectar otro espacio", async () => {
+    const where = vi.fn();
+    const set = vi.fn(() => ({ where }));
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
+      update: () => ({ set }),
+    });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.workspace.revokeInvite({ inviteId: 81 })).resolves.toEqual({ success: true });
+    expect(set).toHaveBeenCalledWith({ status: "revoked" });
+    expect(where).toHaveBeenCalledTimes(1);
+  });
+
+  it("impide que un gestor revoque colaboraciones", async () => {
+    mocks.resolveWorkspaceAccess.mockResolvedValue({ ownerId: 73, role: "manager", canCreateDrafts: true, canReview: false });
+    mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }) });
+    const caller = appRouter.createCaller(createContext(91));
+
+    await expect(caller.finance.workspace.revokeInvite({ inviteId: 81 })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

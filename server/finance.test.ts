@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateLiquidity, calculateMonthlyStatement, calculateNetWorth, monthBounds, summarizeCashFlow, transferIntegrityIssues, withNetCashFlow } from "./finance";
+import { calculateLiquidity, calculateMonthlyStatement, calculateNetWorth, monthBounds, summarizeCashFlow, summarizeCashFlowInReportCurrency, transferIntegrityIssues, withNetCashFlow } from "./finance";
 
 describe("cálculos financieros manuales", () => {
   it("excluye transferencias internas del flujo de caja", () => {
@@ -64,5 +64,16 @@ describe("cálculos financieros manuales", () => {
     ], start, end, "personal");
 
     expect(statement).toEqual({ incomeCents: 100000, expenseCents: 35000, netCashFlowCents: 65000, assetCents: 150000, liabilityCents: 40000, netWorthCents: 110000, liquidCents: 150000 });
+  });
+
+  it("consolida sólo la moneda de reporte confirmada y deja visibles las partidas sin conversión", () => {
+    const { start, end } = monthBounds(new Date("2026-08-15T12:00:00Z"));
+    const summary = summarizeCashFlowInReportCurrency([
+      { type: "income", amountCents: 100000, currency: "MXN", occurredAt: new Date("2026-08-03T12:00:00Z"), categoryId: 1, accountId: 1, transferGroupId: null },
+      { type: "income", amountCents: 10000, currency: "USD", reportCurrency: "MXN", reportAmountCents: 180000, occurredAt: new Date("2026-08-04T12:00:00Z"), categoryId: 1, accountId: 1, transferGroupId: null },
+      { type: "expense", amountCents: 5000, currency: "EUR", reportCurrency: null, reportAmountCents: null, occurredAt: new Date("2026-08-05T12:00:00Z"), categoryId: 2, accountId: 1, transferGroupId: null },
+    ], start, end, "MXN");
+
+    expect(summary).toEqual({ incomeCents: 280000, expenseCents: 0, pendingConversionCount: 1 });
   });
 });

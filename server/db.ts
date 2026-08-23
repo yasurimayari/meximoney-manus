@@ -6,21 +6,25 @@ import {
   calendarColorPreferences,
   calendarEvents,
   categories,
+  collaborationInvites,
   debts,
   decisionRecords,
+  exchangeRates,
   financeDocuments,
   financeTasks,
   financialGoals,
   financialProfiles,
+  financialProjects,
   financialTransactions,
   InsertUser,
   monthlyReviews,
   monthlyFinancialStatements,
   privacyConsents,
   users,
+  workspaceEntities,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
-import { calculateLiquidity, calculateNetWorth, monthBounds, summarizeCashFlow, transferIntegrityIssues, withNetCashFlow } from "./finance";
+import { calculateLiquidity, calculateNetWorth, monthBounds, reportedAmountCents, summarizeCashFlowInReportCurrency, transferIntegrityIssues, withNetCashFlow } from "./finance";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -120,32 +124,58 @@ export async function getProfile(userId: number) {
   return rows[0] ?? null;
 }
 
+export type WorkspaceAccess = {
+  ownerId: number;
+  role: "owner" | "manager" | "reviewer";
+  canCreateDrafts: boolean;
+  canReview: boolean;
+};
+
+export async function resolveWorkspaceAccess(userId: number): Promise<WorkspaceAccess> {
+  const db = await requireDb();
+  const user = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+  const email = user[0]?.email?.toLowerCase();
+  if (!email) return { ownerId: userId, role: "owner", canCreateDrafts: true, canReview: true };
+  const invite = await db.select().from(collaborationInvites).where(and(eq(collaborationInvites.invitedEmail, email), eq(collaborationInvites.status, "accepted"), eq(collaborationInvites.acceptedByUserId, userId))).limit(1);
+  if (!invite[0]) return { ownerId: userId, role: "owner", canCreateDrafts: true, canReview: true };
+  return { ownerId: invite[0].ownerId, role: invite[0].role, canCreateDrafts: invite[0].canCreateDrafts, canReview: invite[0].canReview };
+}
+
 export async function getFinanceSnapshot(userId: number, referenceDate = new Date()) {
   const db = await requireDb();
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows] = await Promise.all([
-    getProfile(userId),
-    db.select().from(accounts).where(eq(accounts.userId, userId)),
-    db.select().from(categories).where(eq(categories.userId, userId)),
-    db.select().from(financialTransactions).where(eq(financialTransactions.userId, userId)),
-    db.select().from(budgets).where(eq(budgets.userId, userId)),
-    db.select().from(debts).where(eq(debts.userId, userId)),
-    db.select().from(financialGoals).where(eq(financialGoals.userId, userId)),
-    db.select().from(financeTasks).where(eq(financeTasks.userId, userId)),
-    db.select().from(monthlyReviews).where(eq(monthlyReviews.userId, userId)),
-    db.select().from(monthlyFinancialStatements).where(eq(monthlyFinancialStatements.userId, userId)),
-    db.select().from(calendarColorPreferences).where(eq(calendarColorPreferences.userId, userId)),
-    db.select().from(calendarEvents).where(eq(calendarEvents.userId, userId)),
-    db.select().from(financeDocuments).where(eq(financeDocuments.userId, userId)),
-    db.select().from(decisionRecords).where(eq(decisionRecords.userId, userId)),
+  const access = await resolveWorkspaceAccess(userId);
+  const ownerId = access.ownerId;
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows] = await Promise.all([
+    getProfile(ownerId),
+    db.select().from(accounts).where(eq(accounts.userId, ownerId)),
+    db.select().from(categories).where(eq(categories.userId, ownerId)),
+    db.select().from(financialTransactions).where(eq(financialTransactions.userId, ownerId)),
+    db.select().from(budgets).where(eq(budgets.userId, ownerId)),
+    db.select().from(debts).where(eq(debts.userId, ownerId)),
+    db.select().from(financialGoals).where(eq(financialGoals.userId, ownerId)),
+    db.select().from(financeTasks).where(eq(financeTasks.userId, ownerId)),
+    db.select().from(monthlyReviews).where(eq(monthlyReviews.userId, ownerId)),
+    db.select().from(monthlyFinancialStatements).where(eq(monthlyFinancialStatements.userId, ownerId)),
+    db.select().from(calendarColorPreferences).where(eq(calendarColorPreferences.userId, ownerId)),
+    db.select().from(calendarEvents).where(eq(calendarEvents.userId, ownerId)),
+    db.select().from(financeDocuments).where(eq(financeDocuments.userId, ownerId)),
+    db.select().from(decisionRecords).where(eq(decisionRecords.userId, ownerId)),
+    db.select().from(workspaceEntities).where(eq(workspaceEntities.ownerId, ownerId)),
+    db.select().from(financialProjects).where(eq(financialProjects.ownerId, ownerId)),
+    db.select().from(exchangeRates).where(eq(exchangeRates.ownerId, ownerId)),
+    db.select().from(collaborationInvites).where(eq(collaborationInvites.ownerId, ownerId)),
   ]);
 
   const { start, end } = monthBounds(referenceDate);
-  const cashFlow = withNetCashFlow(summarizeCashFlow(transactionRows, start, end));
-  const netWorth = calculateNetWorth(accountRows, debtRows);
+  const reportCurrency = (profile?.currency || "MXN").toUpperCase();
+  const cashFlow = withNetCashFlow(summarizeCashFlowInReportCurrency(transactionRows, start, end, reportCurrency));
+  const reportCurrencyAccounts = accountRows.filter(item => item.currency === reportCurrency);
+  const reportCurrencyDebts = debtRows.filter(item => item.currency === reportCurrency);
+  const netWorth = calculateNetWorth(reportCurrencyAccounts, reportCurrencyDebts);
   const essentialExpensesCents = transactionRows
     .filter(item => item.type === "expense" && item.isEssential && item.occurredAt >= start && item.occurredAt < end)
-    .reduce((sum, item) => sum + item.amountCents, 0) || profile?.referenceEssentialExpensesCents || 0;
-  const liquidity = calculateLiquidity(accountRows, essentialExpensesCents);
+    .reduce((sum, item) => sum + (reportedAmountCents(item, reportCurrency) ?? 0), 0) || profile?.referenceEssentialExpensesCents || 0;
+  const liquidity = calculateLiquidity(reportCurrencyAccounts, essentialExpensesCents);
   const qualityIssues = [
     ...transactionRows
       .filter(item => (item.type === "income" || item.type === "expense") && !item.categoryId)
@@ -153,9 +183,18 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     ...transactionRows
       .filter(item => !item.accountId)
       .map(item => ({ code: "missing_account", severity: "high", label: `Movimiento sin cuenta: ${item.notes || `#${item.id}`}` })),
+    ...transactionRows
+      .filter(item => (item.type === "income" || item.type === "expense") && reportedAmountCents(item, reportCurrency) === null)
+      .map(item => ({ code: "pending_currency_conversion", severity: "high", label: `Conversión a ${reportCurrency} pendiente: ${item.notes || `#${item.id}`}` })),
     ...accountRows
       .filter(item => !item.valuationDate || item.valuationDate.getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000)
       .map(item => ({ code: "stale_account", severity: "medium", label: `Valor por actualizar: ${item.name}` })),
+    ...accountRows
+      .filter(item => item.status === "active" && item.currency !== reportCurrency)
+      .map(item => ({ code: "pending_account_conversion", severity: "high", label: `Activo fuera de ${reportCurrency}, pendiente de valoración comparable: ${item.name}` })),
+    ...debtRows
+      .filter(item => (item.status === "active" || item.status === "review") && item.currency !== reportCurrency)
+      .map(item => ({ code: "pending_debt_conversion", severity: "high", label: `Pasivo fuera de ${reportCurrency}, pendiente de valoración comparable: ${item.name}` })),
     ...transferIntegrityIssues(transactionRows).map(groupId => ({ code: "transfer_mismatch", severity: "high", label: `Transferencia incoherente: ${groupId}` })),
     ...debtRows
       .filter(item => item.status === "active" && !item.nextDueAt)
@@ -167,6 +206,11 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
 
   return {
     profile,
+    workspaceAccess: access,
+    entities: entityRows,
+    projects: projectRows,
+    exchangeRates: exchangeRateRows,
+    collaborators: inviteRows,
     accounts: accountRows,
     categories: categoryRows,
     transactions: transactionRows,
@@ -180,7 +224,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     calendarEvents: calendarEventRows,
     documents: documentRows,
     decisions: decisionRows,
-    dashboard: { periodStart: start, cashFlow, netWorth, liquidity, essentialExpensesCents, qualityIssues },
+    dashboard: { periodStart: start, reportCurrency, cashFlow, netWorth, liquidity, essentialExpensesCents, qualityIssues },
   };
 }
 

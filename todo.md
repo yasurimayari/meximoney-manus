@@ -57,3 +57,12 @@
 - [x] Validar persistencia por usuario, contraste, teclado y respuesta móvil de la paleta de calendario.
 - [x] Verificar persistencia de colores tras recarga o nueva sesión autenticada y probar aislamiento por usuario de preferencias de calendario.
 - [x] Validar mediante teclado los botones de color y Restablecer de la paleta, documentando foco y activación.
+- [x] Analizar y priorizar las propuestas externas de evolución de Meximoney, sin implementar cambios hasta recibir confirmación explícita del usuario.
+- [x] Diseñar e implementar onboarding privado para configurar perfil, régimen PFAE general, moneda base, confirmación humana y preferencias iniciales.
+- [x] Crear entidades abiertas, proyectos y monedas trazables con tipo de cambio manual, naturaleza de ingreso y consolidación en moneda base.
+- [x] Añadir colaboración segura entre propietaria y gestor con invitación, permisos granulares y flujo de revisión/aprobación de registros.
+- [ ] Adaptar registros, panel, analítica, estados, calendario y exportaciones al filtro por entidad, proyecto, moneda y estado de revisión.
+- [x] Configurar documentos como referencias privadas de Google Drive y metadatos, sin duplicar archivos externos ni introducir voz o conexión bancaria.
+- [x] Validar aislamiento, flujos de aprobación, conversiones manuales, móvil y accesibilidad de la Fase A.
+- [x] Evitar invitaciones de gestor duplicadas para el mismo espacio y correo, conservando una única invitación vigente con permisos actualizables.
+- [x] Permitir a la propietaria revocar una invitación o colaboración aceptada desde el espacio privado.

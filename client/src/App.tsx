@@ -13,6 +13,8 @@ import Analytics from "./pages/Analytics";
 import Reports from "./pages/Reports";
 import Calendar from "./pages/Calendar";
 import Statements from "./pages/Statements";
+import Workspace from "./pages/Workspace";
+import Review from "./pages/Review";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
@@ -28,6 +30,8 @@ function Router() {
       <Route path={"/calendario"}><DashboardLayout><Calendar /></DashboardLayout></Route>
       <Route path={"/estados"}><DashboardLayout><Statements /></DashboardLayout></Route>
       <Route path={"/exportar"}><DashboardLayout><Reports /></DashboardLayout></Route>
+      <Route path={"/espacio"}><DashboardLayout><Workspace /></DashboardLayout></Route>
+      <Route path={"/revision"}><DashboardLayout><Review /></DashboardLayout></Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

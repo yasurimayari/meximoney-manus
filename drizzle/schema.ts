@@ -37,7 +37,13 @@ export const localCredentials = mysqlTable("localCredentials", {
 export const financialProfiles = mysqlTable("financialProfiles", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
+  workspaceName: varchar("workspaceName", { length: 140 }),
   currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  taxRegime: mysqlEnum("taxRegime", ["pfae_general", "resico", "other", "not_applicable"]).notNull().default("not_applicable"),
+  exchangeRatePolicy: mysqlEnum("exchangeRatePolicy", ["manual", "manual_confirmed", "unconverted"]).notNull().default("manual"),
+  onboardingCompleted: boolean("onboardingCompleted").notNull().default(false),
+  onboardingStep: int("onboardingStep").notNull().default(0),
+  humanReviewRequired: boolean("humanReviewRequired").notNull().default(true),
   residenceCountry: varchar("residenceCountry", { length: 80 }),
   taxResidence: varchar("taxResidence", { length: 120 }),
   householdSize: int("householdSize").notNull().default(1),
@@ -51,9 +57,67 @@ export const financialProfiles = mysqlTable("financialProfiles", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const workspaceEntities = mysqlTable("workspaceEntities", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerId: int("ownerId").notNull(),
+  name: varchar("name", { length: 180 }).notNull(),
+  shortCode: varchar("shortCode", { length: 32 }),
+  countryCode: varchar("countryCode", { length: 2 }).notNull().default("MX"),
+  legalForm: mysqlEnum("legalForm", ["individual", "pfae", "sa_de_cv", "sapi", "sl", "llc", "holding", "other"]).notNull().default("individual"),
+  status: mysqlEnum("status", ["active", "inactive", "planned", "dissolved"]).notNull().default("active"),
+  functionalCurrency: varchar("functionalCurrency", { length: 3 }).notNull().default("MXN"),
+  taxRegime: mysqlEnum("taxRegime", ["pfae_general", "resico", "corporate", "not_applicable", "other"]).notNull().default("not_applicable"),
+  startedAt: timestamp("startedAt"),
+  plannedConversionAt: timestamp("plannedConversionAt"),
+  predecessorEntityId: int("predecessorEntityId"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const financialProjects = mysqlTable("financialProjects", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerId: int("ownerId").notNull(),
+  entityId: int("entityId").notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  status: mysqlEnum("status", ["active", "paused", "closed", "planned"]).notNull().default("active"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const exchangeRates = mysqlTable("exchangeRates", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerId: int("ownerId").notNull(),
+  fromCurrency: varchar("fromCurrency", { length: 3 }).notNull(),
+  toCurrency: varchar("toCurrency", { length: 3 }).notNull(),
+  rateMicros: int("rateMicros").notNull(),
+  rateDate: timestamp("rateDate").notNull(),
+  source: mysqlEnum("source", ["manual", "confirmed_reference"]).notNull().default("manual"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const collaborationInvites = mysqlTable("collaborationInvites", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerId: int("ownerId").notNull(),
+  invitedEmail: varchar("invitedEmail", { length: 320 }).notNull(),
+  role: mysqlEnum("role", ["manager", "reviewer"]).notNull().default("reviewer"),
+  canCreateDrafts: boolean("canCreateDrafts").notNull().default(false),
+  canReview: boolean("canReview").notNull().default(true),
+  status: mysqlEnum("status", ["invited", "accepted", "revoked"]).notNull().default("invited"),
+  invitedByUserId: int("invitedByUserId").notNull(),
+  acceptedByUserId: int("acceptedByUserId"),
+  acceptedAt: timestamp("acceptedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const accounts = mysqlTable("accounts", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
   name: varchar("name", { length: 140 }).notNull(),
   type: mysqlEnum("type", ["cash", "bank", "investment", "pension", "property", "business", "other"]).notNull(),
   scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
@@ -81,6 +145,8 @@ export const categories = mysqlTable("categories", {
 export const financialTransactions = mysqlTable("financialTransactions", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
   accountId: int("accountId"),
   categoryId: int("categoryId"),
   goalId: int("goalId"),
@@ -89,10 +155,19 @@ export const financialTransactions = mysqlTable("financialTransactions", {
   scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
   amountCents: int("amountCents").notNull(),
   currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  reportCurrency: varchar("reportCurrency", { length: 3 }),
+  reportAmountCents: int("reportAmountCents"),
+  exchangeRateMicros: int("exchangeRateMicros"),
+  exchangeRateDate: timestamp("exchangeRateDate"),
+  incomeNature: mysqlEnum("incomeNature", ["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]).notNull().default("other"),
   occurredAt: timestamp("occurredAt").notNull(),
   isEssential: boolean("isEssential").notNull().default(false),
   transferGroupId: varchar("transferGroupId", { length: 64 }),
   status: mysqlEnum("status", ["confirmed", "estimated", "needs_review"]).notNull().default("confirmed"),
+  reviewStatus: mysqlEnum("reviewStatus", ["draft", "pending_review", "approved"]).notNull().default("approved"),
+  createdByUserId: int("createdByUserId"),
+  reviewedByUserId: int("reviewedByUserId"),
+  reviewedAt: timestamp("reviewedAt"),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -101,6 +176,8 @@ export const financialTransactions = mysqlTable("financialTransactions", {
 export const financeDocuments = mysqlTable("financeDocuments", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
   name: varchar("name", { length: 180 }).notNull(),
   type: mysqlEnum("type", ["statement", "invoice", "contract", "policy", "tax", "receipt", "other"]).notNull().default("other"),
   documentClass: varchar("documentClass", { length: 48 }).notNull().default("general"),
@@ -109,6 +186,7 @@ export const financeDocuments = mysqlTable("financeDocuments", {
   relatedEntityId: int("relatedEntityId"),
   jurisdiction: varchar("jurisdiction", { length: 120 }),
   referenceUrl: text("referenceUrl"),
+  referenceProvider: mysqlEnum("referenceProvider", ["google_drive", "url", "other"]).notNull().default("url"),
   issuedAt: timestamp("issuedAt"),
   expiresAt: timestamp("expiresAt"),
   reminderAt: timestamp("reminderAt"),
@@ -120,6 +198,8 @@ export const financeDocuments = mysqlTable("financeDocuments", {
 export const calendarEvents = mysqlTable("calendarEvents", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
   title: varchar("title", { length: 180 }).notNull(),
   eventType: mysqlEnum("eventType", ["tax", "credit_card_cutoff", "credit_card_payment", "loan_payment", "document_expiry", "insurance_renewal", "review", "other"]).notNull().default("other"),
   scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
@@ -149,6 +229,7 @@ export const calendarColorPreferences = mysqlTable("calendarColorPreferences", {
 export const monthlyFinancialStatements = mysqlTable("monthlyFinancialStatements", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  entityId: int("entityId"),
   periodStart: timestamp("periodStart").notNull(),
   scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
   status: mysqlEnum("status", ["draft", "closed"]).notNull().default("draft"),
@@ -167,6 +248,8 @@ export const monthlyFinancialStatements = mysqlTable("monthlyFinancialStatements
 export const budgets = mysqlTable("budgets", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
   categoryId: int("categoryId"),
   scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
   periodStart: timestamp("periodStart").notNull(),
@@ -179,6 +262,8 @@ export const budgets = mysqlTable("budgets", {
 export const debts = mysqlTable("debts", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
   name: varchar("name", { length: 140 }).notNull(),
   creditor: varchar("creditor", { length: 140 }),
   type: mysqlEnum("type", ["credit_card", "loan", "mortgage", "tax", "business", "family", "other"]).notNull().default("other"),
@@ -199,6 +284,8 @@ export const debts = mysqlTable("debts", {
 export const financialGoals = mysqlTable("financialGoals", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
   name: varchar("name", { length: 160 }).notNull(),
   type: mysqlEnum("type", ["emergency", "debt", "housing", "retirement", "investment", "education", "business", "other"]).notNull().default("other"),
   scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
@@ -217,6 +304,8 @@ export const financialGoals = mysqlTable("financialGoals", {
 export const financeTasks = mysqlTable("financeTasks", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
   title: varchar("title", { length: 180 }).notNull(),
   area: mysqlEnum("area", ["budget", "debt", "savings", "investment", "tax", "documents", "business", "review", "other"]).notNull().default("other"),
   scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
@@ -234,6 +323,7 @@ export const financeTasks = mysqlTable("financeTasks", {
 export const monthlyReviews = mysqlTable("monthlyReviews", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  entityId: int("entityId"),
   periodStart: timestamp("periodStart").notNull(),
   status: mysqlEnum("status", ["draft", "reviewed", "closed"]).notNull().default("draft"),
   incomeCents: int("incomeCents").notNull().default(0),
@@ -248,6 +338,8 @@ export const monthlyReviews = mysqlTable("monthlyReviews", {
 export const decisionRecords = mysqlTable("decisionRecords", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
   title: varchar("title", { length: 180 }).notNull(),
   area: mysqlEnum("area", ["budget", "debt", "savings", "investment", "tax", "insurance", "assets", "other"]).notNull().default("other"),
   status: mysqlEnum("status", ["proposal", "approved", "reviewed", "discarded"]).notNull().default("proposal"),

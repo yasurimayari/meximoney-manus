@@ -1,0 +1,19 @@
+import { Button } from "@/components/ui/button";
+import { formatDate, formatMoney } from "@/lib/finance";
+import { trpc } from "@/lib/trpc";
+import { CheckCircle2, ClipboardCheck, RotateCcw, ShieldAlert, UserRoundCheck } from "lucide-react";
+import { toast } from "sonner";
+
+export default function Review() {
+  const utils = trpc.useUtils();
+  const { data, isLoading } = trpc.finance.workspace.get.useQuery();
+  const review = trpc.finance.workspace.reviewTransaction.useMutation({ onSuccess: async result => { await utils.finance.workspace.get.invalidate(); await utils.finance.dashboard.invalidate(); toast.success(result ? "Revisión actualizada" : ""); }, onError: error => toast.error(error.message) });
+  if (isLoading) return <div className="page-loading">Cargando borradores pendientes…</div>;
+  if (!data) return <div className="error-state"><h1>No se pudo cargar la revisión</h1></div>;
+  const pending = data.transactions.filter(item => item.reviewStatus === "pending_review" || item.reviewStatus === "draft");
+  const canReview = data.workspaceAccess.role === "owner" || data.workspaceAccess.canReview;
+  return <div className="review-page space-y-7"><header className="page-heading"><div><p className="eyebrow">Control humano · colaboración</p><h1>Bandeja de revisión</h1><p>Confirma o devuelve los borradores antes de integrarlos a tus cifras. Ninguna sugerencia se aprueba por sí sola.</p></div><span className="workspace-role"><UserRoundCheck className="size-4" />{canReview ? "Puedes revisar" : "Sólo lectura"}</span></header>
+    <section className="review-hero"><ShieldAlert className="size-6" /><div><strong>{pending.length} movimiento{pending.length === 1 ? "" : "s"} pendiente{pending.length === 1 ? "" : "s"}</strong><p>La persona gestora puede crear borradores si tiene permiso; una persona autorizada debe revisarlos para marcarlos como aprobados.</p></div></section>
+    {pending.length === 0 ? <section className="content-card review-empty"><CheckCircle2 className="size-7" /><h2>La bandeja está al día</h2><p>No hay movimientos pendientes de revisión. Los nuevos borradores aparecerán aquí con entidad, moneda y tipo de cambio visible.</p></section> : <section className="review-pending-list">{pending.map(item => { const entity = data.entities.find(entityItem => entityItem.id === item.entityId); const project = data.projects.find(projectItem => projectItem.id === item.projectId); return <article key={item.id}><div className="review-item-icon"><ClipboardCheck className="size-5" /></div><div className="review-item-main"><div><span className={`scope-pill scope-${item.scope}`}>{entity?.shortCode || "Sin entidad"}</span><small>{formatDate(item.occurredAt)} · {item.currency}{item.reportAmountCents != null ? ` · ${formatMoney(item.reportAmountCents, item.reportCurrency || data.profile?.currency || "MXN")}` : " · Conversión pendiente"}</small></div><h2>{item.notes || (item.type === "income" ? "Ingreso sin descripción" : "Movimiento sin descripción")}</h2><p>{project?.name || "Sin proyecto"} · {item.incomeNature === "family_support" ? "Ayuda familiar" : item.incomeNature === "business_revenue" ? "Ingreso de negocio" : item.incomeNature === "salary_commission" ? "Salario o comisión" : item.incomeNature === "owner_draw" ? "Retiro/aportación propia" : "Naturaleza por revisar"}</p></div><div className="review-item-value"><strong>{formatMoney(item.amountCents, item.currency)}</strong><small>{item.status === "estimated" ? "Estimado" : "Pendiente"}</small></div>{canReview ? <div className="review-item-actions"><Button size="sm" className="btn-primary" disabled={review.isPending} onClick={() => review.mutate({ id: item.id, approve: true })}><CheckCircle2 className="size-4" /> Aprobar</Button><Button size="sm" variant="outline" disabled={review.isPending} onClick={() => review.mutate({ id: item.id, approve: false })}><RotateCcw className="size-4" /> Devolver</Button></div> : null}</article>; })}</section>}
+  </div>;
+}

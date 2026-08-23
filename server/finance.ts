@@ -32,6 +32,40 @@ export function summarizeCashFlow(
   );
 }
 
+type ReportableTransaction = ManualTransaction & {
+  currency?: string;
+  reportCurrency?: string | null;
+  reportAmountCents?: number | null;
+};
+
+export function reportedAmountCents(transaction: ReportableTransaction, reportCurrency: string) {
+  if (transaction.reportCurrency === reportCurrency && typeof transaction.reportAmountCents === "number") return transaction.reportAmountCents;
+  if (transaction.currency === reportCurrency) return transaction.amountCents;
+  return null;
+}
+
+export function summarizeCashFlowInReportCurrency(
+  transactions: ReportableTransaction[],
+  start: Date,
+  end: Date,
+  reportCurrency: string
+) {
+  return transactions.filter(transaction => isInPeriod(transaction.occurredAt, start, end)).reduce(
+    (summary, transaction) => {
+      if (transaction.type !== "income" && transaction.type !== "expense") return summary;
+      const amountCents = reportedAmountCents(transaction, reportCurrency);
+      if (amountCents === null) {
+        summary.pendingConversionCount += 1;
+        return summary;
+      }
+      if (transaction.type === "income") summary.incomeCents += amountCents;
+      if (transaction.type === "expense") summary.expenseCents += amountCents;
+      return summary;
+    },
+    { incomeCents: 0, expenseCents: 0, pendingConversionCount: 0 }
+  );
+}
+
 export function withNetCashFlow<T extends { incomeCents: number; expenseCents: number }>(summary: T) {
   return { ...summary, netCashFlowCents: summary.incomeCents - summary.expenseCents };
 }
@@ -69,20 +103,18 @@ function isInScope(itemScope: Scope, selectedScope: Scope) {
 }
 
 export function calculateMonthlyStatement(
-  transactions: Array<ManualTransaction & { scope: Scope }>,
+  transactions: Array<ReportableTransaction & { scope: Scope }>,
   accounts: Array<{ currentValueCents: number; isLiquid: boolean; status: "active" | "closed"; scope: Scope }>,
   debts: Array<{ balanceCents: number; status: "active" | "paid" | "review"; scope: Scope }>,
   start: Date,
   end: Date,
-  scope: Scope
+  scope: Scope,
+  reportCurrency?: string
 ) {
-  const cashFlow = withNetCashFlow(
-    summarizeCashFlow(
-      transactions.filter(item => isInScope(item.scope, scope)),
-      start,
-      end
-    )
-  );
+  const scopedTransactions = transactions.filter(item => isInScope(item.scope, scope));
+  const cashFlow = reportCurrency
+    ? withNetCashFlow(summarizeCashFlowInReportCurrency(scopedTransactions, start, end, reportCurrency))
+    : withNetCashFlow(summarizeCashFlow(scopedTransactions, start, end));
   const statementAccounts = accounts.filter(item => isInScope(item.scope, scope));
   const statementDebts = debts.filter(item => isInScope(item.scope, scope));
   const netWorth = calculateNetWorth(statementAccounts, statementDebts);

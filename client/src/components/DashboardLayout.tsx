@@ -24,11 +24,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeftRight, BarChart3, BotMessageSquare, CalendarDays, CircleCheckBig, EyeOff, FileDown, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, ShieldCheck, Target, BookOpenCheck } from "lucide-react";
+import { ArrowLeftRight, BarChart3, BotMessageSquare, CalendarDays, CircleCheckBig, EyeOff, FileDown, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
+import Onboarding from "@/pages/Onboarding";
 import { Button } from "./ui/button";
 
 const menuItems = [
@@ -41,6 +42,8 @@ const menuItems = [
   { icon: BookOpenCheck, label: "Estados", path: "/estados" },
   { icon: BotMessageSquare, label: "Asistente", path: "/asistente" },
   { icon: FileDown, label: "Exportar", path: "/exportar" },
+  { icon: Settings2, label: "Espacio", path: "/espacio" },
+  { icon: ClipboardCheck, label: "Revisión", path: "/revision" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -58,6 +61,7 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  const { data: workspace, isLoading: workspaceLoading } = trpc.finance.workspace.get.useQuery(undefined, { enabled: Boolean(user) });
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -89,6 +93,9 @@ export default function DashboardLayout({
       </div>
     );
   }
+
+  if (workspaceLoading) return <DashboardLayoutSkeleton />;
+  if (!workspace?.profile?.onboardingCompleted) return <Onboarding />;
 
   return (
     <SidebarProvider

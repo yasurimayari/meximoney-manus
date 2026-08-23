@@ -24,4 +24,24 @@ describe("agregaciones analíticas", () => {
     expect(buildAssetAllocation(snapshot)).toEqual([{ name: "Inversiones", value: 1250 }, { name: "Cuentas", value: 500 }]);
     expect(investmentValue(snapshot)).toBe(125000);
   });
+
+  it("no mezcla divisas sin importe de reporte confirmado", () => {
+    const multiCurrencySnapshot = {
+      profile: { currency: "MXN" },
+      dashboard: { reportCurrency: "MXN" },
+      categories: [{ id: 1, name: "Operación" }],
+      transactions: [
+        { type: "expense", amountCents: 10000, currency: "USD", reportCurrency: "MXN", reportAmountCents: 180000, categoryId: 1 },
+        { type: "expense", amountCents: 5000, currency: "EUR", reportCurrency: null, reportAmountCents: null, categoryId: 1 },
+      ],
+      accounts: [
+        { type: "investment", currentValueCents: 100000, currency: "MXN", status: "active" },
+        { type: "investment", currentValueCents: 80000, currency: "USD", status: "active" },
+      ],
+    };
+
+    expect(buildExpenseCategories(multiCurrencySnapshot)).toEqual([{ name: "Operación", value: 1800 }]);
+    expect(buildAssetAllocation(multiCurrencySnapshot)).toEqual([{ name: "Inversiones", value: 1000 }]);
+    expect(investmentValue(multiCurrencySnapshot)).toBe(100000);
+  });
 });
