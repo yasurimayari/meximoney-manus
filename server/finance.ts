@@ -1,0 +1,89 @@
+export type ManualTransaction = {
+  type: "income" | "expense" | "transfer_out" | "transfer_in";
+  amountCents: number;
+  occurredAt: Date;
+  categoryId: number | null;
+  accountId: number | null;
+  transferGroupId: string | null;
+};
+
+export function monthBounds(reference = new Date()) {
+  const start = new Date(reference.getFullYear(), reference.getMonth(), 1);
+  const end = new Date(reference.getFullYear(), reference.getMonth() + 1, 1);
+  return { start, end };
+}
+
+export function isInPeriod(date: Date, start: Date, end: Date) {
+  return date >= start && date < end;
+}
+
+export function summarizeCashFlow(
+  transactions: ManualTransaction[],
+  start: Date,
+  end: Date
+) {
+  return transactions.filter(transaction => isInPeriod(transaction.occurredAt, start, end)).reduce(
+    (summary, transaction) => {
+      if (transaction.type === "income") summary.incomeCents += transaction.amountCents;
+      if (transaction.type === "expense") summary.expenseCents += transaction.amountCents;
+      return summary;
+    },
+    { incomeCents: 0, expenseCents: 0, netCashFlowCents: 0 }
+  );
+}
+
+export function withNetCashFlow<T extends { incomeCents: number; expenseCents: number }>(summary: T) {
+  return { ...summary, netCashFlowCents: summary.incomeCents - summary.expenseCents };
+}
+
+export function calculateNetWorth(
+  accounts: Array<{ currentValueCents: number; status: "active" | "closed" }>,
+  debts: Array<{ balanceCents: number; status: "active" | "paid" | "review" }>
+) {
+  const assetCents = accounts
+    .filter(account => account.status === "active")
+    .reduce((total, account) => total + account.currentValueCents, 0);
+  const liabilityCents = debts
+    .filter(debt => debt.status === "active" || debt.status === "review")
+    .reduce((total, debt) => total + debt.balanceCents, 0);
+  return { assetCents, liabilityCents, netWorthCents: assetCents - liabilityCents };
+}
+
+export function calculateLiquidity(
+  accounts: Array<{ currentValueCents: number; isLiquid: boolean; status: "active" | "closed" }>,
+  essentialExpensesCents: number
+) {
+  const liquidCents = accounts
+    .filter(account => account.status === "active" && account.isLiquid)
+    .reduce((total, account) => total + account.currentValueCents, 0);
+  return {
+    liquidCents,
+    coverageMonths: essentialExpensesCents > 0 ? liquidCents / essentialExpensesCents : null,
+  };
+}
+
+export function transferIntegrityIssues(transactions: ManualTransaction[]) {
+  const groups = new Map<string, ManualTransaction[]>();
+  transactions
+    .filter(transaction => transaction.type === "transfer_in" || transaction.type === "transfer_out")
+    .forEach(transaction => {
+      if (!transaction.transferGroupId) return;
+      const group = groups.get(transaction.transferGroupId) ?? [];
+      group.push(transaction);
+      groups.set(transaction.transferGroupId, group);
+    });
+
+  return Array.from(groups.entries()).flatMap(([groupId, group]: [string, ManualTransaction[]]): string[] => {
+    const hasIncoming = group.some((item: ManualTransaction) => item.type === "transfer_in");
+    const hasOutgoing = group.some((item: ManualTransaction) => item.type === "transfer_out");
+    const totalIncoming = group
+      .filter((item: ManualTransaction) => item.type === "transfer_in")
+      .reduce((sum: number, item: ManualTransaction) => sum + item.amountCents, 0);
+    const totalOutgoing = group
+      .filter((item: ManualTransaction) => item.type === "transfer_out")
+      .reduce((sum: number, item: ManualTransaction) => sum + item.amountCents, 0);
+
+    if (!hasIncoming || !hasOutgoing || totalIncoming !== totalOutgoing) return [groupId];
+    return [];
+  });
+}

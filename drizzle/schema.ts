@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -25,4 +25,184 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+export const financialProfiles = mysqlTable("financialProfiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  residenceCountry: varchar("residenceCountry", { length: 80 }),
+  taxResidence: varchar("taxResidence", { length: 120 }),
+  householdSize: int("householdSize").notNull().default(1),
+  dependents: int("dependents").notNull().default(0),
+  minimumLiquidityCents: int("minimumLiquidityCents").notNull().default(0),
+  referenceEssentialExpensesCents: int("referenceEssentialExpensesCents").notNull().default(0),
+  riskTolerance: mysqlEnum("riskTolerance", ["low", "medium_low", "medium", "medium_high", "high"]),
+  notes: text("notes"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const accounts = mysqlTable("accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 140 }).notNull(),
+  type: mysqlEnum("type", ["cash", "bank", "investment", "pension", "property", "business", "other"]).notNull(),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  currentValueCents: int("currentValueCents").notNull().default(0),
+  isLiquid: boolean("isLiquid").notNull().default(false),
+  valuationDate: timestamp("valuationDate"),
+  status: mysqlEnum("status", ["active", "closed"]).notNull().default("active"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const categories = mysqlTable("categories", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  type: mysqlEnum("type", ["income", "expense", "transfer", "mixed"]).notNull().default("mixed"),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  isEssential: boolean("isEssential").notNull().default(false),
+  isActive: boolean("isActive").notNull().default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const financialTransactions = mysqlTable("financialTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  accountId: int("accountId"),
+  categoryId: int("categoryId"),
+  goalId: int("goalId"),
+  debtId: int("debtId"),
+  type: mysqlEnum("type", ["income", "expense", "transfer_out", "transfer_in"]).notNull(),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  amountCents: int("amountCents").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  occurredAt: timestamp("occurredAt").notNull(),
+  isEssential: boolean("isEssential").notNull().default(false),
+  transferGroupId: varchar("transferGroupId", { length: 64 }),
+  status: mysqlEnum("status", ["confirmed", "estimated", "needs_review"]).notNull().default("confirmed"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const financeDocuments = mysqlTable("financeDocuments", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 180 }).notNull(),
+  type: mysqlEnum("type", ["statement", "invoice", "contract", "policy", "tax", "receipt", "other"]).notNull().default("other"),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  referenceUrl: text("referenceUrl"),
+  issuedAt: timestamp("issuedAt"),
+  expiresAt: timestamp("expiresAt"),
+  verified: boolean("verified").notNull().default(false),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const budgets = mysqlTable("budgets", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  categoryId: int("categoryId"),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  periodStart: timestamp("periodStart").notNull(),
+  plannedCents: int("plannedCents").notNull(),
+  type: mysqlEnum("type", ["income", "expense"]).notNull().default("expense"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const debts = mysqlTable("debts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 140 }).notNull(),
+  creditor: varchar("creditor", { length: 140 }),
+  type: mysqlEnum("type", ["credit_card", "loan", "mortgage", "tax", "business", "family", "other"]).notNull().default("other"),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  balanceCents: int("balanceCents").notNull().default(0),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  interestRateBps: int("interestRateBps"),
+  minimumPaymentCents: int("minimumPaymentCents").notNull().default(0),
+  nextDueAt: timestamp("nextDueAt"),
+  endDate: timestamp("endDate"),
+  priority: mysqlEnum("priority", ["critical", "high", "medium", "low"]).notNull().default("medium"),
+  status: mysqlEnum("status", ["active", "paid", "review"]).notNull().default("active"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const financialGoals = mysqlTable("financialGoals", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  type: mysqlEnum("type", ["emergency", "debt", "housing", "retirement", "investment", "education", "business", "other"]).notNull().default("other"),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  targetCents: int("targetCents").notNull(),
+  currentCents: int("currentCents").notNull().default(0),
+  monthlyContributionCents: int("monthlyContributionCents").notNull().default(0),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  targetDate: timestamp("targetDate"),
+  priority: mysqlEnum("priority", ["critical", "high", "medium", "low"]).notNull().default("medium"),
+  status: mysqlEnum("status", ["active", "paused", "achieved", "cancelled"]).notNull().default("active"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const financeTasks = mysqlTable("financeTasks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 180 }).notNull(),
+  area: mysqlEnum("area", ["budget", "debt", "savings", "investment", "tax", "documents", "business", "review", "other"]).notNull().default("other"),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  priority: mysqlEnum("priority", ["critical", "high", "medium", "low"]).notNull().default("medium"),
+  status: mysqlEnum("status", ["pending", "in_progress", "waiting", "completed", "cancelled"]).notNull().default("pending"),
+  dueAt: timestamp("dueAt"),
+  goalId: int("goalId"),
+  debtId: int("debtId"),
+  requiresConfirmation: boolean("requiresConfirmation").notNull().default(false),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const monthlyReviews = mysqlTable("monthlyReviews", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  periodStart: timestamp("periodStart").notNull(),
+  status: mysqlEnum("status", ["draft", "reviewed", "closed"]).notNull().default("draft"),
+  incomeCents: int("incomeCents").notNull().default(0),
+  expenseCents: int("expenseCents").notNull().default(0),
+  netCashFlowCents: int("netCashFlowCents").notNull().default(0),
+  observations: text("observations"),
+  nextActions: text("nextActions"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const decisionRecords = mysqlTable("decisionRecords", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 180 }).notNull(),
+  area: mysqlEnum("area", ["budget", "debt", "savings", "investment", "tax", "insurance", "assets", "other"]).notNull().default("other"),
+  status: mysqlEnum("status", ["proposal", "approved", "reviewed", "discarded"]).notNull().default("proposal"),
+  dataUsed: text("dataUsed"),
+  assumptions: text("assumptions"),
+  risks: text("risks"),
+  alternatives: text("alternatives"),
+  approvedAction: text("approvedAction"),
+  reviewAt: timestamp("reviewAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const privacyConsents = mysqlTable("privacyConsents", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  purpose: varchar("purpose", { length: 120 }).notNull(),
+  accepted: boolean("accepted").notNull(),
+  policyVersion: varchar("policyVersion", { length: 40 }).notNull(),
+  acceptedAt: timestamp("acceptedAt").defaultNow().notNull(),
+});

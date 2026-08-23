@@ -21,15 +21,18 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { ArrowLeftRight, BotMessageSquare, CircleCheckBig, EyeOff, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, ShieldCheck, Target } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "Panel", path: "/" },
+  { icon: ArrowLeftRight, label: "Registros", path: "/movimientos" },
+  { icon: Target, label: "Planificación", path: "/planificacion" },
+  { icon: CircleCheckBig, label: "Calidad", path: "/calidad" },
+  { icon: BotMessageSquare, label: "Asistente", path: "/asistente" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -58,23 +61,35 @@ export default function DashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
-          <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Sign in to continue
-            </h1>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
-            </p>
-          </div>
-          <Button
-            onClick={() => startLogin()}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
-          >
-            Sign in
-          </Button>
+      <div className="auth-gate">
+        <div className="auth-orbit auth-orbit-one" />
+        <div className="auth-orbit auth-orbit-two" />
+        <div className="auth-shell">
+          <section className="auth-intro">
+            <div className="auth-wordmark"><span className="auth-logo">M</span><span>Meximoney</span></div>
+            <p className="eyebrow">Finanzas manuales · espacio privado</p>
+            <h1>Tu dinero, tu ritmo,<br /><em>tu claridad.</em></h1>
+            <p>Organiza y analiza tus finanzas personales y empresariales sin conectar bancos, compartir credenciales ni ejecutar pagos.</p>
+            <div className="auth-trust-list">
+              <span><LockKeyhole className="size-4" /> Acceso autenticado</span>
+              <span><EyeOff className="size-4" /> Solo datos manuales</span>
+              <span><ShieldCheck className="size-4" /> Decisiones explicables</span>
+            </div>
+          </section>
+          <section className="auth-card">
+            <div className="auth-card-icon"><ShieldCheck className="size-5" /></div>
+            <p className="auth-card-kicker">Acceso protegido</p>
+            <h2>Tu espacio financiero es privado</h2>
+            <p>Inicia sesión para consultar tus registros, planes y revisiones en Meximoney.</p>
+            <Button
+              onClick={() => startLogin()}
+              size="lg"
+              className="w-full btn-primary"
+            >
+              Iniciar sesión
+            </Button>
+            <div className="auth-card-footer"><span>0 conexiones bancarias</span><i /> <span>0 pagos ejecutados</span></div>
+          </section>
         </div>
       </div>
     );
@@ -168,9 +183,7 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    Navigation
-                  </span>
+                  <span className="brand-mark">M</span><span className="font-semibold tracking-tight truncate brand-word">Meximoney</span>
                 </div>
               ) : null}
             </div>
@@ -224,7 +237,7 @@ function DashboardLayoutContent({
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
+                  <span>Cerrar sesión</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -248,14 +261,14 @@ function DashboardLayoutContent({
               <div className="flex items-center gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="tracking-tight text-foreground">
-                    {activeMenuItem?.label ?? "Menu"}
+                    {activeMenuItem?.label ?? "Meximoney"}
                   </span>
                 </div>
               </div>
             </div>
           </div>
         )}
-        <main className="flex-1 p-4">{children}</main>
+        <main className="flex-1 p-4 lg:p-7"><div className="mx-auto max-w-7xl">{children}</div></main>
       </SidebarInset>
     </>
   );
