@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate, formatMoney, fromCents, monthStartTimestamp, priorityLabel, scopeLabel, toCents } from "@/lib/finance";
 import { trpc } from "@/lib/trpc";
+import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { AlertTriangle, CalendarCheck2, Check, ChevronRight, CircleDollarSign, ClipboardCheck, FileClock, Goal, ListTodo, Plus, Scale, Target, Trash2, WalletCards } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -30,10 +31,12 @@ export default function Planning() {
   const utils = trpc.useUtils();
   const [view, setView] = useState<PlanningView>("budget");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [workspaceFilters, setWorkspaceFilters] = useState(emptyWorkspaceFilters);
   const refresh = async () => { await utils.finance.dashboard.invalidate(); setDialogOpen(false); };
   const currency = data?.profile?.currency ?? "MXN";
 
   if (isLoading || !data) return <div className="page-loading">Preparando tus planes financieros…</div>;
+  const scopedData = useMemo<typeof data>(() => filterWorkspaceSnapshot(data, workspaceFilters), [data, workspaceFilters]);
 
   const title = {
     budget: ["Presupuesto mensual", "Planifica importes y contrasta el presupuesto con tus movimientos manuales."],
@@ -47,12 +50,13 @@ export default function Planning() {
   return <div className="space-y-7">
     <header className="page-heading"><div><p className="eyebrow">Planificación y seguimiento</p><h1>{title[0]}</h1><p>{title[1]}</p></div><Dialog open={dialogOpen} onOpenChange={setDialogOpen}><DialogTrigger asChild><Button className="btn-primary" onClick={() => setDialogOpen(true)}><Plus className="size-4" /> {view === "budget" ? "Añadir partida" : view === "goals" ? "Crear objetivo" : view === "debts" ? "Añadir deuda" : view === "tasks" ? "Crear tarea" : view === "reviews" ? "Crear revisión" : "Registrar decisión"}</Button></DialogTrigger><DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>{view === "budget" ? "Nueva partida presupuestaria" : view === "goals" ? "Nuevo objetivo" : view === "debts" ? "Nueva deuda" : view === "tasks" ? "Nueva tarea" : view === "reviews" ? "Nueva revisión mensual" : "Nueva decisión"}</DialogTitle><DialogDescription>Se guardará únicamente en tu espacio privado de Meximoney.</DialogDescription></DialogHeader>{view === "budget" && <BudgetForm categories={data.categories} entities={data.entities} projects={data.projects} onDone={refresh} />}{view === "goals" && <GoalForm currency={currency} entities={data.entities} projects={data.projects} onDone={refresh} />}{view === "debts" && <DebtForm currency={currency} entities={data.entities} projects={data.projects} onDone={refresh} />}{view === "tasks" && <TaskForm goals={data.goals} debts={data.debts} onDone={refresh} />}{view === "reviews" && <ReviewForm snapshot={data} onDone={refresh} />}{view === "decisions" && <DecisionForm onDone={refresh} />}</DialogContent></Dialog></header>
     <Tabs className="w-full min-w-0" value={view} onValueChange={value => setView(value as PlanningView)}><TabsList className="planning-tabs">{planningTabs.map(tab => <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>)}</TabsList></Tabs>
-    {view === "budget" && <BudgetPanel snapshot={data} currency={currency} onCreate={() => setDialogOpen(true)} />}
-    {view === "goals" && <GoalsPanel snapshot={data} currency={currency} onCreate={() => setDialogOpen(true)} />}
-    {view === "debts" && <DebtsPanel snapshot={data} currency={currency} onCreate={() => setDialogOpen(true)} />}
-    {view === "tasks" && <TasksPanel snapshot={data} onCreate={() => setDialogOpen(true)} refresh={refresh} />}
-    {view === "reviews" && <ReviewsPanel snapshot={data} currency={currency} onCreate={() => setDialogOpen(true)} />}
-    {view === "decisions" && <DecisionsPanel snapshot={data} onCreate={() => setDialogOpen(true)} />}
+    <WorkspaceFilterBar snapshot={data} filters={workspaceFilters} onChange={setWorkspaceFilters} />
+    {view === "budget" && <BudgetPanel snapshot={scopedData} currency={currency} onCreate={() => setDialogOpen(true)} />}
+    {view === "goals" && <GoalsPanel snapshot={scopedData} currency={currency} onCreate={() => setDialogOpen(true)} />}
+    {view === "debts" && <DebtsPanel snapshot={scopedData} currency={currency} onCreate={() => setDialogOpen(true)} />}
+    {view === "tasks" && <TasksPanel snapshot={scopedData} onCreate={() => setDialogOpen(true)} refresh={refresh} />}
+    {view === "reviews" && <ReviewsPanel snapshot={scopedData} currency={currency} onCreate={() => setDialogOpen(true)} />}
+    {view === "decisions" && <DecisionsPanel snapshot={scopedData} onCreate={() => setDialogOpen(true)} />}
   </div>;
 }
 

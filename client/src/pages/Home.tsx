@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { formatDate, formatMoney, priorityLabel, scopeLabel } from "@/lib/finance";
 import { trpc } from "@/lib/trpc";
+import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CheckCircle2, CircleDollarSign, Landmark, ListTodo, Plus, ShieldCheck, Target, WalletCards } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
 
 function MetricCard({ icon: Icon, label, value, note, tone = "neutral" }: { icon: typeof WalletCards; label: string; value: string; note: string; tone?: "neutral" | "positive" | "warm" | "danger" }) {
@@ -9,7 +11,29 @@ function MetricCard({ icon: Icon, label, value, note, tone = "neutral" }: { icon
 }
 
 export default function Home() {
-  const { data, isLoading, error } = trpc.finance.dashboard.useQuery();
+  const { data: rawData, isLoading, error } = trpc.finance.dashboard.useQuery();
+  const [workspaceFilters, setWorkspaceFilters] = useState(emptyWorkspaceFilters);
+  const data = useMemo(() => {
+    if (!rawData) return rawData;
+    const hasFilters = Object.values(workspaceFilters).some(Boolean);
+    if (!hasFilters) return rawData;
+    const scoped = filterWorkspaceSnapshot(rawData, workspaceFilters);
+    const currency = rawData.dashboard.reportCurrency || rawData.profile?.currency || "MXN";
+    const start = new Date(rawData.dashboard.periodStart);
+    const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+    const reportAmount = (item: any) => item.reportCurrency === currency && typeof item.reportAmountCents === "number" ? item.reportAmountCents : item.currency === currency ? item.amountCents : null;
+    const currentTransactions = scoped.transactions.filter((item: any) => new Date(item.occurredAt) >= start && new Date(item.occurredAt) < end);
+    const incomeCents = currentTransactions.filter((item: any) => item.type === "income").reduce((total: number, item: any) => total + (reportAmount(item) ?? 0), 0);
+    const expenseCents = currentTransactions.filter((item: any) => item.type === "expense").reduce((total: number, item: any) => total + (reportAmount(item) ?? 0), 0);
+    const pendingConversionCount = currentTransactions.filter((item: any) => (item.type === "income" || item.type === "expense") && reportAmount(item) === null).length;
+    const accounts = scoped.accounts.filter((item: any) => item.status === "active" && item.currency === currency);
+    const debts = scoped.debts.filter((item: any) => (item.status === "active" || item.status === "review") && item.currency === currency);
+    const assetCents = accounts.reduce((total: number, item: any) => total + item.currentValueCents, 0);
+    const liabilityCents = debts.reduce((total: number, item: any) => total + item.balanceCents, 0);
+    const essentialExpensesCents = currentTransactions.filter((item: any) => item.type === "expense" && item.isEssential).reduce((total: number, item: any) => total + (reportAmount(item) ?? 0), 0);
+    const liquidCents = accounts.filter((item: any) => item.isLiquid).reduce((total: number, item: any) => total + item.currentValueCents, 0);
+    return { ...scoped, dashboard: { ...rawData.dashboard, cashFlow: { incomeCents, expenseCents, netCashFlowCents: incomeCents - expenseCents, pendingConversionCount }, netWorth: { assetCents, liabilityCents, netWorthCents: assetCents - liabilityCents }, liquidity: { liquidCents, coverageMonths: essentialExpensesCents > 0 ? liquidCents / essentialExpensesCents : null }, essentialExpensesCents } } as typeof rawData;
+  }, [rawData, workspaceFilters]);
   if (isLoading) return <div className="page-loading">Preparando tu visión financiera…</div>;
   if (error || !data) return <div className="error-state"><AlertTriangle className="size-6" /><h1>No hemos podido cargar tu espacio financiero</h1><p>Inténtalo de nuevo. Tus datos siguen protegidos y no se ha realizado ninguna acción.</p></div>;
 
@@ -27,6 +51,8 @@ export default function Home() {
       <div><p className="eyebrow">Espacio privado · {currency}</p><h1>Decide con claridad.<br /><em>Gestiona con calma.</em></h1><p className="hero-description">Una visión manual, trazable y separada de tus finanzas personales y empresariales. Sin bancos conectados, sin pagos, sin automatismos invisibles.</p></div>
       <div className="hero-aside"><div className="privacy-dot"><ShieldCheck className="size-5" /></div><div><strong>Control total de tus datos</strong><p>Solo analizamos lo que registras en Meximoney.</p></div></div>
     </section>
+
+    <WorkspaceFilterBar snapshot={data} filters={workspaceFilters} onChange={setWorkspaceFilters} />
 
     {!hasData ? <section className="onboarding-card"><div><p className="eyebrow">Primeros pasos</p><h2>Construye una base fiable antes de analizar.</h2><p>Registra una cuenta, crea tus categorías y añade tus primeros movimientos. El panel calculará tu situación a partir de datos confirmados.</p></div><div className="onboarding-actions"><Link href="/movimientos"><Button className="btn-primary"><Plus className="size-4" /> Registrar una cuenta</Button></Link><Link href="/movimientos"><Button variant="outline">Añadir movimiento</Button></Link></div></section> : null}
 

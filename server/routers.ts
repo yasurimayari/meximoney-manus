@@ -278,7 +278,7 @@ export const appRouter = router({
     }),
     accounts: router({
       save: privateFinanceProcedure.input(z.object({
-        id: z.number().int().positive().optional(), name: z.string().min(1).max(140),
+        id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().min(1).max(140),
         type: z.enum(["cash", "bank", "investment", "pension", "property", "business", "other"]),
         scope: scopeSchema, currency: z.string().length(3), currentValueCents: moneySchema,
         isLiquid: z.boolean(), valuationDate: optionalDate, status: z.enum(["active", "closed"]).default("active"), notes: z.string().max(3000).nullable().optional(),
@@ -319,7 +319,7 @@ export const appRouter = router({
       remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(financialTransactions, input.id, ctx.user.id)),
     }),
     documents: router({
-      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().min(1).max(180), type: z.enum(["statement", "invoice", "contract", "policy", "tax", "receipt", "other"]), documentClass: z.enum(["general", "identity_residency", "tax_residency", "tax_filing", "insurance", "will_estate", "property", "investment_instrument", "loan_credit", "legal_contract"]).default("general"), scope: scopeSchema, relatedEntityType: z.enum(["none", "asset", "debt", "insurance", "tax", "estate"]).default("none"), relatedEntityId: z.number().int().positive().nullable().optional(), jurisdiction: z.string().max(120).nullable().optional(), referenceUrl: z.string().url().nullable().optional(), referenceProvider: z.enum(["google_drive", "url", "other"]).default("url"), issuedAt: optionalDate, expiresAt: optionalDate, reminderAt: optionalDate, verified: z.boolean(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().min(1).max(180), type: z.enum(["statement", "invoice", "contract", "policy", "tax", "receipt", "other"]), documentClass: z.enum(["general", "identity_residency", "tax_residency", "tax_filing", "insurance", "will_estate", "property", "investment_instrument", "loan_credit", "legal_contract"]).default("general"), scope: scopeSchema, relatedEntityType: z.enum(["none", "asset", "debt", "insurance", "tax", "estate"]).default("none"), relatedEntityId: z.number().int().positive().nullable().optional(), jurisdiction: z.string().max(120).nullable().optional(), referenceUrl: z.string().url().nullable().optional(), referenceProvider: z.enum(["google_drive", "url", "other"]).default("url"), issuedAt: optionalDate, expiresAt: optionalDate, reminderAt: optionalDate, verified: z.boolean(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb(); const { id, issuedAt, expiresAt, reminderAt, ...values } = input; const payload = { ...values, issuedAt: asDate(issuedAt), expiresAt: asDate(expiresAt), reminderAt: asDate(reminderAt) };
         if (id) await db.update(financeDocuments).set(payload).where(and(eq(financeDocuments.id, id), eq(financeDocuments.userId, ctx.user.id)));
         else await db.insert(financeDocuments).values({ userId: ctx.user.id, ...payload }); return { success: true };
@@ -387,29 +387,29 @@ export const appRouter = router({
       }),
     }),
     statements: router({
-      preview: privateFinanceProcedure.input(z.object({ periodStart: z.number().int().positive(), scope: scopeSchema, entityId: z.number().int().positive().nullable().optional() })).query(async ({ ctx, input }) => {
+      preview: privateFinanceProcedure.input(z.object({ periodStart: z.number().int().positive(), scope: scopeSchema, entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), currency: z.string().length(3).nullable().optional(), reviewStatus: z.enum(["draft", "pending_review", "approved"]).nullable().optional() })).query(async ({ ctx, input }) => {
         const snapshot = await getFinanceSnapshot(ctx.user.id);
         const { start, end } = monthBounds(new Date(input.periodStart));
         const reportCurrency = snapshot.dashboard.reportCurrency;
-        const transactions = snapshot.transactions.filter(item => !input.entityId || item.entityId === input.entityId);
-        const accounts = snapshot.accounts.filter(item => item.currency === reportCurrency && (!input.entityId || item.entityId === input.entityId));
-        const debts = snapshot.debts.filter(item => item.currency === reportCurrency && (!input.entityId || item.entityId === input.entityId));
+        const transactions = snapshot.transactions.filter(item => (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency || item.reportCurrency === input.currency) && (!input.reviewStatus || item.reviewStatus === input.reviewStatus));
+        const accounts = snapshot.accounts.filter(item => item.currency === reportCurrency && (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency));
+        const debts = snapshot.debts.filter(item => item.currency === reportCurrency && (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency));
         return calculateMonthlyStatement(transactions, accounts, debts, start, end, input.scope, reportCurrency);
       }),
-      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), periodStart: z.number().int().positive(), scope: scopeSchema, entityId: z.number().int().positive().nullable().optional(), status: z.enum(["draft", "closed"]), notes: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), periodStart: z.number().int().positive(), scope: scopeSchema, entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), currency: z.string().length(3).nullable().optional(), reviewStatus: z.enum(["draft", "pending_review", "approved"]).nullable().optional(), status: z.enum(["draft", "closed"]), notes: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
         const snapshot = await getFinanceSnapshot(ctx.user.id);
         const { start, end } = monthBounds(new Date(input.periodStart));
         const reportCurrency = snapshot.dashboard.reportCurrency;
-        const transactions = snapshot.transactions.filter(item => !input.entityId || item.entityId === input.entityId);
-        const accounts = snapshot.accounts.filter(item => item.currency === reportCurrency && (!input.entityId || item.entityId === input.entityId));
-        const debts = snapshot.debts.filter(item => item.currency === reportCurrency && (!input.entityId || item.entityId === input.entityId));
+        const transactions = snapshot.transactions.filter(item => (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency || item.reportCurrency === input.currency) && (!input.reviewStatus || item.reviewStatus === input.reviewStatus));
+        const accounts = snapshot.accounts.filter(item => item.currency === reportCurrency && (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency));
+        const debts = snapshot.debts.filter(item => item.currency === reportCurrency && (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency));
         const calculated = calculateMonthlyStatement(transactions, accounts, debts, start, end, input.scope, reportCurrency);
-        const payload = { incomeCents: calculated.incomeCents, expenseCents: calculated.expenseCents, netCashFlowCents: calculated.netCashFlowCents, assetCents: calculated.assetCents, liabilityCents: calculated.liabilityCents, netWorthCents: calculated.netWorthCents, liquidCents: calculated.liquidCents, entityId: input.entityId ?? null, periodStart: start, scope: input.scope, status: input.status, notes: input.notes ?? null };
+        const payload = { incomeCents: calculated.incomeCents, expenseCents: calculated.expenseCents, netCashFlowCents: calculated.netCashFlowCents, assetCents: calculated.assetCents, liabilityCents: calculated.liabilityCents, netWorthCents: calculated.netWorthCents, liquidCents: calculated.liquidCents, entityId: input.entityId ?? null, projectId: input.projectId ?? null, filterCurrency: input.currency ?? null, filterReviewStatus: input.reviewStatus ?? null, periodStart: start, scope: input.scope, status: input.status, notes: input.notes ?? null };
         if (input.id) {
           await db.update(monthlyFinancialStatements).set(payload).where(and(eq(monthlyFinancialStatements.id, input.id), eq(monthlyFinancialStatements.userId, ctx.user.id)));
         } else {
-          const existing = await db.select({ id: monthlyFinancialStatements.id }).from(monthlyFinancialStatements).where(and(eq(monthlyFinancialStatements.userId, ctx.user.id), eq(monthlyFinancialStatements.scope, input.scope), eq(monthlyFinancialStatements.periodStart, start), input.entityId ? eq(monthlyFinancialStatements.entityId, input.entityId) : isNull(monthlyFinancialStatements.entityId))).limit(1);
+          const existing = await db.select({ id: monthlyFinancialStatements.id }).from(monthlyFinancialStatements).where(and(eq(monthlyFinancialStatements.userId, ctx.user.id), eq(monthlyFinancialStatements.scope, input.scope), eq(monthlyFinancialStatements.periodStart, start), input.entityId ? eq(monthlyFinancialStatements.entityId, input.entityId) : isNull(monthlyFinancialStatements.entityId), input.projectId ? eq(monthlyFinancialStatements.projectId, input.projectId) : isNull(monthlyFinancialStatements.projectId), input.currency ? eq(monthlyFinancialStatements.filterCurrency, input.currency) : isNull(monthlyFinancialStatements.filterCurrency), input.reviewStatus ? eq(monthlyFinancialStatements.filterReviewStatus, input.reviewStatus) : isNull(monthlyFinancialStatements.filterReviewStatus))).limit(1);
           if (existing[0]) await db.update(monthlyFinancialStatements).set(payload).where(eq(monthlyFinancialStatements.id, existing[0].id));
           else await db.insert(monthlyFinancialStatements).values({ userId: ctx.user.id, ...payload });
         }

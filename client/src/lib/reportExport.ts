@@ -14,7 +14,7 @@ function download(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function exportTransactionsCsv(snapshot: any) {
+export function buildTransactionsCsv(snapshot: any) {
   const categories = new Map(snapshot.categories.map((category: any) => [category.id, category.name]));
   const accounts = new Map(snapshot.accounts.map((account: any) => [account.id, account.name]));
   const entities = new Map((snapshot.entities ?? []).map((entity: any) => [entity.id, entity.shortCode || entity.name]));
@@ -28,17 +28,37 @@ export function exportTransactionsCsv(snapshot: any) {
       categories.get(transaction.categoryId) || "", accounts.get(transaction.accountId) || "", transaction.status, transaction.reviewStatus || "", transaction.notes || "",
     ]),
   ];
-  const csv = `\uFEFF${rows.map(row => row.map(escapeCsv).join(",")).join("\n")}`;
+  return `\uFEFF${rows.map(row => row.map(escapeCsv).join(",")).join("\n")}`;
+}
+
+export function exportTransactionsCsv(snapshot: any) {
+  const csv = buildTransactionsCsv(snapshot);
   download(new Blob([csv], { type: "text/csv;charset=utf-8" }), `meximoney-registros-${new Date().toISOString().slice(0, 10)}.csv`);
+}
+
+export function buildFinancialReportSummary(snapshot: any) {
+  const currency = snapshot.dashboard?.reportCurrency || snapshot.profile?.currency || "MXN";
+  const reportCurrency = snapshot.dashboard?.reportCurrency || snapshot.profile?.currency || "MXN";
+  const periodStart = new Date(snapshot.dashboard?.periodStart || new Date());
+  const periodEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 1);
+  const reportAmount = (transaction: any) => transaction.reportCurrency === reportCurrency && typeof transaction.reportAmountCents === "number" ? transaction.reportAmountCents : transaction.currency === reportCurrency ? transaction.amountCents : null;
+  const periodTransactions = snapshot.transactions.filter((transaction: any) => new Date(transaction.occurredAt) >= periodStart && new Date(transaction.occurredAt) < periodEnd);
+  const incomeCents = periodTransactions.filter((transaction: any) => transaction.type === "income").reduce((total: number, transaction: any) => total + (reportAmount(transaction) ?? 0), 0);
+  const expenseCents = periodTransactions.filter((transaction: any) => transaction.type === "expense").reduce((total: number, transaction: any) => total + (reportAmount(transaction) ?? 0), 0);
+  const pendingConversionCount = periodTransactions.filter((transaction: any) => (transaction.type === "income" || transaction.type === "expense") && reportAmount(transaction) === null).length;
+  const activeAccounts = snapshot.accounts.filter((account: any) => account.status === "active" && account.currency === reportCurrency);
+  const activeDebts = snapshot.debts.filter((debt: any) => (debt.status === "active" || debt.status === "review") && debt.currency === reportCurrency);
+  const cashFlow = { incomeCents, expenseCents, netCashFlowCents: incomeCents - expenseCents, pendingConversionCount };
+  const netWorth: { assetCents: number; liabilityCents: number; netWorthCents: number } = { assetCents: activeAccounts.reduce((total: number, account: any) => total + account.currentValueCents, 0), liabilityCents: activeDebts.reduce((total: number, debt: any) => total + debt.balanceCents, 0), netWorthCents: 0 };
+  const liquidity = { liquidCents: activeAccounts.filter((account: any) => account.isLiquid).reduce((total: number, account: any) => total + account.currentValueCents, 0) };
+  netWorth.netWorthCents = netWorth.assetCents - netWorth.liabilityCents;
+  return { currency, cashFlow, netWorth, liquidity };
 }
 
 export async function exportFinancialPdf(snapshot: any) {
   const { jsPDF } = await import("jspdf");
-  const currency = snapshot.dashboard?.reportCurrency || snapshot.profile?.currency || "MXN";
+  const { currency, cashFlow, netWorth, liquidity } = buildFinancialReportSummary(snapshot);
   const document = new jsPDF({ unit: "pt", format: "a4" });
-  const cashFlow = snapshot.dashboard.cashFlow;
-  const netWorth = snapshot.dashboard.netWorth;
-  const liquidity = snapshot.dashboard.liquidity;
   const taxReserve = snapshot.profile?.futureTaxReserveCents || 0;
   const title = "Informe financiero Meximoney";
   const width = document.internal.pageSize.getWidth();

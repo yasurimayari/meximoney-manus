@@ -42,6 +42,8 @@ La propietaria puede invitar a una persona gestora o revisora por correo. La per
 
 Los documentos admiten una URL manual y la etiqueta de proveedor **Google Drive**, URL u otra referencia. Meximoney conserva el enlace y metadatos; no copia archivos, no solicita autorización de Drive, no sincroniza carpetas y no utiliza almacenamiento de archivos para esta modalidad.
 
+En el Calendario, el selector de estado se refiere al **estado del evento** —planeado, completado o cancelado—. Los eventos derivados de documentos, tareas, deudas o fechas fiscales no tienen un estado de revisión homogéneo, por lo que no se presentan como movimientos aprobados o pendientes. El estado de revisión de movimientos se mantiene disponible en Panel, Registros, Analítica, Estados y Exportar.
+
 ## Límites del asistente Mexi
 
 Mexi recibe una síntesis estructurada de los datos manuales guardados en el espacio de la persona usuaria. No consulta internet, no obtiene precios actuales, no conecta entidades bancarias y no ejecuta transferencias, pagos, compras, ventas ni contrataciones. Si el servicio de IA no estuviera disponible, muestra una respuesta de indisponibilidad sin modificar ningún registro.

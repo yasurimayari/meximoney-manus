@@ -61,8 +61,19 @@
 - [x] Diseñar e implementar onboarding privado para configurar perfil, régimen PFAE general, moneda base, confirmación humana y preferencias iniciales.
 - [x] Crear entidades abiertas, proyectos y monedas trazables con tipo de cambio manual, naturaleza de ingreso y consolidación en moneda base.
 - [x] Añadir colaboración segura entre propietaria y gestor con invitación, permisos granulares y flujo de revisión/aprobación de registros.
-- [ ] Adaptar registros, panel, analítica, estados, calendario y exportaciones al filtro por entidad, proyecto, moneda y estado de revisión.
+- [x] Adaptar registros, panel, analítica, estados, calendario y exportaciones al filtro por entidad, proyecto, moneda y estado de revisión.
 - [x] Configurar documentos como referencias privadas de Google Drive y metadatos, sin duplicar archivos externos ni introducir voz o conexión bancaria.
 - [x] Validar aislamiento, flujos de aprobación, conversiones manuales, móvil y accesibilidad de la Fase A.
 - [x] Evitar invitaciones de gestor duplicadas para el mismo espacio y correo, conservando una única invitación vigente con permisos actualizables.
 - [x] Permitir a la propietaria revocar una invitación o colaboración aceptada desde el espacio privado.
+- [x] Completar Estados con filtros de proyecto, moneda y revisión aplicados al cálculo, la vista previa y el guardado.
+- [x] Completar Calendario con un filtro visible por estado de revisión o documentar y rediseñar el requisito de ese filtro para eventos.
+- [x] Completar CSV y PDF con filtros de entidad, proyecto, moneda y revisión, y validar los filtros transversales en QA.
+- [x] Verificar en Registros el filtrado coherente de movimientos, cuentas y documentos mediante pruebas o QA específica.
+- [x] Recalcular todos los KPI de Analítica y la vista previa de Exportar desde el conjunto filtrado.
+- [x] Ejecutar y documentar una QA funcional de filtros por vista, incluyendo Registros y exportaciones descargadas.
+- [x] Ejecutar QA funcional del Panel y validar exclusiones de filtros por entidad, proyecto, moneda y revisión.
+- [x] Descargar y verificar CSV/PDF filtrados desde Exportar durante la QA.
+- [x] Ejecutar QA funcional de Calendario según el estado propio del evento documentado.
+- [x] Verificar una cuenta filtrada junto con movimiento y documento en Registros.
+- [x] Extraer y comprobar el texto del PDF filtrado durante la QA.
