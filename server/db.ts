@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   accounts,
   budgets,
+  calendarEvents,
   categories,
   debts,
   decisionRecords,
@@ -13,6 +14,7 @@ import {
   financialTransactions,
   InsertUser,
   monthlyReviews,
+  monthlyFinancialStatements,
   privacyConsents,
   users,
 } from "../drizzle/schema";
@@ -119,7 +121,7 @@ export async function getProfile(userId: number) {
 
 export async function getFinanceSnapshot(userId: number, referenceDate = new Date()) {
   const db = await requireDb();
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, documentRows, decisionRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarEventRows, documentRows, decisionRows] = await Promise.all([
     getProfile(userId),
     db.select().from(accounts).where(eq(accounts.userId, userId)),
     db.select().from(categories).where(eq(categories.userId, userId)),
@@ -129,6 +131,8 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(financialGoals).where(eq(financialGoals.userId, userId)),
     db.select().from(financeTasks).where(eq(financeTasks.userId, userId)),
     db.select().from(monthlyReviews).where(eq(monthlyReviews.userId, userId)),
+    db.select().from(monthlyFinancialStatements).where(eq(monthlyFinancialStatements.userId, userId)),
+    db.select().from(calendarEvents).where(eq(calendarEvents.userId, userId)),
     db.select().from(financeDocuments).where(eq(financeDocuments.userId, userId)),
     db.select().from(decisionRecords).where(eq(decisionRecords.userId, userId)),
   ]);
@@ -169,13 +173,15 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     goals: goalRows,
     tasks: taskRows,
     reviews: reviewRows,
+    statements: statementRows,
+    calendarEvents: calendarEventRows,
     documents: documentRows,
     decisions: decisionRows,
     dashboard: { periodStart: start, cashFlow, netWorth, liquidity, essentialExpensesCents, qualityIssues },
   };
 }
 
-export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords, id: number, userId: number) {
+export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements, id: number, userId: number) {
   const db = await requireDb();
   await db.delete(table).where(and(eq(table.id, id), eq(table.userId, userId)));
 }
@@ -185,9 +191,11 @@ export async function deleteAllFinancialData(userId: number) {
   await db.transaction(async tx => {
     await tx.delete(financialTransactions).where(eq(financialTransactions.userId, userId));
     await tx.delete(budgets).where(eq(budgets.userId, userId));
+    await tx.delete(calendarEvents).where(eq(calendarEvents.userId, userId));
     await tx.delete(financeDocuments).where(eq(financeDocuments.userId, userId));
     await tx.delete(financeTasks).where(eq(financeTasks.userId, userId));
     await tx.delete(monthlyReviews).where(eq(monthlyReviews.userId, userId));
+    await tx.delete(monthlyFinancialStatements).where(eq(monthlyFinancialStatements.userId, userId));
     await tx.delete(decisionRecords).where(eq(decisionRecords.userId, userId));
     await tx.delete(financialGoals).where(eq(financialGoals.userId, userId));
     await tx.delete(debts).where(eq(debts.userId, userId));

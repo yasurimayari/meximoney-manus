@@ -18,11 +18,15 @@ El inicio de sesión OAuth anterior puede depender de un servicio de autenticaci
 | Calidad | Permite configurar la moneda base del perfil. | La reserva fiscal tiene una fecha estimada opcional. | El contexto permite declarar residencia y restricciones sin mezclar datos de terceros. |
 | Analítica | Formatea indicadores y gráficos con la moneda del perfil. | El selector permite consultar 3, 6 o 12 meses. | Los datos proceden de registros con ámbito y no combinan fuentes externas. |
 | Asistente Mexi | Explica importes en la moneda configurada cuando existen registros. | Usa el resumen del periodo actual disponible. | Analiza exclusivamente el conjunto manual del espacio privado, sin fuentes externas. |
+| Calendario | Muestra importes estimados en la moneda indicada en cada evento. | Presenta el mes elegido y recurrencias manuales mensuales, trimestrales o anuales. | Cada evento conserva ámbito personal, empresarial o mixto; además muestra fechas derivadas de deudas, tareas y documentos del mismo espacio. |
+| Estados | Usa la moneda base del perfil en resultados, flujo, activos, pasivos, patrimonio y liquidez. | Cada cierre se guarda para un mes definido. | El selector calcula y archiva por separado los ámbitos personal, empresarial o consolidado manual. |
 | Exportar | El CSV conserva la moneda de cada movimiento y el PDF usa la moneda base. | El PDF incluye el periodo del informe. | Los archivos reflejan el ámbito registrado y no contienen credenciales bancarias. |
 
 ## Controles de interacción
 
-Los formularios muestran estados vacíos, límites de caracteres, mensajes de error y confirmaciones de guardado o descarga. Los controles de navegación mantienen etiquetas visibles, orden lógico de teclado, foco estándar y opciones agrupadas por áreas: Panel, Registros, Planificación, Calidad, Analítica, Asistente y Exportar.
+Los formularios muestran estados vacíos, límites de caracteres, mensajes de error y confirmaciones de guardado o descarga. Los controles de navegación mantienen etiquetas visibles, orden lógico de teclado, foco estándar y opciones agrupadas por áreas: Panel, Registros, Planificación, Calidad, Analítica, Calendario, Estados, Asistente y Exportar.
+
+Los documentos permiten clasificar referencias de residencia, fiscalidad, seguros, testamento o sucesión, propiedades, instrumentos de inversión, créditos y contratos. Los vínculos con activos y deudas se guardan como referencia explícita dentro de Meximoney. En cambio, los documentos de seguros u obligaciones fiscales se **clasifican y recuerdan manualmente**: no se vinculan a una aseguradora, al SAT ni a ninguna entidad externa, y no activan trámites, pagos o avisos automáticos.
 
 La aceptación del consentimiento explícito es necesaria antes de guardar o analizar información financiera. La pantalla de Calidad permite también eliminar todos los datos financieros manuales del espacio, sin convertir esta acción en un pago, transferencia o cambio de inversión.
 

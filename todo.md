@@ -39,3 +39,11 @@
 - [x] Historial duplicado: corregir el acceso rápido de ingresos para que abra un movimiento de tipo ingreso y no el tipo de gasto predeterminado.
 - [x] Validar con una sesión autenticada real las rutas móviles de panel, registros, planificación, calidad, analítica y asistente, y documentar hallazgos visuales por ruta.
 - [x] Probar y documentar en la interfaz protegida los estados de error y validación de formularios, además de navegación básica por teclado y foco.
+- [x] Diseñar e implementar un calendario financiero manual con eventos, recurrencias y vínculos a deudas, documentos, impuestos y tareas, sin integración externa ni ejecución automática.
+- [x] Crear estados financieros mensuales privados: resultados, flujo de efectivo y situación patrimonial, con desglose personal/empresarial y exportación dentro del informe PDF.
+- [x] Ampliar documentos con clasificaciones legales y patrimoniales, fechas clave y relaciones explícitas con activos, deudas, seguros y obligaciones fiscales.
+- [x] Validar cálculos, aislamiento por usuario, accesibilidad y respuesta móvil de calendario, estados mensuales y documentos ampliados.
+- [x] Acotar y documentar las relaciones de documentos de seguros y obligaciones fiscales como clasificación manual, sin crear entidades externas ni automatismos.
+- [x] Añadir pruebas de aislamiento por usuario para eventos de calendario, estados mensuales y documentos especializados.
+- [x] Ejecutar y documentar QA de foco y teclado en Calendario y Estados mensuales.
+- [x] Corregir y repetir la QA de teclado en Estados para demostrar un cambio real de foco entre controles interactivos y documentar el resultado persistente.

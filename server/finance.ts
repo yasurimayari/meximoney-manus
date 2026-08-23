@@ -62,6 +62,37 @@ export function calculateLiquidity(
   };
 }
 
+type Scope = "personal" | "business" | "mixed";
+
+function isInScope(itemScope: Scope, selectedScope: Scope) {
+  return selectedScope === "mixed" ? true : itemScope === selectedScope;
+}
+
+export function calculateMonthlyStatement(
+  transactions: Array<ManualTransaction & { scope: Scope }>,
+  accounts: Array<{ currentValueCents: number; isLiquid: boolean; status: "active" | "closed"; scope: Scope }>,
+  debts: Array<{ balanceCents: number; status: "active" | "paid" | "review"; scope: Scope }>,
+  start: Date,
+  end: Date,
+  scope: Scope
+) {
+  const cashFlow = withNetCashFlow(
+    summarizeCashFlow(
+      transactions.filter(item => isInScope(item.scope, scope)),
+      start,
+      end
+    )
+  );
+  const statementAccounts = accounts.filter(item => isInScope(item.scope, scope));
+  const statementDebts = debts.filter(item => isInScope(item.scope, scope));
+  const netWorth = calculateNetWorth(statementAccounts, statementDebts);
+  const liquidCents = statementAccounts
+    .filter(account => account.status === "active" && account.isLiquid)
+    .reduce((total, account) => total + account.currentValueCents, 0);
+
+  return { ...cashFlow, ...netWorth, liquidCents };
+}
+
 export function transferIntegrityIssues(transactions: ManualTransaction[]) {
   const groups = new Map<string, ManualTransaction[]>();
   transactions

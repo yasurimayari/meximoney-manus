@@ -103,6 +103,29 @@ export async function exportFinancialPdf(snapshot: any) {
     });
   }
   y += 34;
+  const statements = (snapshot.statements ?? []).slice().sort((a: any, b: any) => new Date(b.periodStart).getTime() - new Date(a.periodStart).getTime()).slice(0, 8);
+  if (statements.length > 0) {
+    if (y > 610) { document.addPage(); y = 54; }
+    document.setFont("helvetica", "bold");
+    document.setFontSize(12);
+    document.setTextColor(28, 56, 54);
+    document.text("Estados mensuales guardados", 44, y);
+    y += 20;
+    document.setFontSize(8.5);
+    statements.forEach((statement: any) => {
+      if (y > 740) { document.addPage(); y = 54; }
+      document.setDrawColor(224, 233, 229);
+      document.line(44, y + 7, width - 44, y + 7);
+      document.setFont("helvetica", "normal");
+      const scope = statement.scope === "business" ? "Empresarial" : statement.scope === "mixed" ? "Consolidado" : "Personal";
+      document.text(`${formatDate(statement.periodStart)} · ${scope} · ${statement.status === "closed" ? "Cerrado" : "Borrador"}`, 44, y);
+      document.text(`Flujo: ${formatMoney(statement.netCashFlowCents, currency)}`, 280, y);
+      document.setFont("helvetica", "bold");
+      document.text(`Patrimonio: ${formatMoney(statement.netWorthCents, currency)}`, width - 44, y, { align: "right" });
+      y += 22;
+    });
+    y += 20;
+  }
   if (y > 710) { document.addPage(); y = 54; }
   document.setFont("helvetica", "bold");
   document.setFontSize(12);
@@ -110,7 +133,7 @@ export async function exportFinancialPdf(snapshot: any) {
   document.setFont("helvetica", "normal");
   document.setFontSize(9);
   document.setTextColor(90, 107, 104);
-  const note = "Este informe organiza exclusivamente los datos manuales de Meximoney. No es una declaración fiscal, una recomendación de inversión ni una instrucción de pago.";
+  const note = "Este informe organiza exclusivamente los datos manuales de Meximoney. Los estados mensuales guardados son fotos manuales de los importes registrados al cierre. No es una declaración fiscal, una recomendación de inversión ni una instrucción de pago.";
   document.text(document.splitTextToSize(note, width - 88), 44, y + 18);
   document.save(`meximoney-informe-${new Date().toISOString().slice(0, 10)}.pdf`);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateLiquidity, calculateNetWorth, monthBounds, summarizeCashFlow, transferIntegrityIssues, withNetCashFlow } from "./finance";
+import { calculateLiquidity, calculateMonthlyStatement, calculateNetWorth, monthBounds, summarizeCashFlow, transferIntegrityIssues, withNetCashFlow } from "./finance";
 
 describe("cálculos financieros manuales", () => {
   it("excluye transferencias internas del flujo de caja", () => {
@@ -46,5 +46,23 @@ describe("cálculos financieros manuales", () => {
     ]);
 
     expect(issues).toEqual(["faltante", "distinto"]);
+  });
+
+  it("construye un estado mensual separado por ámbito y excluye transferencias", () => {
+    const { start, end } = monthBounds(new Date("2026-08-15T12:00:00Z"));
+    const statement = calculateMonthlyStatement([
+      { type: "income", scope: "personal", amountCents: 100000, occurredAt: new Date("2026-08-03T12:00:00Z"), categoryId: 1, accountId: 1, transferGroupId: null },
+      { type: "expense", scope: "personal", amountCents: 35000, occurredAt: new Date("2026-08-05T12:00:00Z"), categoryId: 2, accountId: 1, transferGroupId: null },
+      { type: "transfer_out", scope: "personal", amountCents: 12000, occurredAt: new Date("2026-08-06T12:00:00Z"), categoryId: null, accountId: 1, transferGroupId: "a" },
+      { type: "income", scope: "business", amountCents: 90000, occurredAt: new Date("2026-08-08T12:00:00Z"), categoryId: 3, accountId: 2, transferGroupId: null },
+    ], [
+      { currentValueCents: 150000, isLiquid: true, status: "active" as const, scope: "personal" as const },
+      { currentValueCents: 300000, isLiquid: false, status: "active" as const, scope: "business" as const },
+    ], [
+      { balanceCents: 40000, status: "active" as const, scope: "personal" as const },
+      { balanceCents: 20000, status: "paid" as const, scope: "business" as const },
+    ], start, end, "personal");
+
+    expect(statement).toEqual({ incomeCents: 100000, expenseCents: 35000, netCashFlowCents: 65000, assetCents: 150000, liabilityCents: 40000, netWorthCents: 110000, liquidCents: 150000 });
   });
 });

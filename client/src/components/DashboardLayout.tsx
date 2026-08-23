@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeftRight, BarChart3, BotMessageSquare, CircleCheckBig, EyeOff, FileDown, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, ShieldCheck, Target } from "lucide-react";
+import { ArrowLeftRight, BarChart3, BotMessageSquare, CalendarDays, CircleCheckBig, EyeOff, FileDown, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, ShieldCheck, Target, BookOpenCheck } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -37,6 +37,8 @@ const menuItems = [
   { icon: Target, label: "Planificación", path: "/planificacion" },
   { icon: CircleCheckBig, label: "Calidad", path: "/calidad" },
   { icon: BarChart3, label: "Analítica", path: "/analitica" },
+  { icon: CalendarDays, label: "Calendario", path: "/calendario" },
+  { icon: BookOpenCheck, label: "Estados", path: "/estados" },
   { icon: BotMessageSquare, label: "Asistente", path: "/asistente" },
   { icon: FileDown, label: "Exportar", path: "/exportar" },
 ];
