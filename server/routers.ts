@@ -42,6 +42,7 @@ async function setLocalSession(ctx: { req: any; res: any }, user: { openId: stri
     ...getSessionCookieOptions(ctx.req),
     maxAge: 365 * 24 * 60 * 60 * 1000,
   });
+  return token;
 }
 
 const privateFinanceProcedure = protectedProcedure.use(async ({ ctx, next }) => {
@@ -99,8 +100,8 @@ export const appRouter = router({
       const user = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
       if (!user[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No se pudo crear la cuenta." });
       await db.insert(localCredentials).values({ userId: user[0].id, email: input.email, passwordHash: await hashPassword(input.password) });
-      await setLocalSession(ctx, user[0]);
-      return { success: true, user: { name: user[0].name, email: user[0].email } };
+      const sessionToken = await setLocalSession(ctx, user[0]);
+      return { success: true, sessionToken, user: { name: user[0].name, email: user[0].email } };
     }),
     login: publicProcedure.input(credentialInput).mutation(async ({ ctx, input }) => {
       const db = await requireDb();
@@ -110,8 +111,8 @@ export const appRouter = router({
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Correo o contraseña incorrectos." });
       }
       await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, record.user.id));
-      await setLocalSession(ctx, record.user);
-      return { success: true, user: { name: record.user.name, email: record.user.email } };
+      const sessionToken = await setLocalSession(ctx, record.user);
+      return { success: true, sessionToken, user: { name: record.user.name, email: record.user.email } };
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -267,15 +268,25 @@ export const appRouter = router({
     assistant: router({
       chat: privateFinanceProcedure.input(z.object({ message: z.string().min(1).max(1600) })).mutation(async ({ ctx, input }) => {
         const snapshot = await getFinanceSnapshot(ctx.user.id);
-        const response = await invokeLLM({
-          model: "gpt-5-mini",
-          reasoning: { effort: "low" },
-          messages: [
-            { role: "system", content: `Eres Mexi, el asistente privado y explicable de Meximoney. ${manualOnlyNotice} Usa exclusivamente el JSON de registros manuales suministrado en este mensaje y la pregunta de la usuaria. No uses búsqueda web, conocimientos externos, precios de mercado, normas fiscales actuales ni herramientas. No inventes datos. Si falta información, dilo de forma explícita y propone qué registro manual se debe crear o actualizar. No des instrucciones para transferir, pagar, comprar, vender, contratar ni cancelar productos financieros. Ofrece análisis educativo, explica cálculos y distingue entre datos, supuestos, riesgos y próximos pasos. Responde siempre en español y usa importes en centavos solo si explicas el formato. Cierra con la frase: "Sin conexiones bancarias ni acciones financieras ejecutadas."` },
-            { role: "user", content: `REGISTROS MANUALES DE MEXIMONEY:\n${createManualSnapshotText(snapshot)}\n\nPREGUNTA DE LA USUARIA:\n${input.message}` },
-          ],
-        });
-        return { content: String(response.choices[0]?.message?.content ?? "No pude preparar el análisis en este momento."), notice: manualOnlyNotice };
+        try {
+          const response = await invokeLLM({
+            model: "gpt-5-mini",
+            reasoning: { effort: "low" },
+            maxTokens: 1_200,
+            requestTimeoutMs: 45_000,
+            maxRetries: 0,
+            messages: [
+              { role: "system", content: `Eres Mexi, el asistente privado y explicable de Meximoney. ${manualOnlyNotice} Usa exclusivamente el JSON de registros manuales suministrado en este mensaje y la pregunta de la usuaria. No uses búsqueda web, conocimientos externos, precios de mercado, normas fiscales actuales ni herramientas. No inventes datos. Si falta información, dilo de forma explícita y propone qué registro manual se debe crear o actualizar. No des instrucciones para transferir, pagar, comprar, vender, contratar ni cancelar productos financieros. Ofrece análisis educativo, explica cálculos y distingue entre datos, supuestos, riesgos y próximos pasos. Responde siempre en español y usa importes en centavos solo si explicas el formato. Cierra con la frase: "Sin conexiones bancarias ni acciones financieras ejecutadas."` },
+              { role: "user", content: `REGISTROS MANUALES DE MEXIMONEY:\n${createManualSnapshotText(snapshot)}\n\nPREGUNTA DE LA USUARIA:\n${input.message}` },
+            ],
+          });
+          const content = response.choices[0]?.message?.content;
+          const normalizedContent = typeof content === "string" ? content.trim() : "";
+          return { content: normalizedContent || "Mexi recibió tus registros manuales, pero el modelo no devolvió texto utilizable. Reintenta la consulta; tus datos no se han modificado.", notice: manualOnlyNotice };
+        } catch (error) {
+          console.error("[Mexi] Analysis unavailable:", error);
+          return { content: "Mexi no pudo obtener una respuesta del servicio de IA en este momento. Tus datos no se han modificado. Puedes volver a intentarlo más tarde o revisar el panel, los controles de calidad y el cierre mensual manual.", notice: manualOnlyNotice };
+        }
       }),
     }),
   }),

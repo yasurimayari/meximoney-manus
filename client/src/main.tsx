@@ -43,6 +43,15 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       headers() {
+        // A local email/password login keeps this signed token only for the
+        // current tab. It prevents the preview runtime's Manus token from
+        // taking precedence over the user's own Meximoney session.
+        try {
+          const localToken = sessionStorage.getItem("meximoney-local-session");
+          if (localToken) return { "X-Meximoney-Session": localToken };
+        } catch {
+          // sessionStorage unavailable
+        }
         // Preview auto-login fallback: when the browser blocks iframe cookies
         // (Safari ITP / private browsing / WebView), the runtime mirrors the
         // session into sessionStorage so we can forward it as a Bearer token.

@@ -33,6 +33,7 @@ export default function Records() {
   const [editingAccount, setEditingAccount] = useState<any>(null);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingDocument, setEditingDocument] = useState<any>(null);
+  const [initialMovementType, setInitialMovementType] = useState<keyof typeof typeLabel>("expense");
 
   const refresh = async () => {
     await utils.finance.dashboard.invalidate();
@@ -52,8 +53,9 @@ export default function Records() {
   const categories = data?.categories ?? [];
   const transactions = useMemo(() => (data?.transactions ?? []).slice().sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()), [data?.transactions]);
 
-  const openCreate = (nextMode: RecordMode) => {
+  const openCreate = (nextMode: RecordMode, movementType: keyof typeof typeLabel = "expense") => {
     setMode(nextMode);
+    setInitialMovementType(movementType);
     setEditingMovement(null);
     setEditingAccount(null);
     setEditingCategory(null);
@@ -88,7 +90,7 @@ export default function Records() {
                 <TabsTrigger value="document">Documento</TabsTrigger>
               </TabsList>
             </Tabs>
-            {mode === "movement" && <MovementForm accounts={accounts} categories={categories} defaultCurrency={data?.profile?.currency ?? "MXN"} editing={editingMovement} onDone={refresh} />}
+            {mode === "movement" && <MovementForm accounts={accounts} categories={categories} defaultCurrency={data?.profile?.currency ?? "MXN"} initialType={initialMovementType} editing={editingMovement} onDone={refresh} />}
             {mode === "account" && <AccountForm defaultCurrency={data?.profile?.currency ?? "MXN"} editing={editingAccount} onDone={refresh} />}
             {mode === "category" && <CategoryForm editing={editingCategory} onDone={refresh} />}
             {mode === "document" && <DocumentForm editing={editingDocument} onDone={refresh} />}
@@ -98,12 +100,12 @@ export default function Records() {
 
       <section className="record-shortcuts" aria-label="Crear registros">
         {[
-          { mode: "movement" as const, icon: ArrowDownLeft, title: "Ingreso", note: "Cobros y entradas manuales" },
-          { mode: "movement" as const, icon: ArrowUpRight, title: "Gasto", note: "Pagos y salidas manuales" },
+          { mode: "movement" as const, movementType: "income" as const, icon: ArrowDownLeft, title: "Ingreso", note: "Cobros y entradas manuales" },
+          { mode: "movement" as const, movementType: "expense" as const, icon: ArrowUpRight, title: "Gasto", note: "Pagos y salidas manuales" },
           { mode: "account" as const, icon: WalletCards, title: "Cuenta o activo", note: "Efectivo, banco, inversión o empresa" },
           { mode: "document" as const, icon: FileText, title: "Documento", note: "Enlace de respaldo y vencimientos" },
         ].map(item => (
-          <button key={item.title} onClick={() => openCreate(item.mode)} className="shortcut-card">
+          <button key={item.title} onClick={() => openCreate(item.mode, "movementType" in item ? item.movementType : "expense")} className="shortcut-card">
             <item.icon className="size-5" /><span><strong>{item.title}</strong><small>{item.note}</small></span><Plus className="size-4 shortcut-plus" />
           </button>
         ))}
@@ -143,9 +145,9 @@ function EmptyRecords({ icon: Icon, title, description, action, actionLabel, com
   return <div className={`empty-state ${compact ? "empty-compact" : ""}`}><div className="empty-icon"><Icon className="size-5" /></div><div><h3>{title}</h3><p>{description}</p>{!compact && <Button variant="outline" className="mt-4" onClick={action}>{actionLabel}</Button>}</div>{compact && <Button variant="outline" onClick={action}>{actionLabel}</Button>}</div>;
 }
 
-function MovementForm({ accounts, categories, defaultCurrency, editing, onDone }: { accounts: any[]; categories: any[]; defaultCurrency: string; editing: any; onDone: () => void }) {
+function MovementForm({ accounts, categories, defaultCurrency, initialType, editing, onDone }: { accounts: any[]; categories: any[]; defaultCurrency: string; initialType: keyof typeof typeLabel; editing: any; onDone: () => void }) {
   const mutation = trpc.finance.transactions.save.useMutation({ onSuccess: () => { toast.success("Movimiento guardado"); onDone(); }, onError: error => toast.error(error.message) });
-  const [form, setForm] = useState(() => ({ type: editing?.type ?? "expense", scope: editing?.scope ?? "personal", amount: editing ? fromCents(editing.amountCents) : "", currency: editing?.currency ?? defaultCurrency, accountId: editing?.accountId?.toString() ?? "", categoryId: editing?.categoryId?.toString() ?? "", occurredAt: editing?.occurredAt ? new Date(editing.occurredAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10), isEssential: editing?.isEssential ?? false, status: editing?.status ?? "confirmed", transferGroupId: editing?.transferGroupId ?? "", notes: editing?.notes ?? "" }));
+  const [form, setForm] = useState(() => ({ type: editing?.type ?? initialType, scope: editing?.scope ?? "personal", amount: editing ? fromCents(editing.amountCents) : "", currency: editing?.currency ?? defaultCurrency, accountId: editing?.accountId?.toString() ?? "", categoryId: editing?.categoryId?.toString() ?? "", occurredAt: editing?.occurredAt ? new Date(editing.occurredAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10), isEssential: editing?.isEssential ?? false, status: editing?.status ?? "confirmed", transferGroupId: editing?.transferGroupId ?? "", notes: editing?.notes ?? "" }));
   const submit = (event: FormEvent) => { event.preventDefault(); mutation.mutate({ id: editing?.id, type: form.type, scope: form.scope, amountCents: toCents(form.amount), currency: form.currency.toUpperCase(), accountId: form.accountId ? Number(form.accountId) : null, categoryId: form.categoryId ? Number(form.categoryId) : null, occurredAt: new Date(`${form.occurredAt}T12:00:00`).getTime(), isEssential: form.isEssential, status: form.status, transferGroupId: form.transferGroupId || null, notes: form.notes || null }); };
   const isTransfer = form.type.startsWith("transfer");
   return <form className="form-grid" onSubmit={submit}><div className="form-field"><Label>Tipo</Label><select value={form.type} onChange={event => setForm({ ...form, type: event.target.value as any })}>{Object.entries(typeLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div><div className="form-field"><Label>Área</Label><select value={form.scope} onChange={event => setForm({ ...form, scope: event.target.value as any })}><option value="personal">Personal</option><option value="business">Empresarial</option><option value="mixed">Mixto</option></select></div><div className="form-field"><Label>Importe</Label><Input type="number" min="0.01" step="0.01" required value={form.amount} onChange={event => setForm({ ...form, amount: event.target.value })} /></div><div className="form-field"><Label>Moneda</Label><Input maxLength={3} required value={form.currency} onChange={event => setForm({ ...form, currency: event.target.value.toUpperCase() })} /></div><div className="form-field"><Label>Fecha</Label><Input type="date" required value={form.occurredAt} onChange={event => setForm({ ...form, occurredAt: event.target.value })} /></div><div className="form-field"><Label>Cuenta</Label><select value={form.accountId} onChange={event => setForm({ ...form, accountId: event.target.value })}><option value="">Sin cuenta / pendiente</option>{accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}</select></div>{!isTransfer && <div className="form-field"><Label>Categoría</Label><select value={form.categoryId} onChange={event => setForm({ ...form, categoryId: event.target.value })}><option value="">Sin categoría / pendiente</option>{categories.filter(category => category.isActive).map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>}{isTransfer && <div className="form-field"><Label>Grupo de transferencia</Label><Input placeholder="Mismo identificador para entrada y salida" value={form.transferGroupId} onChange={event => setForm({ ...form, transferGroupId: event.target.value })} /></div>}<div className="form-field"><Label>Calidad del dato</Label><select value={form.status} onChange={event => setForm({ ...form, status: event.target.value as any })}><option value="confirmed">Confirmado</option><option value="estimated">Estimado</option><option value="needs_review">Pendiente de revisar</option></select></div><div className="switch-row"><Switch checked={form.isEssential} onCheckedChange={checked => setForm({ ...form, isEssential: checked })} /><span>Gasto esencial</span></div><div className="form-field span-2"><Label>Descripción o nota</Label><Textarea placeholder="Ej. Compra semanal, factura, aclaración" value={form.notes} onChange={event => setForm({ ...form, notes: event.target.value })} /></div><div className="form-actions span-2"><Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Guardando…" : editing ? "Guardar cambios" : "Guardar movimiento"}</Button></div></form>;

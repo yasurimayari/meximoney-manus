@@ -61,10 +61,25 @@ describe("auth.register", () => {
       password: "UnaClaveMuyLarga#2026",
     });
 
-    expect(result).toEqual({ success: true, user: { name: "Ana", email: "ana@example.com" } });
+    expect(result).toEqual({ success: true, sessionToken: "local-session-token", user: { name: "Ana", email: "ana@example.com" } });
     expect(mocks.insertedUsers[0]).toMatchObject({ email: "ana@example.com", loginMethod: "email_password" });
     expect(mocks.insertedCredentials[0]).toMatchObject({ userId: 44, email: "ana@example.com" });
     expect(String(mocks.insertedCredentials[0]?.passwordHash)).not.toContain("UnaClaveMuyLarga#2026");
     expect(cookie).toHaveBeenCalledWith("app_session_id", "local-session-token", expect.objectContaining({ httpOnly: true, secure: true }));
+  });
+
+  it("rechaza una contraseña corta antes de persistir una cuenta", async () => {
+    const { ctx } = createContext();
+    mocks.insertedUsers.length = 0;
+    mocks.insertedCredentials.length = 0;
+
+    await expect(appRouter.createCaller(ctx).auth.register({
+      name: "Ana",
+      email: "ana@example.com",
+      password: "corta",
+    })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
+    expect(mocks.insertedUsers).toHaveLength(0);
+    expect(mocks.insertedCredentials).toHaveLength(0);
   });
 });

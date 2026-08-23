@@ -15,13 +15,27 @@
 - [x] Añadir estados vacíos, formularios validados, manejo de errores y navegación accesible.
 - [x] Escribir y ejecutar pruebas Vitest para los cálculos financieros, aislamiento por usuario y validaciones críticas.
 - [x] Verificar la interfaz en vistas de escritorio y móvil, corregir errores y marcar todas las tareas completadas.
-- [ ] Verificar con sesión autenticada las vistas de panel, registros, planificación, calidad y asistente en escritorio y móvil, y corregir hallazgos visuales.
-- [ ] Documentar la presencia consistente de moneda, periodo y separación personal/empresarial en las vistas principales.
-- [ ] Reforzar y verificar los mensajes de error, la validación de formularios y la navegación accesible de los flujos protegidos.
+- [x] Verificar con sesión autenticada las vistas de panel, registros, planificación, calidad y asistente en escritorio y móvil, y corregir hallazgos visuales.
+- [x] Documentar la presencia consistente de moneda, periodo y separación personal/empresarial en las vistas principales.
+- [x] Reforzar y verificar los mensajes de error, la validación de formularios y la navegación accesible de los flujos protegidos.
 - [x] Implementar registro e inicio de sesión visibles con correo y contraseña como alternativa al acceso OAuth actual.
 - [x] Crear un panel analítico con gráficos interactivos para ingresos, gastos, ahorro, impuestos futuros, patrimonio e inversiones manuales.
 - [x] Añadir exportación descargable de registros y un informe financiero en PDF basado solo en datos manuales.
 - [x] Confirmar en la interfaz el acceso al asistente Mexi y sus límites de análisis interno sin ejecución financiera.
-- [ ] Probar los nuevos flujos de acceso, analítica y exportación, y documentar el error OAuth como dependencia externa del acceso previo.
+- [x] Probar los nuevos flujos de acceso, analítica y exportación, y documentar el error OAuth como dependencia externa del acceso previo.
 - [x] Añadir visualizaciones explícitas de patrimonio neto e impuestos futuros o reserva fiscal dentro del panel analítico.
-- [ ] Verificar con sesión autenticada que los gráficos interactivos representan todos los conceptos analíticos prometidos.
+- [x] Verificar con sesión autenticada que los gráficos interactivos representan todos los conceptos analíticos prometidos.
+- [x] Validar en móvil las vistas autenticadas de panel, registros, planificación, calidad, analítica y asistente, y corregir hallazgos visuales si aparecen.
+- [x] Crear documentación explícita que enumere por vista la moneda, el periodo y la separación personal/empresarial visibles en la interfaz.
+- [x] Probar y documentar estados de error, validación de formularios protegidos y accesibilidad básica de navegación mediante teclado y foco.
+- [x] Registrar en el proyecto que el acceso OAuth previo depende de un servicio externo y que el acceso local por correo lo sustituye cuando ese servicio falla.
+- [x] Cargar datos manuales mínimos de prueba y verificar que la analítica muestra ingresos, gastos, ahorro, patrimonio, inversiones y reserva fiscal; después, limpiar esos datos temporales.
+- [x] Corregir el acceso rápido de ingresos para que abra un movimiento de tipo ingreso y no el tipo de gasto predeterminado.
+- [x] Historial duplicado: validar en móvil las vistas autenticadas de panel, registros, planificación, calidad, analítica y asistente, y corregir hallazgos visuales si aparecen.
+- [x] Historial duplicado: crear documentación explícita que enumere por vista la moneda, el periodo y la separación personal/empresarial visibles en la interfaz.
+- [x] Historial duplicado: probar y documentar estados de error, validación de formularios protegidos y accesibilidad básica de navegación mediante teclado y foco.
+- [x] Historial duplicado: registrar en el proyecto que el acceso OAuth previo depende de un servicio externo y que el acceso local por correo lo sustituye cuando ese servicio falla.
+- [x] Historial duplicado: cargar datos manuales mínimos de prueba y verificar que la analítica muestra ingresos, gastos, ahorro, patrimonio, inversiones y reserva fiscal; después, limpiar esos datos temporales.
+- [x] Historial duplicado: corregir el acceso rápido de ingresos para que abra un movimiento de tipo ingreso y no el tipo de gasto predeterminado.
+- [x] Validar con una sesión autenticada real las rutas móviles de panel, registros, planificación, calidad, analítica y asistente, y documentar hallazgos visuales por ruta.
+- [x] Probar y documentar en la interfaz protegida los estados de error y validación de formularios, además de navegación básica por teclado y foco.

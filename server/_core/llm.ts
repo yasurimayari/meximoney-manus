@@ -69,6 +69,8 @@ export type InvokeParams = {
   model?: string;
   thinking?: Record<string, unknown>;
   reasoning?: Record<string, unknown>;
+  requestTimeoutMs?: number;
+  maxRetries?: number;
 };
 
 export type ToolCall = {
@@ -301,14 +303,17 @@ const computeBackoffDelay = (
 // returns the final Response so callers keep their existing error handling.
 const fetchWithBackoff = async (
   url: string,
-  init: FetchInit
+  init: FetchInit,
+  options: { requestTimeoutMs?: number; maxRetries?: number } = {}
 ): Promise<Response> => {
+  const requestTimeoutMs = options.requestTimeoutMs ?? 60_000;
+  const maxRetries = options.maxRetries ?? RETRY_MAX_RETRIES;
   let lastError: unknown;
 
-  for (let attempt = 0; attempt <= RETRY_MAX_RETRIES; attempt++) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await fetch(url, init);
-      if (response.ok || attempt === RETRY_MAX_RETRIES) {
+      const response = await fetch(url, { ...init, signal: AbortSignal.timeout(requestTimeoutMs) });
+      if (response.ok || attempt === maxRetries) {
         return response;
       }
 
@@ -326,7 +331,7 @@ const fetchWithBackoff = async (
       await sleep(computeBackoffDelay(attempt, retryAfterMs));
     } catch (error) {
       lastError = error;
-      if (attempt === RETRY_MAX_RETRIES) throw error;
+      if (attempt === maxRetries) throw error;
       console.warn(
         `LLM request retry ${attempt + 1}/${RETRY_MAX_RETRIES} after network error`
       );
@@ -356,6 +361,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     reasoning,
     maxTokens,
     max_tokens,
+    requestTimeoutMs,
+    maxRetries,
   } = params;
 
   const payload: Record<string, unknown> = {
@@ -408,7 +415,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       authorization: `Bearer ${ENV.forgeApiKey}`,
     },
     body: JSON.stringify(payload),
-  });
+  }, { requestTimeoutMs, maxRetries });
 
   if (!response.ok) {
     const errorText = await response.text();

@@ -256,11 +256,16 @@ class SDKServer {
   }
 
   async authenticateRequest(req: Request): Promise<AuthenticatedUser> {
-    // 1. Prefer the session cookie (regular OAuth login).
-    const cookies = this.parseCookies(req.headers.cookie);
-    let sessionToken = cookies.get(COOKIE_NAME);
+    // 1. A local Meximoney session is forwarded from sessionStorage only when
+    // preview environments inject a conflicting Manus auto-login token.
+    const localSessionHeader = req.headers["x-meximoney-session"];
+    const localSessionToken = Array.isArray(localSessionHeader) ? localSessionHeader[0] : localSessionHeader;
 
-    // 2. Fallback to the Authorization header (Preview auto-login via
+    // 2. Prefer the explicit local session, then the regular cookie.
+    const cookies = this.parseCookies(req.headers.cookie);
+    let sessionToken = localSessionToken || cookies.get(COOKIE_NAME);
+
+    // 3. Fallback to the Authorization header (Preview auto-login via
     //    sessionStorage), used when the browser blocks iframe cookies such as
     //    Safari ITP, private browsing, or iOS/Android WebView.
     if (!sessionToken) {

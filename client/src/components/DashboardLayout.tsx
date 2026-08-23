@@ -109,13 +109,14 @@ function LocalAuthCard() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const utils = trpc.useUtils();
-  const onSuccess = async (message: string) => {
+  const onSuccess = async (message: string, sessionToken: string) => {
+    sessionStorage.setItem("meximoney-local-session", sessionToken);
     await utils.auth.me.invalidate();
     toast.success(message);
     window.location.assign("/");
   };
-  const login = trpc.auth.login.useMutation({ onSuccess: () => onSuccess("Sesión iniciada"), onError: error => toast.error(error.message) });
-  const register = trpc.auth.register.useMutation({ onSuccess: () => onSuccess("Cuenta creada"), onError: error => toast.error(error.message) });
+  const login = trpc.auth.login.useMutation({ onSuccess: response => onSuccess("Sesión iniciada", response.sessionToken), onError: error => toast.error(error.message) });
+  const register = trpc.auth.register.useMutation({ onSuccess: response => onSuccess("Cuenta creada", response.sessionToken), onError: error => toast.error(error.message) });
   const isPending = login.isPending || register.isPending;
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -284,7 +285,7 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
@@ -299,7 +300,7 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="flex-1 p-4 lg:p-7"><div className="mx-auto max-w-7xl">{children}</div></main>
+        <main className="min-w-0 flex-1 p-4 lg:p-7"><div className="mx-auto min-w-0 max-w-7xl">{children}</div></main>
       </SidebarInset>
     </>
   );
