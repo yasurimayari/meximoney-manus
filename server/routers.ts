@@ -283,7 +283,7 @@ export const appRouter = router({
       get: privateFinanceProcedure.query(async ({ ctx }) => {
         const db = await requireDb();
         const [storedPreferences] = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, ctx.user.id)).limit(1);
-        const preferences = storedPreferences ?? { inAppEnabled: true, calendarEnabled: true, documentsEnabled: true, debtsEnabled: true, reviewsEnabled: true };
+        const preferences = storedPreferences ?? { inAppEnabled: true, calendarEnabled: true, documentsEnabled: true, debtsEnabled: true, reviewsEnabled: true, budgetEnabled: true, taxReserveEnabled: true };
         if (!preferences.inAppEnabled) return { preferences, notifications: [] };
         const snapshot = await getFinanceSnapshot(ctx.user.id);
         const now = new Date(); const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -291,16 +291,19 @@ export const appRouter = router({
         if (preferences.inAppEnabled && preferences.calendarEnabled) snapshot.calendarEvents.filter(event => event.status === "planned" && event.startsAt >= now && event.startsAt <= inSevenDays).forEach(event => candidates.push({ type: "calendar", title: `Próximo: ${event.title}`, message: "Tienes una fecha programada en los próximos 7 días.", relatedEntityType: "calendar_event", relatedEntityId: event.id }));
         if (preferences.inAppEnabled && preferences.documentsEnabled) snapshot.documents.filter(document => document.expiresAt && document.expiresAt >= now && document.expiresAt <= inSevenDays).forEach(document => candidates.push({ type: "document", title: `Documento próximo a vencer: ${document.name}`, message: "Revisa el documento y su referencia antes de su vencimiento.", relatedEntityType: "document", relatedEntityId: document.id }));
         if (preferences.inAppEnabled && preferences.debtsEnabled) snapshot.debts.filter(debt => debt.status === "active" && debt.nextDueAt && debt.nextDueAt >= now && debt.nextDueAt <= inSevenDays).forEach(debt => candidates.push({ type: "debt", title: `Vencimiento próximo: ${debt.name}`, message: "Revisa esta deuda y confirma manualmente su siguiente pago o ajuste.", relatedEntityType: "debt", relatedEntityId: debt.id }));
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1); const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        if (preferences.inAppEnabled && preferences.budgetEnabled) snapshot.budgets.filter(budget => budget.periodStart >= monthStart && budget.periodStart < nextMonthStart).forEach(budget => candidates.push({ type: "budget", title: "Revisión manual de presupuesto", message: "Revisa manualmente este presupuesto mensual frente a tus registros confirmados.", relatedEntityType: "budget", relatedEntityId: budget.id }));
+        if (preferences.inAppEnabled && preferences.taxReserveEnabled && snapshot.profile?.futureTaxReserveCents > 0 && snapshot.profile.futureTaxDueAt && snapshot.profile.futureTaxDueAt >= now && snapshot.profile.futureTaxDueAt <= inSevenDays) candidates.push({ type: "tax_reserve", title: "Revisa tu reserva fiscal manual", message: "Hay una fecha de referencia cercana. Confirma tus datos antes de tomar cualquier decisión fiscal.", relatedEntityType: "financial_profile", relatedEntityId: snapshot.profile.id });
         if (preferences.inAppEnabled && preferences.reviewsEnabled && snapshot.workspaceAccess?.role !== "manager") snapshot.transactions.filter(transaction => transaction.reviewStatus === "pending_review").forEach(transaction => candidates.push({ type: "review", title: "Movimiento pendiente de revisión", message: "Hay un movimiento que espera confirmación humana.", relatedEntityType: "transaction", relatedEntityId: transaction.id }));
         const existing = await db.select().from(financeNotifications).where(eq(financeNotifications.userId, ctx.user.id));
         const existingKeys = new Set(existing.map(notification => `${notification.type}:${notification.relatedEntityType}:${notification.relatedEntityId}`));
         const pending = candidates.filter(candidate => !existingKeys.has(`${candidate.type}:${candidate.relatedEntityType}:${candidate.relatedEntityId}`));
         if (pending.length) await db.insert(financeNotifications).values(pending.map(candidate => ({ userId: ctx.user.id, ...candidate })));
         const notifications = pending.length ? await db.select().from(financeNotifications).where(eq(financeNotifications.userId, ctx.user.id)) : existing;
-        const visibleTypes = new Set([preferences.calendarEnabled && "calendar", preferences.documentsEnabled && "document", preferences.debtsEnabled && "debt", preferences.reviewsEnabled && "review"]);
+        const visibleTypes = new Set([preferences.calendarEnabled && "calendar", preferences.documentsEnabled && "document", preferences.debtsEnabled && "debt", preferences.reviewsEnabled && "review", preferences.budgetEnabled && "budget", preferences.taxReserveEnabled && "tax_reserve"]);
         return { preferences, notifications: notifications.filter(notification => !notification.dismissedAt && visibleTypes.has(notification.type)).sort((left, right) => right.occurredAt.getTime() - left.occurredAt.getTime()) };
       }),
-      savePreferences: privateFinanceProcedure.input(z.object({ inAppEnabled: z.boolean(), calendarEnabled: z.boolean(), documentsEnabled: z.boolean(), debtsEnabled: z.boolean(), reviewsEnabled: z.boolean() })).mutation(async ({ ctx, input }) => {
+      savePreferences: privateFinanceProcedure.input(z.object({ inAppEnabled: z.boolean(), calendarEnabled: z.boolean(), documentsEnabled: z.boolean(), debtsEnabled: z.boolean(), reviewsEnabled: z.boolean(), budgetEnabled: z.boolean(), taxReserveEnabled: z.boolean() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
         await db.insert(notificationPreferences).values({ userId: ctx.user.id, ...input }).onDuplicateKeyUpdate({ set: input });
         return { success: true };

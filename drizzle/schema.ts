@@ -72,6 +72,8 @@ export const notificationPreferences = mysqlTable("notificationPreferences", {
   documentsEnabled: boolean("documentsEnabled").notNull().default(true),
   debtsEnabled: boolean("debtsEnabled").notNull().default(true),
   reviewsEnabled: boolean("reviewsEnabled").notNull().default(true),
+  budgetEnabled: boolean("budgetEnabled").notNull().default(true),
+  taxReserveEnabled: boolean("taxReserveEnabled").notNull().default(true),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 

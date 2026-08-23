@@ -37,9 +37,20 @@ La pantalla **Notificaciones** permite activar o silenciar la bandeja interna y 
 
 El menú lateral muestra un contador visual de avisos no leídos junto a **Notificaciones**. El contador se actualiza desde la misma bandeja privada, se limita a `99+` para conservar el menú legible y expone una etiqueta accesible con el total. No aparece cuando no hay avisos pendientes y no revela información financiera fuera del espacio autenticado.
 
+La bandeja puede filtrarse por estado de lectura y categoría, agruparse por fecha o categoría y abrir el área privada relacionada. También incorpora reglas manuales para revisar presupuestos del mes actual y una reserva fiscal con fecha de referencia. Estas reglas sólo señalan datos que la persona usuaria ya registró: **no calculan impuestos, no presentan declaraciones ni sugieren ejecutar pagos**.
+
 > No son notificaciones push, correo, SMS ni un proceso programado. Meximoney no envía información financiera a servicios externos, no ejecuta pagos y no realiza acciones sobre bancos, documentos o deudas desde un aviso.
 
 Al desactivar la bandeja global, no se genera ni muestra ninguna alerta. Al desactivar una categoría, sus alertas quedan ocultas y dejan de generarse hasta volver a activarla. La persona usuaria puede volver a habilitarlas desde su propio perfil; una cuenta no puede leer, modificar o descartar notificaciones de otra.
+
+### Evaluación de Telegram
+
+Telegram es técnicamente viable como canal opcional mediante su [Bot API HTTP](https://core.telegram.org/bots/api). No está conectado en esta versión porque requeriría un bot, una autorización explícita de la usuaria y un vínculo privado de chat. El diseño seguro sería enviar únicamente una señal mínima, por ejemplo: “Tienes un aviso nuevo en Meximoney; abre tu bandeja privada”, sin categoría, importe, documento, fecha ni otro detalle financiero. Si se quisieran avisos sin abrir la aplicación, habría que configurar una ejecución programada determinista; no requiere un modelo de IA, pero sí una credencial de bot y una programación propia. Telegram admite webhooks HTTPS para enlazar el chat y recibir actualizaciones, con un secreto de verificación recomendado por su documentación oficial [1](https://core.telegram.org/bots/api) [2](https://core.telegram.org/bots/webhooks).
+
+| Alternativa | Privacidad | Coste de ejecución | Configuración |
+|---|---|---|---|
+| Bandeja interna actual | Máxima: los detalles permanecen dentro de Meximoney. | No añade ejecuciones externas ni consultas de IA. | Ninguna. |
+| Telegram con señal mínima opcional | El contenido financiero no sale de Meximoney; Telegram recibe sólo una señal genérica. | Una solicitud HTTP determinista, sin modelo de IA; requiere evaluar el coste de cualquier programación futura. | Crear bot, guardar credencial de forma segura, vincular un chat privado y consentimiento específico. |
 
 ## Espacio, colaboración y multi-moneda de Fase A
 

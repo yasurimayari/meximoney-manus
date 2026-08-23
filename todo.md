@@ -92,3 +92,6 @@
 - [x] Añadir controles de privacidad y consentimiento para notificaciones, sin enviar detalles financieros por canales externos.
 - [x] Validar notificaciones, accesibilidad, aislamiento por usuaria y vista móvil antes de publicar.
 - [x] Añadir un contador visual, privado y accesible de notificaciones no leídas en el menú lateral y validarlo en escritorio y móvil.
+- [x] Añadir filtro de no leídas, agrupación por categoría o fecha y enlaces contextuales desde la bandeja de notificaciones.
+- [x] Diseñar reglas manuales de recordatorio para presupuesto y reserva fiscal, sin cálculos ni presentación fiscal automática.
+- [x] Evaluar Telegram como canal opcional de señal mínima, comparando privacidad, coste operativo y configuración requerida antes de integrarlo.

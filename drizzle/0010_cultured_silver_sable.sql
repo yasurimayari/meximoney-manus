@@ -1,0 +1,2 @@
+ALTER TABLE `notificationPreferences` ADD `budgetEnabled` boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE `notificationPreferences` ADD `taxReserveEnabled` boolean DEFAULT true NOT NULL;
