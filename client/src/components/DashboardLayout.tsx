@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
+import { notificationBadgeLabel, unreadNotificationCount } from "@/lib/notificationBadge";
 import { ArrowLeftRight, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, EyeOff, FileDown, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -169,6 +170,8 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
+  const { data: notificationData } = trpc.finance.notifications.get.useQuery(undefined, { enabled: Boolean(user) });
+  const unreadNotifications = notificationData ? unreadNotificationCount(notificationData.notifications) : 0;
 
   useEffect(() => {
     if (isCollapsed) {
@@ -235,18 +238,22 @@ function DashboardLayoutContent({
             <SidebarMenu className="px-2 py-1">
               {menuItems.map(item => {
                 const isActive = location === item.path;
+                const isNotificationsItem = item.path === "/notificaciones";
+                const notificationLabel = unreadNotifications ? `${unreadNotifications} notificaciones sin leer` : "Sin notificaciones sin leer";
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
+                      tooltip={isNotificationsItem && unreadNotifications ? `${item.label}: ${notificationLabel}` : item.label}
+                      aria-label={isNotificationsItem ? `${item.label}. ${notificationLabel}` : item.label}
                       className={`h-10 transition-all font-normal`}
                     >
                       <item.icon
                         className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
                       />
                       <span>{item.label}</span>
+                      {isNotificationsItem && unreadNotifications ? <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[0.62rem] font-bold leading-none text-primary-foreground group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:right-0.5 group-data-[collapsible=icon]:top-0.5" aria-hidden="true">{notificationBadgeLabel(unreadNotifications)}</span> : null}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );

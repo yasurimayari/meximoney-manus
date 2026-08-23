@@ -34,9 +34,11 @@ try {
   await cdp("Page.addScriptToEvaluateOnNewDocument", { source: `sessionStorage.setItem("meximoney-local-session", ${JSON.stringify(token)});` });
   await cdp("Page.navigate", { url: `${baseUrl}/notificaciones` });
   for (let attempt = 0; attempt < 20; attempt += 1) { if (await evaluate(`document.querySelector("h1")?.textContent`)) break; await pause(250); }
-  const checkViewport = async (width, height) => { await cdp("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width <= 375 }); await pause(350); return evaluate(`({ width: document.documentElement.scrollWidth, viewport: window.innerWidth, heading: document.querySelector("h1")?.textContent, toggles: document.querySelectorAll('[role="switch"]').length, hasReadButton: Boolean(document.querySelector('button[aria-label="Marcar como leído"]')) })`); };
+  const checkViewport = async (width, height) => { await cdp("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width <= 375 }); await pause(350); return evaluate(`({ width: document.documentElement.scrollWidth, viewport: window.innerWidth, heading: document.querySelector("h1")?.textContent, toggles: document.querySelectorAll('[role="switch"]').length, hasReadButton: Boolean(document.querySelector('button[aria-label="Marcar como leído"]')), notificationAria: document.querySelector('[aria-label^="Notificaciones."]')?.getAttribute("aria-label"), badge: Array.from(document.querySelectorAll('[aria-label^="Notificaciones."] span')).map(element => element.textContent?.trim()).find(value => /^(?:[1-9]\\d*|99\\+)$/.test(value ?? "")) })`); };
   const desktop = await checkViewport(1280, 720);
   const mobile = await checkViewport(375, 812);
+  await evaluate(`document.querySelector('button[data-sidebar="trigger"]')?.click(); true`); await pause(350);
+  const mobileBadge = await evaluate(`({ aria: document.querySelector('[aria-label^="Notificaciones."]')?.getAttribute("aria-label"), badge: Array.from(document.querySelectorAll('[aria-label^="Notificaciones."] span')).map(element => element.textContent?.trim()).find(value => /^(?:[1-9]\d*|99\+)$/.test(value ?? "")) })`);
   await evaluate(`document.querySelector('[role="switch"]')?.focus(); document.activeElement?.getAttribute("aria-label")`);
   const focusedLabel = await evaluate(`document.activeElement?.getAttribute("aria-label")`);
   const prior = await evaluate(`document.querySelector('[role="switch"]')?.getAttribute("aria-checked")`);
@@ -48,8 +50,8 @@ try {
   const beforeDismiss = await evaluate(`document.querySelectorAll('button[aria-label="Descartar notificación"]').length`);
   await evaluate(`document.querySelector('button[aria-label="Descartar notificación"]')?.click(); true`); await pause(450);
   const discarded = await evaluate(`document.querySelectorAll('button[aria-label="Descartar notificación"]').length < ${beforeDismiss}`);
-  const report = { desktop: desktop.heading === "Lo importante, sin ruido." && desktop.toggles === 5 && desktop.hasReadButton && desktop.width <= desktop.viewport, mobile: mobile.heading === "Lo importante, sin ruido." && mobile.toggles === 5 && mobile.width <= mobile.viewport, keyboardFocus: focusedLabel === "Bandeja dentro de Meximoney", keyboardToggle: toggled, markRead: markedRead, dismiss: discarded };
-  if (!Object.values(report).every(Boolean)) throw new Error(`QA visual de notificaciones falló: ${JSON.stringify({ report, desktop, mobile, focusedLabel, prior, url: await evaluate("location.href"), text: await evaluate("document.body.innerText.slice(0, 500)") })}`);
+  const report = { desktop: desktop.heading === "Lo importante, sin ruido." && desktop.toggles === 5 && desktop.hasReadButton && desktop.width <= desktop.viewport && Boolean(desktop.badge) && /sin leer/.test(desktop.notificationAria ?? ""), mobile: mobile.heading === "Lo importante, sin ruido." && mobile.toggles === 5 && mobile.width <= mobile.viewport && Boolean(mobileBadge.badge) && /sin leer/.test(mobileBadge.aria ?? ""), keyboardFocus: focusedLabel === "Bandeja dentro de Meximoney", keyboardToggle: toggled, markRead: markedRead, dismiss: discarded };
+  if (!Object.values(report).every(Boolean)) throw new Error(`QA visual de notificaciones falló: ${JSON.stringify({ report, desktop, mobile, mobileBadge, focusedLabel, prior, url: await evaluate("location.href"), text: await evaluate("document.body.innerText.slice(0, 500)") })}`);
   console.log(JSON.stringify(report));
   socket.close();
 } finally { chrome.kill("SIGTERM"); }

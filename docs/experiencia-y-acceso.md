@@ -35,6 +35,8 @@ La aceptación del consentimiento explícito es necesaria antes de guardar o ana
 
 La pantalla **Notificaciones** permite activar o silenciar la bandeja interna y cada categoría: fechas de Calendario, documentos próximos a vencer, vencimientos de deudas y movimientos pendientes de revisión humana. Los avisos se generan al abrir o consultar la bandeja, se deduplican por elemento relacionado y pueden marcarse como leídos o descartarse manualmente.
 
+El menú lateral muestra un contador visual de avisos no leídos junto a **Notificaciones**. El contador se actualiza desde la misma bandeja privada, se limita a `99+` para conservar el menú legible y expone una etiqueta accesible con el total. No aparece cuando no hay avisos pendientes y no revela información financiera fuera del espacio autenticado.
+
 > No son notificaciones push, correo, SMS ni un proceso programado. Meximoney no envía información financiera a servicios externos, no ejecuta pagos y no realiza acciones sobre bancos, documentos o deudas desde un aviso.
 
 Al desactivar la bandeja global, no se genera ni muestra ninguna alerta. Al desactivar una categoría, sus alertas quedan ocultas y dejan de generarse hasta volver a activarla. La persona usuaria puede volver a habilitarlas desde su propio perfil; una cuenta no puede leer, modificar o descartar notificaciones de otra.

@@ -91,3 +91,4 @@
 - [x] Generar notificaciones para próximas fechas de calendario, documentos, deudas y movimientos pendientes de revisión.
 - [x] Añadir controles de privacidad y consentimiento para notificaciones, sin enviar detalles financieros por canales externos.
 - [x] Validar notificaciones, accesibilidad, aislamiento por usuaria y vista móvil antes de publicar.
+- [x] Añadir un contador visual, privado y accesible de notificaciones no leídas en el menú lateral y validarlo en escritorio y móvil.
