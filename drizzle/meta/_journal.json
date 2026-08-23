@@ -36,6 +36,13 @@
       "when": 1787452224187,
       "tag": "0004_square_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1787454088464,
+      "tag": "0005_groovy_william_stryker",
+      "breakpoints": true
     }
   ]
 }

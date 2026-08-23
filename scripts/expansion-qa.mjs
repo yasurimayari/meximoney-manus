@@ -4,6 +4,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 const baseUrl = "http://127.0.0.1:3000";
 const email = "qa-expansion-meximoney-20260823@example.invalid";
 const password = "ExpansionSegura#2026";
+const secondaryEmail = "qa-colors-isolated-meximoney-20260823@example.invalid";
+const secondaryPassword = "AislamientoColores#2026";
 const debugPort = 9232;
 const outputDirectory = "/home/ubuntu/qa-expansion-meximoney";
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -19,13 +21,21 @@ async function call(path, token, input) {
   return payload[0].result.data.json;
 }
 
-async function getToken() {
+async function callQuery(path, token, input = null) {
+  const encodedInput = encodeURIComponent(JSON.stringify({ 0: { json: input } }));
+  const response = await fetch(`${baseUrl}/api/trpc/${path}?batch=1&input=${encodedInput}`, { headers: token ? { "X-Meximoney-Session": token } : {} });
+  const payload = await response.json();
+  if (!response.ok || payload[0]?.error) throw new Error(`${path}: ${payload[0]?.error?.json?.message ?? response.status}`);
+  return payload[0].result.data.json;
+}
+
+async function getToken(emailAddress = email, passwordValue = password) {
   try {
-    const registered = await call("auth.register", null, { name: "QA Expansión", email, password });
+    const registered = await call("auth.register", null, { name: "QA Expansión", email: emailAddress, password: passwordValue });
     return registered.sessionToken;
   } catch (error) {
     if (!String(error).includes("Ya existe")) throw error;
-    return (await call("auth.login", null, { email, password })).sessionToken;
+    return (await call("auth.login", null, { email: emailAddress, password: passwordValue })).sessionToken;
   }
 }
 
@@ -44,12 +54,16 @@ async function main() {
   await mkdir(outputDirectory, { recursive: true });
   const token = await getToken();
   await call("finance.privacy.recordConsent", token, { accepted: true, policyVersion: "qa-v1" });
+  const secondaryToken = await getToken(secondaryEmail, secondaryPassword);
+  await call("finance.privacy.recordConsent", secondaryToken, { accepted: true, policyVersion: "qa-v1" });
+  await call("finance.calendar.saveColor", secondaryToken, { category: "credit_card_payment", colorKey: "emerald" });
   await call("finance.accounts.save", token, { name: "Fondo QA", type: "cash", scope: "personal", currency: "MXN", currentValueCents: 120000, isLiquid: true, valuationDate: Date.now(), status: "active", notes: "Dato temporal QA" });
   await call("finance.debts.save", token, { name: "Tarjeta QA", creditor: "Banco de prueba", type: "credit_card", scope: "personal", balanceCents: 30000, currency: "MXN", interestRateBps: 2400, minimumPaymentCents: 5000, nextDueAt: new Date("2026-08-28T12:00:00").getTime(), endDate: null, priority: "high", status: "active", notes: "Dato temporal QA" });
   await call("finance.transactions.save", token, { type: "income", scope: "personal", amountCents: 80000, currency: "MXN", accountId: null, categoryId: null, goalId: null, debtId: null, occurredAt: new Date("2026-08-05T12:00:00").getTime(), isEssential: false, transferGroupId: null, status: "confirmed", notes: "Ingreso temporal QA" });
   await call("finance.transactions.save", token, { type: "expense", scope: "personal", amountCents: 25000, currency: "MXN", accountId: null, categoryId: null, goalId: null, debtId: null, occurredAt: new Date("2026-08-06T12:00:00").getTime(), isEssential: true, transferGroupId: null, status: "confirmed", notes: "Gasto temporal QA" });
   await call("finance.documents.save", token, { name: "Póliza QA", type: "policy", documentClass: "insurance", scope: "personal", relatedEntityType: "insurance", relatedEntityId: null, jurisdiction: "México", referenceUrl: "https://example.invalid/poliza", issuedAt: new Date("2026-08-01T12:00:00").getTime(), expiresAt: new Date("2026-08-26T12:00:00").getTime(), reminderAt: new Date("2026-08-20T12:00:00").getTime(), verified: true, notes: "Documento temporal QA" });
   await call("finance.calendar.save", token, { title: "Pago TDC QA", eventType: "credit_card_payment", scope: "personal", startsAt: new Date("2026-08-28T12:00:00").getTime(), endsAt: null, recurrence: "monthly", amountCents: 5000, currency: "MXN", linkedDebtId: null, linkedDocumentId: null, linkedTaskId: null, status: "planned", notes: "Evento temporal QA" });
+  await call("finance.calendar.saveColor", token, { category: "credit_card_payment", colorKey: "rose" });
   const savedStatement = await call("finance.statements.save", token, { periodStart: new Date("2026-08-01T12:00:00").getTime(), scope: "personal", status: "closed", notes: "Cierre temporal QA" });
 
   const chromium = spawn("/usr/bin/chromium", ["--headless=new", `--remote-debugging-port=${debugPort}`, `--user-data-dir=${outputDirectory}/profile`, "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "about:blank"], { stdio: "ignore" });
@@ -84,6 +98,31 @@ async function main() {
     }
     await send("Page.navigate", { url: `${baseUrl}/calendario` }, sessionId);
     await sleep(900);
+    const paletteOpenerFound = await evaluate(`(() => { const opener = [...document.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Colores'); opener?.click(); return Boolean(opener); })()`);
+    await sleep(350);
+    const calendarColors = await evaluate(`(() => { const row = [...document.querySelectorAll('.calendar-palette-row')].find(item => item.textContent?.includes('Pago de tarjeta')); return { openerFound: ${paletteOpenerFound}, rowFound: Boolean(row), initialRoseSelected: Boolean(row?.querySelector('.calendar-palette-choice.calendar-color-rose[aria-pressed="true"]')) }; })()`);
+    const paletteScreenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true }, sessionId);
+    await writeFile(`${outputDirectory}/calendario-colores.png`, Buffer.from(paletteScreenshot.data, "base64"));
+    await evaluate(`(() => { const row = [...document.querySelectorAll('.calendar-palette-row')].find(item => item.textContent?.includes('Pago de tarjeta')); row?.querySelector('.calendar-palette-choice.calendar-color-violet')?.click(); })()`);
+    await sleep(700);
+    const calendarColorPersistence = await evaluate(`(() => { const row = [...document.querySelectorAll('.calendar-palette-row')].find(item => item.textContent?.includes('Pago de tarjeta')); return { violetSelected: Boolean(row?.querySelector('.calendar-palette-choice.calendar-color-violet[aria-pressed="true"]')), eventUsesViolet: Boolean(document.querySelector('.calendar-day-event.calendar-color-violet')) }; })()`);
+    const keyboardColorFocused = await evaluate(`(() => { const row = [...document.querySelectorAll('.calendar-palette-row')].find(item => item.textContent?.includes('Pago de tarjeta')); const choice = row?.querySelector('.calendar-palette-choice.calendar-color-rose'); choice?.focus(); return document.activeElement === choice; })()`);
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", text: "\r", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 }, sessionId);
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 }, sessionId);
+    await sleep(450);
+    const resetFocused = await evaluate(`(() => { const row = [...document.querySelectorAll('.calendar-palette-row')].find(item => item.textContent?.includes('Pago de tarjeta')); const button = [...(row?.querySelectorAll('button') ?? [])].find(item => item.textContent?.trim() === 'Restablecer'); button?.focus(); return document.activeElement === button; })()`);
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", text: "\r", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 }, sessionId);
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 }, sessionId);
+    await sleep(450);
+    const keyboardReset = await evaluate(`(() => { const row = [...document.querySelectorAll('.calendar-palette-row')].find(item => item.textContent?.includes('Pago de tarjeta')); return { defaultRestored: Boolean(row?.querySelector('.calendar-palette-choice.calendar-color-teal[aria-pressed="true"]')) }; })()`);
+    await evaluate(`(() => { const row = [...document.querySelectorAll('.calendar-palette-row')].find(item => item.textContent?.includes('Pago de tarjeta')); row?.querySelector('.calendar-palette-choice.calendar-color-violet')?.click(); })()`);
+    await sleep(550);
+    const reloginToken = await getToken();
+    const reloadedSnapshot = await callQuery("finance.dashboard", reloginToken);
+    const isolatedSnapshot = await callQuery("finance.dashboard", secondaryToken);
+    const colorIsolation = { primaryVioletPersisted: reloadedSnapshot.calendarColors?.some(item => item.category === "credit_card_payment" && item.colorKey === "violet"), secondaryEmeraldOnly: isolatedSnapshot.calendarColors?.some(item => item.category === "credit_card_payment" && item.colorKey === "emerald"), secondaryHasNoViolet: !isolatedSnapshot.calendarColors?.some(item => item.category === "credit_card_payment" && item.colorKey === "violet"), keyboardColorFocused, resetFocused, keyboardReset };
+    await evaluate(`([...document.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Listo'))?.click()`);
+    await sleep(250);
     const monthlyView = await evaluate(`({ selected: document.querySelector('button[aria-pressed="true"]')?.textContent?.trim() === 'Mensual', gridDays: document.querySelectorAll('.calendar-day').length, eventsVisible: document.body.innerText.includes('Pago TDC QA') })`);
     await evaluate(`([...document.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Semanal'))?.click()`);
     await sleep(450);
@@ -175,8 +214,8 @@ async function main() {
     }
     const accessibility = { calendarButtonFocused, calendarTabFocus, calendarValidation, statesInputFocused, statesFocusTrail };
     socket.close();
-    await writeFile(`${outputDirectory}/results.json`, JSON.stringify({ savedStatement, reports, calendarViews: { monthlyView, weeklyView }, calendarNavigation, documentForm, accessibility }, null, 2));
-    console.log(JSON.stringify({ savedStatement, reports, calendarViews: { monthlyView, weeklyView }, calendarNavigation, documentForm, accessibility }));
+    await writeFile(`${outputDirectory}/results.json`, JSON.stringify({ savedStatement, reports, calendarColors, calendarColorPersistence, colorIsolation, calendarViews: { monthlyView, weeklyView }, calendarNavigation, documentForm, accessibility }, null, 2));
+    console.log(JSON.stringify({ savedStatement, reports, calendarColors, calendarColorPersistence, colorIsolation, calendarViews: { monthlyView, weeklyView }, calendarNavigation, documentForm, accessibility }));
   } finally {
     chromium.kill("SIGTERM");
   }

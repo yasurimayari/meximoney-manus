@@ -52,3 +52,8 @@
 - [x] Ejecutar y documentar QA de navegación temporal completa: anterior, siguiente, Hoy y selectores de mes/fecha en vistas mensual y semanal.
 - [x] Verificar y documentar el orden final de foco del calendario entre Añadir evento, vista, controles de periodo y celdas.
 - [x] Extender la QA para confirmar foco en una celda de día mensual y una semanal, y documentar la traza completa.
+- [x] Diseñar e implementar preferencias privadas para personalizar el color de las categorías de eventos del calendario.
+- [x] Aplicar los colores personalizados con contraste legible en las vistas mensual, semanal y agenda diaria.
+- [x] Validar persistencia por usuario, contraste, teclado y respuesta móvil de la paleta de calendario.
+- [x] Verificar persistencia de colores tras recarga o nueva sesión autenticada y probar aislamiento por usuario de preferencias de calendario.
+- [x] Validar mediante teclado los botones de color y Restablecer de la paleta, documentando foco y activación.

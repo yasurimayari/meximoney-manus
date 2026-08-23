@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   accounts,
   budgets,
+  calendarColorPreferences,
   calendarEvents,
   categories,
   debts,
@@ -121,7 +122,7 @@ export async function getProfile(userId: number) {
 
 export async function getFinanceSnapshot(userId: number, referenceDate = new Date()) {
   const db = await requireDb();
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarEventRows, documentRows, decisionRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows] = await Promise.all([
     getProfile(userId),
     db.select().from(accounts).where(eq(accounts.userId, userId)),
     db.select().from(categories).where(eq(categories.userId, userId)),
@@ -132,6 +133,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(financeTasks).where(eq(financeTasks.userId, userId)),
     db.select().from(monthlyReviews).where(eq(monthlyReviews.userId, userId)),
     db.select().from(monthlyFinancialStatements).where(eq(monthlyFinancialStatements.userId, userId)),
+    db.select().from(calendarColorPreferences).where(eq(calendarColorPreferences.userId, userId)),
     db.select().from(calendarEvents).where(eq(calendarEvents.userId, userId)),
     db.select().from(financeDocuments).where(eq(financeDocuments.userId, userId)),
     db.select().from(decisionRecords).where(eq(decisionRecords.userId, userId)),
@@ -174,6 +176,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     tasks: taskRows,
     reviews: reviewRows,
     statements: statementRows,
+    calendarColors: calendarColorRows,
     calendarEvents: calendarEventRows,
     documents: documentRows,
     decisions: decisionRows,
@@ -191,6 +194,7 @@ export async function deleteAllFinancialData(userId: number) {
   await db.transaction(async tx => {
     await tx.delete(financialTransactions).where(eq(financialTransactions.userId, userId));
     await tx.delete(budgets).where(eq(budgets.userId, userId));
+    await tx.delete(calendarColorPreferences).where(eq(calendarColorPreferences.userId, userId));
     await tx.delete(calendarEvents).where(eq(calendarEvents.userId, userId));
     await tx.delete(financeDocuments).where(eq(financeDocuments.userId, userId));
     await tx.delete(financeTasks).where(eq(financeTasks.userId, userId));

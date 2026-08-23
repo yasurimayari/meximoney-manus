@@ -137,6 +137,15 @@ export const calendarEvents = mysqlTable("calendarEvents", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const calendarColorPreferences = mysqlTable("calendarColorPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  category: mysqlEnum("category", ["tax", "credit_card_cutoff", "credit_card_payment", "loan_payment", "document_expiry", "insurance_renewal", "review", "other", "debt_due", "document_due", "task_due", "fiscal_reserve"]).notNull(),
+  colorKey: mysqlEnum("colorKey", ["teal", "emerald", "sky", "indigo", "violet", "amber", "orange", "rose", "slate"]).notNull().default("teal"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const monthlyFinancialStatements = mysqlTable("monthlyFinancialStatements", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

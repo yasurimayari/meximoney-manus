@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   accounts,
   budgets,
+  calendarColorPreferences,
   calendarEvents,
   categories,
   debts,
@@ -33,6 +34,8 @@ import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 const scopeSchema = z.enum(["personal", "business", "mixed"]);
 const moneySchema = z.number().int().min(0);
 const optionalDate = z.number().int().positive().nullable().optional();
+const calendarColorCategorySchema = z.enum(["tax", "credit_card_cutoff", "credit_card_payment", "loan_payment", "document_expiry", "insurance_renewal", "review", "other", "debt_due", "document_due", "task_due", "fiscal_reserve"]);
+const calendarColorKeySchema = z.enum(["teal", "emerald", "sky", "indigo", "violet", "amber", "orange", "rose", "slate"]);
 const manualOnlyNotice = "Meximoney trabaja solo con tus registros manuales. No tiene acceso a bancos ni puede ejecutar acciones financieras.";
 const credentialInput = z.object({
   email: z.string().trim().email().max(320).transform(value => value.toLowerCase()),
@@ -231,6 +234,18 @@ export const appRouter = router({
         return { success: true };
       }),
       remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(calendarEvents, input.id, ctx.user.id)),
+      saveColor: privateFinanceProcedure.input(z.object({ category: calendarColorCategorySchema, colorKey: calendarColorKeySchema })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const existing = await db.select({ id: calendarColorPreferences.id }).from(calendarColorPreferences).where(and(eq(calendarColorPreferences.userId, ctx.user.id), eq(calendarColorPreferences.category, input.category))).limit(1);
+        if (existing[0]) await db.update(calendarColorPreferences).set({ colorKey: input.colorKey }).where(and(eq(calendarColorPreferences.id, existing[0].id), eq(calendarColorPreferences.userId, ctx.user.id)));
+        else await db.insert(calendarColorPreferences).values({ userId: ctx.user.id, ...input });
+        return { success: true };
+      }),
+      resetColor: privateFinanceProcedure.input(z.object({ category: calendarColorCategorySchema })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        await db.delete(calendarColorPreferences).where(and(eq(calendarColorPreferences.userId, ctx.user.id), eq(calendarColorPreferences.category, input.category)));
+        return { success: true };
+      }),
     }),
     budgets: router({
       save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), categoryId: z.number().int().positive().nullable().optional(), scope: scopeSchema, periodStart: z.number().int().positive(), plannedCents: moneySchema, type: z.enum(["income", "expense"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
