@@ -82,6 +82,65 @@ async function main() {
       const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true }, sessionId);
       await writeFile(`${outputDirectory}${path}.png`, Buffer.from(screenshot.data, "base64"));
     }
+    await send("Page.navigate", { url: `${baseUrl}/calendario` }, sessionId);
+    await sleep(900);
+    const monthlyView = await evaluate(`({ selected: document.querySelector('button[aria-pressed="true"]')?.textContent?.trim() === 'Mensual', gridDays: document.querySelectorAll('.calendar-day').length, eventsVisible: document.body.innerText.includes('Pago TDC QA') })`);
+    await evaluate(`([...document.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Semanal'))?.click()`);
+    await sleep(450);
+    await evaluate(`document.querySelector('button[aria-label="Semana siguiente"]')?.click()`);
+    await sleep(350);
+    const weeklyView = await evaluate(`({ selected: document.querySelector('button[aria-pressed="true"]')?.textContent?.trim() === 'Semanal', gridDays: document.querySelectorAll('.calendar-day').length, eventsVisible: document.body.innerText.includes('Pago TDC QA'), width: document.documentElement.scrollWidth })`);
+    const weeklyScreenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true }, sessionId);
+    await writeFile(`${outputDirectory}/calendario-semanal.png`, Buffer.from(weeklyScreenshot.data, "base64"));
+    await evaluate(`([...document.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Mensual'))?.click()`);
+    await sleep(300);
+    const monthInitial = await evaluate(`document.querySelector('.calendar-period-heading h2')?.textContent?.trim()`);
+    await evaluate(`document.querySelector('button[aria-label="Mes siguiente"]')?.click()`);
+    await sleep(260);
+    const monthNext = await evaluate(`document.querySelector('.calendar-period-heading h2')?.textContent?.trim()`);
+    await evaluate(`document.querySelector('button[aria-label="Mes anterior"]')?.click()`);
+    await sleep(260);
+    const monthPrevious = await evaluate(`document.querySelector('.calendar-period-heading h2')?.textContent?.trim()`);
+    const monthSelectorChanged = await evaluate(`(() => { const input = document.querySelector('input[type="month"]'); const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set; setValue?.call(input, '2026-09'); input?.dispatchEvent(new Event('input', { bubbles: true })); input?.dispatchEvent(new Event('change', { bubbles: true })); return Boolean(input); })()`);
+    await sleep(300);
+    const monthSelected = await evaluate(`document.querySelector('.calendar-period-heading h2')?.textContent?.trim()`);
+    await evaluate(`document.querySelector('button')?.focus()`);
+    const calendarFocusTrail = [];
+    for (let step = 0; step < 7; step += 1) {
+      await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 }, sessionId);
+      await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 }, sessionId);
+      calendarFocusTrail.push(await evaluate(`({ tag: document.activeElement?.tagName, label: document.activeElement?.getAttribute('aria-label'), text: document.activeElement?.textContent?.trim(), type: document.activeElement?.getAttribute('type') })`));
+    }
+    await evaluate(`document.querySelector('input[type="month"]')?.focus()`);
+    const monthlyCellFocusTrail = [];
+    for (let step = 0; step < 7; step += 1) {
+      await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 }, sessionId);
+      await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 }, sessionId);
+      monthlyCellFocusTrail.push(await evaluate(`({ tag: document.activeElement?.tagName, label: document.activeElement?.getAttribute('aria-label'), pressed: document.activeElement?.getAttribute('aria-pressed'), type: document.activeElement?.getAttribute('type') })`));
+    }
+    await evaluate(`([...document.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Semanal'))?.click()`);
+    await sleep(260);
+    const weeklyInitial = await evaluate(`document.querySelector('.calendar-period-heading h2')?.textContent?.trim()`);
+    const weekSelectorChanged = await evaluate(`(() => { const input = document.querySelector('input[type="date"]'); const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set; setValue?.call(input, '2026-08-28'); input?.dispatchEvent(new Event('input', { bubbles: true })); input?.dispatchEvent(new Event('change', { bubbles: true })); return Boolean(input); })()`);
+    await sleep(300);
+    const weeklySelected = await evaluate(`document.querySelector('.calendar-period-heading h2')?.textContent?.trim()`);
+    await evaluate(`document.querySelector('button[aria-label="Semana siguiente"]')?.click()`);
+    await sleep(260);
+    const weeklyNext = await evaluate(`document.querySelector('.calendar-period-heading h2')?.textContent?.trim()`);
+    await evaluate(`document.querySelector('button[aria-label="Semana anterior"]')?.click()`);
+    await sleep(260);
+    const weeklyPrevious = await evaluate(`document.querySelector('.calendar-period-heading h2')?.textContent?.trim()`);
+    await evaluate(`([...document.querySelectorAll('button')].find(button => button.textContent?.includes('Hoy')))?.click()`);
+    await sleep(260);
+    const weeklyToday = await evaluate(`document.querySelector('.calendar-period-heading h2')?.textContent?.trim()`);
+    await evaluate(`document.querySelector('input[type="date"]')?.focus()`);
+    const weeklyCellFocusTrail = [];
+    for (let step = 0; step < 8; step += 1) {
+      await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 }, sessionId);
+      await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 }, sessionId);
+      weeklyCellFocusTrail.push(await evaluate(`({ tag: document.activeElement?.tagName, label: document.activeElement?.getAttribute('aria-label'), pressed: document.activeElement?.getAttribute('aria-pressed'), type: document.activeElement?.getAttribute('type') })`));
+    }
+    const calendarNavigation = { monthInitial, monthNext, monthPrevious, monthSelectorChanged, monthSelected, weeklyInitial, weekSelectorChanged, weeklySelected, weeklyNext, weeklyPrevious, weeklyToday, calendarFocusTrail, monthlyCellFocusTrail, weeklyCellFocusTrail };
     await send("Page.navigate", { url: `${baseUrl}/movimientos` }, sessionId);
     await sleep(1100);
     const dialogOpened = await evaluate(`Boolean((() => { const trigger = [...document.querySelectorAll('button')].find(button => button.textContent?.includes('Nuevo registro')); trigger?.click(); return trigger; })())`);
@@ -116,8 +175,8 @@ async function main() {
     }
     const accessibility = { calendarButtonFocused, calendarTabFocus, calendarValidation, statesInputFocused, statesFocusTrail };
     socket.close();
-    await writeFile(`${outputDirectory}/results.json`, JSON.stringify({ savedStatement, reports, documentForm, accessibility }, null, 2));
-    console.log(JSON.stringify({ savedStatement, reports, documentForm, accessibility }));
+    await writeFile(`${outputDirectory}/results.json`, JSON.stringify({ savedStatement, reports, calendarViews: { monthlyView, weeklyView }, calendarNavigation, documentForm, accessibility }, null, 2));
+    console.log(JSON.stringify({ savedStatement, reports, calendarViews: { monthlyView, weeklyView }, calendarNavigation, documentForm, accessibility }));
   } finally {
     chromium.kill("SIGTERM");
   }

@@ -47,3 +47,8 @@
 - [x] Añadir pruebas de aislamiento por usuario para eventos de calendario, estados mensuales y documentos especializados.
 - [x] Ejecutar y documentar QA de foco y teclado en Calendario y Estados mensuales.
 - [x] Corregir y repetir la QA de teclado en Estados para demostrar un cambio real de foco entre controles interactivos y documentar el resultado persistente.
+- [x] Diseñar e implementar vistas mensual y semanal del calendario para visualizar fechas importantes, pagos y vencimientos manuales.
+- [x] Validar la navegación por periodos, accesibilidad y adaptación móvil de las nuevas vistas de calendario.
+- [x] Ejecutar y documentar QA de navegación temporal completa: anterior, siguiente, Hoy y selectores de mes/fecha en vistas mensual y semanal.
+- [x] Verificar y documentar el orden final de foco del calendario entre Añadir evento, vista, controles de periodo y celdas.
+- [x] Extender la QA para confirmar foco en una celda de día mensual y una semanal, y documentar la traza completa.
