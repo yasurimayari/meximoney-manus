@@ -43,7 +43,15 @@ Los abonos se guardan como historial privado, con importe, fecha y nota. El sald
 
 La **Fase A está concluida** conforme al alcance acordado: onboarding privado, entidades y proyectos, conversión manual, naturaleza de ingresos, referencias de Drive, colaboración controlada, filtros, exportaciones, notificaciones internas, traspasos, CxC, abonos y conciliación manual. Las validaciones preservan el aislamiento por usuario y no introducen bancos conectados, pagos automáticos, fiscalidad automatizada ni servicios externos de mensajería.
 
-La aplicación está preparada para pasar a **Fase B**, pero esa fase aún no se ha iniciado. El siguiente bloque debe definirse antes de construirlo para evitar ampliar el alcance sin decisión explícita.
+La **primera versión de Fase B** ya incorpora captura y control de calidad manual. No conecta bancos, no utiliza OCR, no conserva los archivos de importación y no registra nada sin confirmación explícita.
+
+## Captura revisable, recurrencias y cuentas por pagar
+
+En **Registros**, la importación de archivos CSV, XLSX o XLS se analiza localmente para previsualizar hasta 300 filas. La persona usuaria asigna columnas de fecha, importe, detalle, tipo y moneda, define el contexto común y revisa cada fila antes de confirmar. Meximoney compara una huella de tipo, importe, moneda, fecha, cuenta y detalle para señalar posibles duplicados; una coincidencia se excluye hasta que la persona usuaria confirme expresamente conservarla. El archivo fuente no se guarda ni se envía a bancos u otros proveedores.
+
+En **Plantillas recurrentes**, se pueden crear, editar o eliminar plantillas privadas para cualquier proveedor o contraparte —por ejemplo, Notion, Squarespace, Google Workspace, contador u otros gastos propios—. La frecuencia es una referencia de organización; la acción **Aplicar ahora** crea un único movimiento confirmado cuando la persona usuaria lo decide. No existe cron, cargo programado ni conexión con el proveedor.
+
+La pestaña **Por pagar** registra obligaciones con proveedores, contador, socios, amistades u otros acreedores. Cada CxP conserva origen, ámbito, entidad/proyecto opcionales, fechas, importe y estados manuales **pendiente**, **vencida**, **pagada** y **conciliada**. Los pagos parciales recalculan el saldo y pueden enlazarse a un gasto aprobado ya existente, en la misma moneda; el vínculo no crea ni duplica gastos.
 
 ## Notificaciones privadas dentro del sitio
 

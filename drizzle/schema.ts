@@ -238,6 +238,60 @@ export const receivablePayments = mysqlTable("receivablePayments", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const recurringTemplates = mysqlTable("recurringTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
+  accountId: int("accountId"),
+  categoryId: int("categoryId"),
+  name: varchar("name", { length: 180 }).notNull(),
+  counterparty: varchar("counterparty", { length: 180 }),
+  type: mysqlEnum("type", ["income", "expense"]).notNull().default("expense"),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  amountCents: int("amountCents").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  incomeNature: mysqlEnum("incomeNature", ["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]).notNull().default("other"),
+  cadence: mysqlEnum("cadence", ["weekly", "monthly", "quarterly", "annual"]).notNull().default("monthly"),
+  nextOccurrenceAt: timestamp("nextOccurrenceAt"),
+  status: mysqlEnum("status", ["active", "paused"]).notNull().default("active"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const payables = mysqlTable("payables", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
+  creditor: varchar("creditor", { length: 180 }).notNull(),
+  origin: varchar("origin", { length: 220 }).notNull(),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  amountCents: int("amountCents").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  issuedAt: timestamp("issuedAt").notNull(),
+  dueAt: timestamp("dueAt"),
+  paidAt: timestamp("paidAt"),
+  status: mysqlEnum("status", ["pending", "overdue", "paid", "reconciled"]).notNull().default("pending"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const payablePayments = mysqlTable("payablePayments", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  payableId: int("payableId").notNull(),
+  linkedTransactionId: int("linkedTransactionId"),
+  amountCents: int("amountCents").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  paidAt: timestamp("paidAt").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const financeDocuments = mysqlTable("financeDocuments", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

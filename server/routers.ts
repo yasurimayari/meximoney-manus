@@ -24,9 +24,12 @@ import {
   monthlyFinancialStatements,
   notificationPreferences,
   localCredentials,
+  payablePayments,
+  payables,
   privacyConsents,
   receivables,
   receivablePayments,
+  recurringTemplates,
   users,
   workspaceEntities,
 } from "../drizzle/schema";
@@ -35,6 +38,7 @@ import { deleteAllFinancialData, deleteOwnedRow, getFinanceSnapshot, getProfile,
 import { storagePut } from "./storage";
 import { requiresPersonalProfileConsent } from "./profilePrivacy";
 import { calculateMonthlyStatement, monthBounds } from "./finance";
+import { findPossibleDuplicates } from "./imports";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM } from "./_core/llm";
 import { sdk } from "./_core/sdk";
@@ -46,6 +50,7 @@ const moneySchema = z.number().int().min(0);
 const optionalDate = z.number().int().positive().nullable().optional();
 const calendarColorCategorySchema = z.enum(["tax", "credit_card_cutoff", "credit_card_payment", "loan_payment", "document_expiry", "insurance_renewal", "review", "other", "debt_due", "document_due", "task_due", "fiscal_reserve"]);
 const calendarColorKeySchema = z.enum(["teal", "emerald", "sky", "indigo", "violet", "amber", "orange", "rose", "slate"]);
+const importRowSchema = z.object({ accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), type: z.enum(["income", "expense"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), reportCurrency: z.string().length(3).nullable().optional(), reportAmountCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), occurredAt: z.number().int().positive(), isEssential: z.boolean().default(false), status: z.enum(["confirmed", "estimated", "needs_review"]).default("confirmed"), notes: z.string().max(3000).nullable().optional(), allowPossibleDuplicate: z.boolean().default(false) });
 const manualOnlyNotice = "Meximoney trabaja solo con tus registros manuales. No tiene acceso a bancos ni puede ejecutar acciones financieras.";
 const credentialInput = z.object({
   email: z.string().trim().email().max(320).transform(value => value.toLowerCase()),
@@ -101,6 +106,14 @@ export function receivableSettlement(receivable: { amountCents: number; dueAt: D
   const remainingCents = Math.max(0, receivable.amountCents - paidCents);
   const completelyLinked = payments.length > 0 && payments.every(payment => payment.linkedTransactionId !== null);
   const status: "pending" | "overdue" | "paid" | "reconciled" = remainingCents === 0 ? (completelyLinked ? "reconciled" : "paid") : receivable.dueAt && receivable.dueAt.getTime() < Date.now() ? "overdue" : "pending";
+  return { paidCents, remainingCents, status, paidAt: remainingCents === 0 ? payments.reduce<Date | null>((latest, payment) => !latest || payment.paidAt > latest ? payment.paidAt : latest, null) : null };
+}
+
+export function payableSettlement(payable: { amountCents: number; dueAt: Date | null }, payments: Array<{ amountCents: number; linkedTransactionId: number | null; paidAt: Date }>) {
+  const paidCents = payments.reduce((sum, payment) => sum + payment.amountCents, 0);
+  const remainingCents = Math.max(0, payable.amountCents - paidCents);
+  const completelyLinked = payments.length > 0 && payments.every(payment => payment.linkedTransactionId !== null);
+  const status: "pending" | "overdue" | "paid" | "reconciled" = remainingCents === 0 ? (completelyLinked ? "reconciled" : "paid") : payable.dueAt && payable.dueAt.getTime() < Date.now() ? "overdue" : "pending";
   return { paidCents, remainingCents, status, paidAt: remainingCents === 0 ? payments.reduce<Date | null>((latest, payment) => !latest || payment.paidAt > latest ? payment.paidAt : latest, null) : null };
 }
 
@@ -327,6 +340,105 @@ export const appRouter = router({
         remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar cuentas por cobrar." });
           const db = await requireDb(); await db.delete(receivables).where(and(eq(receivables.id, input.id), eq(receivables.userId, ctx.workspaceAccess.ownerId))); return { success: true };
+        }),
+      }),
+      payables: router({
+        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), creditor: z.string().trim().min(1).max(180), origin: z.string().trim().min(1).max(220), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), issuedAt: z.number().int().positive(), dueAt: optionalDate, paidAt: optionalDate, status: z.enum(["pending", "overdue", "paid", "reconciled"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar cuentas por pagar." });
+          const db = await requireDb(); const { id, issuedAt, dueAt, paidAt, ...values } = input;
+          const payload = { ...values, issuedAt: new Date(issuedAt), dueAt: asDate(dueAt), paidAt: asDate(paidAt) };
+          if (id) await db.update(payables).set(payload).where(and(eq(payables.id, id), eq(payables.userId, ctx.workspaceAccess.ownerId)));
+          else await db.insert(payables).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+          return { success: true };
+        }),
+        paymentSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), payableId: z.number().int().positive(), linkedTransactionId: z.number().int().positive().nullable().optional(), amountCents: z.number().int().positive(), currency: z.string().length(3), paidAt: z.number().int().positive(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede registrar o conciliar pagos." });
+          const db = await requireDb();
+          await db.transaction(async tx => {
+            const [payable] = await tx.select().from(payables).where(and(eq(payables.id, input.payableId), eq(payables.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!payable) throw new TRPCError({ code: "NOT_FOUND", message: "La cuenta por pagar no pertenece a tu espacio." });
+            if (payable.currency !== input.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "El pago debe usar la misma moneda que la cuenta por pagar." });
+            const existingPayments = await tx.select().from(payablePayments).where(and(eq(payablePayments.payableId, payable.id), eq(payablePayments.userId, ctx.workspaceAccess.ownerId)));
+            const otherPayments = existingPayments.filter(payment => payment.id !== input.id);
+            if (otherPayments.reduce((sum, payment) => sum + payment.amountCents, 0) + input.amountCents > payable.amountCents) throw new TRPCError({ code: "BAD_REQUEST", message: "El pago supera el saldo pendiente de esta cuenta por pagar." });
+            if (input.linkedTransactionId) {
+              const [expense] = await tx.select().from(financialTransactions).where(and(eq(financialTransactions.id, input.linkedTransactionId), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId))).limit(1);
+              if (!expense || expense.type !== "expense" || expense.currency !== input.currency || expense.reviewStatus !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Selecciona un gasto aprobado, de la misma moneda y de tu espacio privado." });
+              const linkedElsewhere = await tx.select().from(payablePayments).where(and(eq(payablePayments.userId, ctx.workspaceAccess.ownerId), eq(payablePayments.linkedTransactionId, expense.id)));
+              if (linkedElsewhere.filter(payment => payment.id !== input.id).reduce((sum, payment) => sum + payment.amountCents, 0) + input.amountCents > expense.amountCents) throw new TRPCError({ code: "BAD_REQUEST", message: "El importe vinculado supera el gasto real seleccionado." });
+            }
+            const payload = { payableId: payable.id, linkedTransactionId: input.linkedTransactionId ?? null, amountCents: input.amountCents, currency: input.currency, paidAt: new Date(input.paidAt), notes: input.notes ?? null };
+            if (input.id) await tx.update(payablePayments).set(payload).where(and(eq(payablePayments.id, input.id), eq(payablePayments.userId, ctx.workspaceAccess.ownerId)));
+            else await tx.insert(payablePayments).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+            const updatedPayments = input.id ? [...otherPayments, { ...payload, id: input.id, userId: ctx.workspaceAccess.ownerId, createdAt: new Date(), updatedAt: new Date() }] : [...existingPayments, { ...payload, id: -1, userId: ctx.workspaceAccess.ownerId, createdAt: new Date(), updatedAt: new Date() }];
+            const settlement = payableSettlement(payable, updatedPayments);
+            await tx.update(payables).set({ status: settlement.status, paidAt: settlement.paidAt }).where(and(eq(payables.id, payable.id), eq(payables.userId, ctx.workspaceAccess.ownerId)));
+          });
+          return { success: true };
+        }),
+        paymentRemove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar pagos." });
+          const db = await requireDb();
+          await db.transaction(async tx => {
+            const [payment] = await tx.select().from(payablePayments).where(and(eq(payablePayments.id, input.id), eq(payablePayments.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!payment) return;
+            const [payable] = await tx.select().from(payables).where(and(eq(payables.id, payment.payableId), eq(payables.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            await tx.delete(payablePayments).where(and(eq(payablePayments.id, payment.id), eq(payablePayments.userId, ctx.workspaceAccess.ownerId)));
+            if (!payable) return;
+            const remainingPayments = await tx.select().from(payablePayments).where(and(eq(payablePayments.payableId, payable.id), eq(payablePayments.userId, ctx.workspaceAccess.ownerId)));
+            const settlement = payableSettlement(payable, remainingPayments);
+            await tx.update(payables).set({ status: settlement.status, paidAt: settlement.paidAt }).where(and(eq(payables.id, payable.id), eq(payables.userId, ctx.workspaceAccess.ownerId)));
+          });
+          return { success: true };
+        }),
+        remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar cuentas por pagar." });
+          const db = await requireDb(); await db.delete(payables).where(and(eq(payables.id, input.id), eq(payables.userId, ctx.workspaceAccess.ownerId))); return { success: true };
+        }),
+      }),
+      recurringTemplates: router({
+        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(180), counterparty: z.string().trim().max(180).nullable().optional(), type: z.enum(["income", "expense"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), cadence: z.enum(["weekly", "monthly", "quarterly", "annual"]), nextOccurrenceAt: optionalDate, status: z.enum(["active", "paused"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar plantillas recurrentes." });
+          const db = await requireDb(); const { id, nextOccurrenceAt, ...values } = input; const payload = { ...values, nextOccurrenceAt: asDate(nextOccurrenceAt) };
+          if (id) await db.update(recurringTemplates).set(payload).where(and(eq(recurringTemplates.id, id), eq(recurringTemplates.userId, ctx.workspaceAccess.ownerId)));
+          else await db.insert(recurringTemplates).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+          return { success: true };
+        }),
+        remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar plantillas recurrentes." });
+          const db = await requireDb(); await db.delete(recurringTemplates).where(and(eq(recurringTemplates.id, input.id), eq(recurringTemplates.userId, ctx.workspaceAccess.ownerId))); return { success: true };
+        }),
+        applyNow: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive(), occurredAt: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede aplicar plantillas recurrentes." });
+          const db = await requireDb();
+          const [template] = await db.select().from(recurringTemplates).where(and(eq(recurringTemplates.id, input.id), eq(recurringTemplates.userId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!template || template.status !== "active") throw new TRPCError({ code: "NOT_FOUND", message: "La plantilla activa no pertenece a tu espacio." });
+          await db.insert(financialTransactions).values({ userId: ctx.workspaceAccess.ownerId, accountId: template.accountId, categoryId: template.categoryId, goalId: null, debtId: null, entityId: template.entityId, projectId: template.projectId, type: template.type, scope: template.scope, amountCents: template.amountCents, currency: template.currency, reportCurrency: template.currency, reportAmountCents: template.amountCents, exchangeRateMicros: null, exchangeRateDate: null, incomeNature: template.incomeNature, occurredAt: new Date(input.occurredAt), isEssential: false, transferGroupId: null, status: "confirmed", reviewStatus: "approved", createdByUserId: ctx.user.id, reviewedByUserId: ctx.user.id, reviewedAt: new Date(), notes: [template.name, template.counterparty].filter(Boolean).join(" · ") || template.notes });
+          return { success: true };
+        }),
+      }),
+      imports: router({
+        preview: workspaceFinanceProcedure.input(z.object({ rows: z.array(importRowSchema).min(1).max(300) })).mutation(async ({ ctx, input }) => {
+          const db = await requireDb();
+          const existing = await db.select().from(financialTransactions).where(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId));
+          return input.rows.map((row, index) => ({ index, possibleDuplicateIds: findPossibleDuplicates({ ...row, occurredAt: new Date(row.occurredAt), accountId: row.accountId ?? null, notes: row.notes ?? null }, existing), row }));
+        }),
+        confirm: workspaceFinanceProcedure.input(z.object({ rows: z.array(importRowSchema).min(1).max(300) })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner" && !ctx.workspaceAccess.canCreateDrafts) throw new TRPCError({ code: "FORBIDDEN", message: "Tu rol no permite confirmar importaciones." });
+          const db = await requireDb();
+          const isOwner = ctx.workspaceAccess.role === "owner";
+          const result = await db.transaction(async tx => {
+            const existing = await tx.select().from(financialTransactions).where(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId));
+            const blocked = input.rows.flatMap((row, index) => {
+              const possibleDuplicateIds = findPossibleDuplicates({ ...row, occurredAt: new Date(row.occurredAt), accountId: row.accountId ?? null, notes: row.notes ?? null }, existing);
+              return possibleDuplicateIds.length && !row.allowPossibleDuplicate ? [{ index, possibleDuplicateIds }] : [];
+            });
+            if (blocked.length) throw new TRPCError({ code: "CONFLICT", message: "Hay filas que coinciden con movimientos existentes. Revísalas y confirma cada duplicado que quieras conservar.", cause: blocked });
+            const values = input.rows.map(({ occurredAt, exchangeRateDate, allowPossibleDuplicate, ...row }) => ({ userId: ctx.workspaceAccess.ownerId, ...row, accountId: row.accountId ?? null, categoryId: row.categoryId ?? null, entityId: row.entityId ?? null, projectId: row.projectId ?? null, goalId: null, debtId: null, occurredAt: new Date(occurredAt), exchangeRateDate: asDate(exchangeRateDate), transferGroupId: null, reviewStatus: isOwner ? "approved" as const : "pending_review" as const, status: isOwner ? row.status : "needs_review" as const, createdByUserId: ctx.user.id, reviewedByUserId: isOwner ? ctx.user.id : null, reviewedAt: isOwner ? new Date() : null }));
+            await tx.insert(financialTransactions).values(values);
+            return { importedCount: values.length };
+          });
+          return { success: true, ...result };
         }),
       }),
       reviewTransaction: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive(), approve: z.boolean() })).mutation(async ({ ctx, input }) => {

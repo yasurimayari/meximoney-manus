@@ -105,3 +105,9 @@
 - [x] Implementar abonos parciales privados en CxC con saldo pendiente calculado de forma trazable.
 - [x] Permitir vincular una CxC pagada o conciliada con un ingreso real manual del mismo espacio, sin crear ni duplicar movimientos.
 - [x] Validar totales, aislamiento, accesibilidad y respuesta móvil de abonos y conciliación, y documentar el cierre de Fase A y la preparación de Fase B.
+- [x] Reconciliar la hoja de ruta original con las capacidades ya entregadas y presentar un plan revisado de Fase B para aprobación, sin ejecutar cambios.
+- [x] Implementar importación manual y revisable de CSV/Excel con previsualización, mapeo y confirmación antes de guardar.
+- [x] Añadir detección de duplicados y plantillas recurrentes privadas, editables y personalizables para cualquier proveedor o gasto.
+- [x] Implementar cuentas por pagar manuales para proveedores, contador, socios, amistades y otros acreedores, con abonos, saldo y estados trazables.
+- [x] Validar privacidad, importes, accesibilidad, respuesta móvil y regresiones de la primera versión de Fase B.
+- [x] Validar aislamiento entre usuarias para importaciones, plantillas recurrentes, cuentas por pagar y pagos antes de cerrar la primera versión de Fase B.

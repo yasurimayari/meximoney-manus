@@ -19,9 +19,12 @@ import {
   InsertUser,
   monthlyReviews,
   monthlyFinancialStatements,
+  payablePayments,
+  payables,
   privacyConsents,
   receivables,
   receivablePayments,
+  recurringTemplates,
   users,
   workspaceEntities,
 } from "../drizzle/schema";
@@ -147,7 +150,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, receivableRows, receivablePaymentRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, receivableRows, receivablePaymentRows, templateRows, payableRows, payablePaymentRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
@@ -168,6 +171,9 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(collaborationInvites).where(eq(collaborationInvites.ownerId, ownerId)),
     db.select().from(receivables).where(eq(receivables.userId, ownerId)),
     db.select().from(receivablePayments).where(eq(receivablePayments.userId, ownerId)),
+    db.select().from(recurringTemplates).where(eq(recurringTemplates.userId, ownerId)),
+    db.select().from(payables).where(eq(payables.userId, ownerId)),
+    db.select().from(payablePayments).where(eq(payablePayments.userId, ownerId)),
   ]);
 
   const { start, end } = monthBounds(referenceDate);
@@ -229,12 +235,15 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     documents: documentRows,
     receivables: receivableRows,
     receivablePayments: receivablePaymentRows,
+    recurringTemplates: templateRows,
+    payables: payableRows,
+    payablePayments: payablePaymentRows,
     decisions: decisionRows,
     dashboard: { periodStart: start, reportCurrency, cashFlow, netWorth, liquidity, essentialExpensesCents, qualityIssues },
   };
 }
 
-export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements | typeof receivables | typeof receivablePayments, id: number, userId: number) {
+export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements | typeof receivables | typeof receivablePayments | typeof recurringTemplates | typeof payables | typeof payablePayments, id: number, userId: number) {
   const db = await requireDb();
   await db.delete(table).where(and(eq(table.id, id), eq(table.userId, userId)));
 }
@@ -245,6 +254,9 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(financialTransactions).where(eq(financialTransactions.userId, userId));
     await tx.delete(receivablePayments).where(eq(receivablePayments.userId, userId));
     await tx.delete(receivables).where(eq(receivables.userId, userId));
+    await tx.delete(payablePayments).where(eq(payablePayments.userId, userId));
+    await tx.delete(payables).where(eq(payables.userId, userId));
+    await tx.delete(recurringTemplates).where(eq(recurringTemplates.userId, userId));
     await tx.delete(budgets).where(eq(budgets.userId, userId));
     await tx.delete(calendarColorPreferences).where(eq(calendarColorPreferences.userId, userId));
     await tx.delete(calendarEvents).where(eq(calendarEvents.userId, userId));
