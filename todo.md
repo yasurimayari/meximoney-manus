@@ -96,8 +96,3 @@
 - [x] Diseñar reglas manuales de recordatorio para presupuesto y reserva fiscal, sin cálculos ni presentación fiscal automática.
 - [x] Evaluar Telegram como canal opcional de señal mínima, comparando privacidad, coste operativo y configuración requerida antes de integrarlo.
 - [x] Auditar la página histórica de Notion de Meximoney, comparar sus componentes con la aplicación actual y priorizar oportunidades sin implementarlas todavía.
-- [x] Exportar historial de posiciones y operaciones de inversión a CSV, Excel y PDF.
-- [x] Completar el PDF de inversiones con fecha, notas y saltos de página para historiales extensos.
-- [x] Cubrir con pruebas la generación local de exportaciones de inversiones.
-- [x] Desarrollar cierres mensuales que incorporen patrimonio, activos, pasivos e inversiones para alimentar su evolución histórica.
-- [x] Añadir ahorro e inversión como dimensiones presupuestarias y una vista de Presupuesto vs. Real que señale desviaciones mensuales.

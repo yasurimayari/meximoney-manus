@@ -283,7 +283,7 @@ function DashboardLayoutContent({
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={() => setLocation("/calidad")} className="cursor-pointer">
                   <CircleCheckBig className="mr-2 h-4 w-4" />
-                  <span>Perfil y privacidad</span>
+                  <span>Calidad, perfil y privacidad</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setLocation("/notificaciones")} className="cursor-pointer">
                   <BellRing className="mr-2 h-4 w-4" />

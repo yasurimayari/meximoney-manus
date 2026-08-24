@@ -90,6 +90,13 @@ export const financeNotifications = mysqlTable("financeNotifications", {
   dismissedAt: timestamp("dismissedAt"),
 });
 
+export const qualityIssueAcknowledgements = mysqlTable("qualityIssueAcknowledgements", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  issueKey: varchar("issueKey", { length: 512 }).notNull(),
+  acknowledgedAt: timestamp("acknowledgedAt").defaultNow().notNull(),
+});
+
 export const workspaceEntities = mysqlTable("workspaceEntities", {
   id: int("id").autoincrement().primaryKey(),
   ownerId: int("ownerId").notNull(),

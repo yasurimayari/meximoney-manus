@@ -30,6 +30,7 @@ import {
   payablePayments,
   payables,
   privacyConsents,
+  qualityIssueAcknowledgements,
   receivables,
   receivablePayments,
   recurringTemplates,
@@ -607,6 +608,19 @@ export const appRouter = router({
       }),
       dismiss: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb(); await db.update(financeNotifications).set({ dismissedAt: new Date() }).where(and(eq(financeNotifications.id, input.id), eq(financeNotifications.userId, ctx.user.id))); return { success: true };
+      }),
+    }),
+    quality: router({
+      acknowledge: privateFinanceProcedure.input(z.object({ issueKey: z.string().min(3).max(512) })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const existing = await db.select({ id: qualityIssueAcknowledgements.id }).from(qualityIssueAcknowledgements).where(and(eq(qualityIssueAcknowledgements.userId, ctx.user.id), eq(qualityIssueAcknowledgements.issueKey, input.issueKey))).limit(1);
+        if (!existing[0]) await db.insert(qualityIssueAcknowledgements).values({ userId: ctx.user.id, issueKey: input.issueKey });
+        return { success: true };
+      }),
+      reopen: privateFinanceProcedure.input(z.object({ issueKey: z.string().min(3).max(512) })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        await db.delete(qualityIssueAcknowledgements).where(and(eq(qualityIssueAcknowledgements.userId, ctx.user.id), eq(qualityIssueAcknowledgements.issueKey, input.issueKey)));
+        return { success: true };
       }),
     }),
     privacy: router({

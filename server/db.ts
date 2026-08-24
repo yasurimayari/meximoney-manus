@@ -25,6 +25,7 @@ import {
   payablePayments,
   payables,
   privacyConsents,
+  qualityIssueAcknowledgements,
   receivables,
   receivablePayments,
   recurringTemplates,
@@ -154,7 +155,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, qualityAcknowledgementRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
@@ -181,6 +182,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(payablePayments).where(eq(payablePayments.userId, ownerId)),
     db.select().from(investments).where(eq(investments.userId, ownerId)),
     db.select().from(investmentOperations).where(eq(investmentOperations.userId, ownerId)),
+    db.select().from(qualityIssueAcknowledgements).where(eq(qualityIssueAcknowledgements.userId, ownerId)),
   ]);
 
   const { start, end } = monthBounds(referenceDate);
@@ -195,7 +197,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     .filter(item => item.type === "expense" && item.isEssential && item.occurredAt >= start && item.occurredAt < end)
     .reduce((sum, item) => sum + (reportedAmountCents(item, reportCurrency) ?? 0), 0) || profile?.referenceEssentialExpensesCents || 0;
   const liquidity = calculateLiquidity(reportCurrencyAccounts, essentialExpensesCents);
-  const qualityIssues = [
+  const derivedQualityIssues = [
     ...transactionRows
       .filter(item => (item.type === "income" || item.type === "expense") && !item.categoryId)
       .map(item => ({ code: "missing_category", severity: "medium", label: `Movimiento sin categoría: ${item.notes || `#${item.id}`}` })),
@@ -228,6 +230,10 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
       .filter(item => item.status === "active" && !item.targetDate)
       .map(item => ({ code: "missing_goal_date", severity: "low", label: `Fecha objetivo pendiente: ${item.name}` })),
   ];
+  const acknowledgedKeys = new Set(qualityAcknowledgementRows.map(item => item.issueKey));
+  const qualityIssues = derivedQualityIssues
+    .map(issue => ({ ...issue, key: `${issue.code}:${issue.label}` }))
+    .filter(issue => !acknowledgedKeys.has(issue.key));
 
   return {
     profile,
@@ -237,6 +243,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     exchangeRates: exchangeRateRows,
     collaborators: inviteRows,
     contacts: contactRows,
+    qualityAcknowledgements: qualityAcknowledgementRows,
     accounts: accountRows,
     categories: categoryRows,
     transactions: transactionRows,
@@ -292,5 +299,6 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(accounts).where(eq(accounts.userId, userId));
     await tx.delete(financialProfiles).where(eq(financialProfiles.userId, userId));
     await tx.delete(privacyConsents).where(eq(privacyConsents.userId, userId));
+    await tx.delete(qualityIssueAcknowledgements).where(eq(qualityIssueAcknowledgements.userId, userId));
   });
 }
