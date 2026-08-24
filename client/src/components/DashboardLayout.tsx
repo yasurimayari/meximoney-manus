@@ -149,6 +149,7 @@ function LocalAuthCard() {
       <div className="form-field"><Label htmlFor="auth-password">Contraseña</Label><Input id="auth-password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={12} required value={password} onChange={event => setPassword(event.target.value)} />{mode === "register" ? <small>Usa al menos 12 caracteres.</small> : null}</div>
       <Button type="submit" size="lg" className="w-full btn-primary" disabled={isPending}>{isPending ? "Procesando…" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}</Button>
     </form>
+    <p className="mt-4 text-center text-sm text-muted-foreground">{mode === "login" ? <>¿Es tu primera vez? <button type="button" className="font-semibold text-primary underline-offset-4 hover:underline" onClick={() => setMode("register")}>Crear cuenta</button></> : <>¿Ya tienes cuenta? <button type="button" className="font-semibold text-primary underline-offset-4 hover:underline" onClick={() => setMode("login")}>Iniciar sesión</button></>}</p>
     <div className="auth-card-footer"><span>0 conexiones bancarias</span><i /> <span>0 pagos ejecutados</span></div>
   </section>;
 }

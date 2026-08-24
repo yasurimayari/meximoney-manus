@@ -102,3 +102,4 @@
 - [x] Permitir editar partidas de presupuesto y alternar entre vistas de tarjetas, resumen y progreso visual.
 - [x] Añadir vistas de tarjetas/lista y filtro por contactos activos en Contactos.
 - [x] Mover Calidad de tus datos fuera del Panel y convertir sus alertas en acciones editables, eliminables o marcables como resueltas.
+- [x] Mostrar una opción visible de iniciar sesión para usuarios registrados desde la pantalla pública de Meximoney.
