@@ -21,6 +21,8 @@ import {
   financialProfiles,
   financialProjects,
   financialTransactions,
+  investments,
+  investmentOperations,
   monthlyReviews,
   monthlyFinancialStatements,
   notificationPreferences,
@@ -39,6 +41,7 @@ import { deleteAllFinancialData, deleteOwnedRow, getFinanceSnapshot, getProfile,
 import { storagePut } from "./storage";
 import { requiresPersonalProfileConsent } from "./profilePrivacy";
 import { calculateMonthlyStatement, monthBounds } from "./finance";
+import { comparableInvestmentValueCents } from "./investmentData";
 import { findPossibleDuplicates } from "./imports";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM } from "./_core/llm";
@@ -303,9 +306,13 @@ export const appRouter = router({
         return { success: true };
       }),
       receivables: router({
-        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), counterparty: z.string().trim().min(1).max(180), origin: z.string().trim().min(1).max(220), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), issuedAt: z.number().int().positive(), dueAt: optionalDate, paidAt: optionalDate, status: z.enum(["pending", "overdue", "paid", "reconciled"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), counterparty: z.string().trim().min(1).max(180), origin: z.string().trim().min(1).max(220), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), issuedAt: z.number().int().positive(), dueAt: optionalDate, paidAt: optionalDate, status: z.enum(["pending", "overdue", "paid", "reconciled"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar cuentas por cobrar." });
           const db = await requireDb(); const { id, issuedAt, dueAt, paidAt, ...values } = input;
+          if (values.contactId) {
+            const contact = await db.select({ id: financialContacts.id }).from(financialContacts).where(and(eq(financialContacts.id, values.contactId), eq(financialContacts.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!contact[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El contacto seleccionado no pertenece a tu espacio privado." });
+          }
           const payload = { ...values, issuedAt: new Date(issuedAt), dueAt: asDate(dueAt), paidAt: asDate(paidAt) };
           if (id) await db.update(receivables).set(payload).where(and(eq(receivables.id, id), eq(receivables.userId, ctx.workspaceAccess.ownerId)));
           else await db.insert(receivables).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
@@ -359,9 +366,13 @@ export const appRouter = router({
         }),
       }),
       payables: router({
-        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), creditor: z.string().trim().min(1).max(180), origin: z.string().trim().min(1).max(220), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), issuedAt: z.number().int().positive(), dueAt: optionalDate, paidAt: optionalDate, status: z.enum(["pending", "overdue", "paid", "reconciled"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), creditor: z.string().trim().min(1).max(180), origin: z.string().trim().min(1).max(220), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), issuedAt: z.number().int().positive(), dueAt: optionalDate, paidAt: optionalDate, status: z.enum(["pending", "overdue", "paid", "reconciled"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar cuentas por pagar." });
           const db = await requireDb(); const { id, issuedAt, dueAt, paidAt, ...values } = input;
+          if (values.contactId) {
+            const contact = await db.select({ id: financialContacts.id }).from(financialContacts).where(and(eq(financialContacts.id, values.contactId), eq(financialContacts.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!contact[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El contacto seleccionado no pertenece a tu espacio privado." });
+          }
           const payload = { ...values, issuedAt: new Date(issuedAt), dueAt: asDate(dueAt), paidAt: asDate(paidAt) };
           if (id) await db.update(payables).set(payload).where(and(eq(payables.id, id), eq(payables.userId, ctx.workspaceAccess.ownerId)));
           else await db.insert(payables).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
@@ -410,6 +421,44 @@ export const appRouter = router({
         remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar cuentas por pagar." });
           const db = await requireDb(); await db.delete(payables).where(and(eq(payables.id, input.id), eq(payables.userId, ctx.workspaceAccess.ownerId))); return { success: true };
+        }),
+      }),
+      investments: router({
+        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(180), type: z.enum(["savings", "fixed_income", "fund_etf", "stock", "crypto", "land", "property", "business_equity", "retirement", "other"]), institution: z.string().trim().max(180).nullable().optional(), scope: scopeSchema, currency: z.string().length(3), costBasisCents: moneySchema, currentValueCents: moneySchema, reportCurrency: z.string().length(3).nullable().optional(), reportValueCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, valuationDate: optionalDate, includeInNetWorth: z.boolean(), status: z.enum(["active", "paused", "closed"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar ahorro e inversiones." });
+          const db = await requireDb(); const { id, exchangeRateDate, valuationDate, ...values } = input;
+          const payload = { ...values, exchangeRateDate: asDate(exchangeRateDate), valuationDate: asDate(valuationDate) };
+          if (id) await db.update(investments).set(payload).where(and(eq(investments.id, id), eq(investments.userId, ctx.workspaceAccess.ownerId)));
+          else await db.insert(investments).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+          return { success: true };
+        }),
+        remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar posiciones." });
+          const db = await requireDb();
+          await db.transaction(async tx => {
+            await tx.delete(investmentOperations).where(and(eq(investmentOperations.investmentId, input.id), eq(investmentOperations.userId, ctx.workspaceAccess.ownerId)));
+            await tx.delete(investments).where(and(eq(investments.id, input.id), eq(investments.userId, ctx.workspaceAccess.ownerId)));
+          });
+          return { success: true };
+        }),
+        operationSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), investmentId: z.number().int().positive(), linkedTransactionId: z.number().int().positive().nullable().optional(), type: z.enum(["contribution", "withdrawal", "yield", "valuation_adjustment"]), amountCents: z.number().int().positive(), currency: z.string().length(3), occurredAt: z.number().int().positive(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede registrar operaciones de inversión." });
+          const db = await requireDb();
+          const [investment] = await db.select().from(investments).where(and(eq(investments.id, input.investmentId), eq(investments.userId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!investment) throw new TRPCError({ code: "NOT_FOUND", message: "La posición no pertenece a tu espacio privado." });
+          if (investment.currency !== input.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "La operación debe usar la moneda de la posición." });
+          if (input.linkedTransactionId) {
+            const [transaction] = await db.select().from(financialTransactions).where(and(eq(financialTransactions.id, input.linkedTransactionId), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!transaction || transaction.currency !== input.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "El movimiento vinculado debe pertenecer a tu espacio y usar la misma moneda." });
+          }
+          const { id, occurredAt, ...values } = input; const payload = { ...values, occurredAt: new Date(occurredAt) };
+          if (id) await db.update(investmentOperations).set(payload).where(and(eq(investmentOperations.id, id), eq(investmentOperations.userId, ctx.workspaceAccess.ownerId)));
+          else await db.insert(investmentOperations).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+          return { success: true };
+        }),
+        operationRemove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar operaciones de inversión." });
+          const db = await requireDb(); await db.delete(investmentOperations).where(and(eq(investmentOperations.id, input.id), eq(investmentOperations.userId, ctx.workspaceAccess.ownerId))); return { success: true };
         }),
       }),
       recurringTemplates: router({
@@ -690,7 +739,8 @@ export const appRouter = router({
         const transactions = snapshot.transactions.filter(item => (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency || item.reportCurrency === input.currency) && (!input.reviewStatus || item.reviewStatus === input.reviewStatus));
         const accounts = snapshot.accounts.filter(item => item.currency === reportCurrency && (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency));
         const debts = snapshot.debts.filter(item => item.currency === reportCurrency && (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency));
-        return calculateMonthlyStatement(transactions, accounts, debts, start, end, input.scope, reportCurrency);
+        const investmentAssets = snapshot.investments.map(item => ({ item, valueCents: comparableInvestmentValueCents(item, reportCurrency) })).filter((item): item is { item: typeof snapshot.investments[number]; valueCents: number } => item.valueCents !== null).filter(({ item }) => (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency || item.reportCurrency === input.currency)).map(({ item, valueCents }) => ({ currentValueCents: valueCents, status: "active" as const, isLiquid: false, scope: item.scope }));
+        return calculateMonthlyStatement(transactions, [...accounts, ...investmentAssets], debts, start, end, input.scope, reportCurrency);
       }),
       save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), periodStart: z.number().int().positive(), scope: scopeSchema, entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), currency: z.string().length(3).nullable().optional(), reviewStatus: z.enum(["draft", "pending_review", "approved"]).nullable().optional(), status: z.enum(["draft", "closed"]), notes: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
@@ -700,7 +750,8 @@ export const appRouter = router({
         const transactions = snapshot.transactions.filter(item => (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency || item.reportCurrency === input.currency) && (!input.reviewStatus || item.reviewStatus === input.reviewStatus));
         const accounts = snapshot.accounts.filter(item => item.currency === reportCurrency && (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency));
         const debts = snapshot.debts.filter(item => item.currency === reportCurrency && (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency));
-        const calculated = calculateMonthlyStatement(transactions, accounts, debts, start, end, input.scope, reportCurrency);
+        const investmentAssets = snapshot.investments.map(item => ({ item, valueCents: comparableInvestmentValueCents(item, reportCurrency) })).filter((item): item is { item: typeof snapshot.investments[number]; valueCents: number } => item.valueCents !== null).filter(({ item }) => (!input.entityId || item.entityId === input.entityId) && (!input.projectId || item.projectId === input.projectId) && (!input.currency || item.currency === input.currency || item.reportCurrency === input.currency)).map(({ item, valueCents }) => ({ currentValueCents: valueCents, status: "active" as const, isLiquid: false, scope: item.scope }));
+        const calculated = calculateMonthlyStatement(transactions, [...accounts, ...investmentAssets], debts, start, end, input.scope, reportCurrency);
         const payload = { incomeCents: calculated.incomeCents, expenseCents: calculated.expenseCents, netCashFlowCents: calculated.netCashFlowCents, assetCents: calculated.assetCents, liabilityCents: calculated.liabilityCents, netWorthCents: calculated.netWorthCents, liquidCents: calculated.liquidCents, entityId: input.entityId ?? null, projectId: input.projectId ?? null, filterCurrency: input.currency ?? null, filterReviewStatus: input.reviewStatus ?? null, periodStart: start, scope: input.scope, status: input.status, notes: input.notes ?? null };
         if (input.id) {
           await db.update(monthlyFinancialStatements).set(payload).where(and(eq(monthlyFinancialStatements.id, input.id), eq(monthlyFinancialStatements.userId, ctx.user.id)));

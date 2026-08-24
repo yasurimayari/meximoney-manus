@@ -119,3 +119,8 @@
 - [x] Añadir plantilla descargable para CSV/Excel y mejorar la importación para que su estructura sea predecible.
 - [x] Añadir edición de plantillas recurrentes y cuentas por pagar existentes, y un calendario de vencimientos de CxP.
 - [x] Diseñar la captura rápida por texto natural como opción confirmable sin activarla por defecto.
+- [x] Vincular contactos financieros con las cuentas por cobrar y por pagar, preservando la trazabilidad y el aislamiento por usuaria.
+- [x] Diseñar e implementar una sección privada de ahorro e inversiones con aportaciones, activos, valoración manual y rendimiento registrado, sin cotizaciones ni ejecución automática.
+- [x] Completar la vista de patrimonio neto con filtros de entidad, proyecto y moneda, y una evolución manual clara basada en cierres.
+- [x] Evaluar un proveedor de correo gratuito compatible con Gmail para invitaciones; Resend queda recomendado y no se configura nada sin autorización explícita.
+- [x] Validar la consolidación patrimonial filtrada con inversiones manuales y la exclusión de posiciones sin conversión comparable.

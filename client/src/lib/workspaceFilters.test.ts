@@ -13,6 +13,7 @@ describe("filterWorkspaceSnapshot", () => {
       ],
       accounts: [{ id: 1, entityId: 10, projectId: 20, currency: "MXN" }, { id: 2, entityId: 10, projectId: 20, currency: "USD" }],
       debts: [{ id: 1, entityId: 10, projectId: 20, currency: "MXN" }],
+      investments: [{ id: 1, entityId: 10, projectId: 20, currency: "MXN", reportCurrency: null }, { id: 2, entityId: 10, projectId: 21, currency: "MXN", reportCurrency: null }, { id: 3, entityId: 10, projectId: 20, currency: "USD", reportCurrency: "MXN" }],
       receivables: [{ id: 1, entityId: 10, projectId: 20, currency: "MXN" }, { id: 2, entityId: 10, projectId: 21, currency: "MXN" }, { id: 3, entityId: 11, projectId: 20, currency: "MXN" }, { id: 4, entityId: 10, projectId: 20, currency: "USD" }],
       budgets: [{ id: 1, entityId: 10, projectId: 20 }, { id: 2, entityId: 11, projectId: 20 }],
       goals: [], documents: [{ id: 1, entityId: 10, projectId: 20 }, { id: 2, entityId: 10, projectId: 21 }, { id: 3, entityId: 11, projectId: 20 }], calendarEvents: [], statements: [],
@@ -23,6 +24,7 @@ describe("filterWorkspaceSnapshot", () => {
     expect(filtered.transactions.map((item: any) => item.id)).toEqual([1]);
     expect(filtered.accounts.map((item: any) => item.id)).toEqual([1]);
     expect(filtered.debts.map((item: any) => item.id)).toEqual([1]);
+    expect(filtered.investments.map((item: any) => item.id)).toEqual([1, 3]);
     expect(filtered.receivables.map((item: any) => item.id)).toEqual([1]);
     expect(filtered.budgets.map((item: any) => item.id)).toEqual([1]);
     expect(filtered.documents.map((item: any) => item.id)).toEqual([1]);

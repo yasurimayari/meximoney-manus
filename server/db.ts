@@ -17,6 +17,8 @@ import {
   financialProfiles,
   financialProjects,
   financialTransactions,
+  investments,
+  investmentOperations,
   InsertUser,
   monthlyReviews,
   monthlyFinancialStatements,
@@ -31,6 +33,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { calculateLiquidity, calculateNetWorth, monthBounds, reportedAmountCents, summarizeCashFlowInReportCurrency, transferIntegrityIssues, withNetCashFlow } from "./finance";
+import { comparableInvestmentValueCents, investmentNeedsManualConversion } from "./investmentData";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -151,7 +154,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, templateRows, payableRows, payablePaymentRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
@@ -176,14 +179,18 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(recurringTemplates).where(eq(recurringTemplates.userId, ownerId)),
     db.select().from(payables).where(eq(payables.userId, ownerId)),
     db.select().from(payablePayments).where(eq(payablePayments.userId, ownerId)),
+    db.select().from(investments).where(eq(investments.userId, ownerId)),
+    db.select().from(investmentOperations).where(eq(investmentOperations.userId, ownerId)),
   ]);
 
   const { start, end } = monthBounds(referenceDate);
   const reportCurrency = (profile?.currency || "MXN").toUpperCase();
   const cashFlow = withNetCashFlow(summarizeCashFlowInReportCurrency(transactionRows, start, end, reportCurrency));
   const reportCurrencyAccounts = accountRows.filter(item => item.currency === reportCurrency);
+  const reportCurrencyInvestments = investmentRows.map(item => ({ item, valueCents: comparableInvestmentValueCents(item, reportCurrency) })).filter((item): item is { item: typeof investmentRows[number]; valueCents: number } => item.valueCents !== null).map(({ item, valueCents }) => ({ ...item, currency: reportCurrency, currentValueCents: valueCents, isLiquid: false }));
+  const investmentNetWorthAssets = reportCurrencyInvestments.map(item => ({ currentValueCents: item.currentValueCents, status: "active" as const }));
   const reportCurrencyDebts = debtRows.filter(item => item.currency === reportCurrency);
-  const netWorth = calculateNetWorth(reportCurrencyAccounts, reportCurrencyDebts);
+  const netWorth = calculateNetWorth([...reportCurrencyAccounts, ...investmentNetWorthAssets], reportCurrencyDebts);
   const essentialExpensesCents = transactionRows
     .filter(item => item.type === "expense" && item.isEssential && item.occurredAt >= start && item.occurredAt < end)
     .reduce((sum, item) => sum + (reportedAmountCents(item, reportCurrency) ?? 0), 0) || profile?.referenceEssentialExpensesCents || 0;
@@ -204,6 +211,12 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     ...accountRows
       .filter(item => item.status === "active" && item.currency !== reportCurrency)
       .map(item => ({ code: "pending_account_conversion", severity: "high", label: `Activo fuera de ${reportCurrency}, pendiente de valoración comparable: ${item.name}` })),
+    ...investmentRows
+      .filter(item => item.status === "active" && (!item.valuationDate || item.valuationDate.getTime() < Date.now() - 90 * 24 * 60 * 60 * 1000))
+      .map(item => ({ code: "stale_investment", severity: "medium", label: `Valuación de inversión por actualizar: ${item.name}` })),
+    ...investmentRows
+      .filter(item => investmentNeedsManualConversion(item, reportCurrency))
+      .map(item => ({ code: "pending_investment_conversion", severity: "high", label: `Inversión fuera de ${reportCurrency}, pendiente de valoración comparable: ${item.name}` })),
     ...debtRows
       .filter(item => (item.status === "active" || item.status === "review") && item.currency !== reportCurrency)
       .map(item => ({ code: "pending_debt_conversion", severity: "high", label: `Pasivo fuera de ${reportCurrency}, pendiente de valoración comparable: ${item.name}` })),
@@ -241,12 +254,14 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     recurringTemplates: templateRows,
     payables: payableRows,
     payablePayments: payablePaymentRows,
+    investments: investmentRows,
+    investmentOperations: investmentOperationRows,
     decisions: decisionRows,
     dashboard: { periodStart: start, reportCurrency, cashFlow, netWorth, liquidity, essentialExpensesCents, qualityIssues },
   };
 }
 
-export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements | typeof receivables | typeof receivablePayments | typeof recurringTemplates | typeof payables | typeof payablePayments, id: number, userId: number) {
+export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements | typeof receivables | typeof receivablePayments | typeof recurringTemplates | typeof payables | typeof payablePayments | typeof investments | typeof investmentOperations, id: number, userId: number) {
   const db = await requireDb();
   await db.delete(table).where(and(eq(table.id, id), eq(table.userId, userId)));
 }
@@ -259,6 +274,8 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(receivables).where(eq(receivables.userId, userId));
     await tx.delete(payablePayments).where(eq(payablePayments.userId, userId));
     await tx.delete(payables).where(eq(payables.userId, userId));
+    await tx.delete(investmentOperations).where(eq(investmentOperations.userId, userId));
+    await tx.delete(investments).where(eq(investments.userId, userId));
     await tx.delete(recurringTemplates).where(eq(recurringTemplates.userId, userId));
     await tx.delete(financialContacts).where(eq(financialContacts.userId, userId));
     await tx.delete(budgets).where(eq(budgets.userId, userId));

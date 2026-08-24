@@ -63,6 +63,14 @@ La invitación de gestor o contador queda creada dentro de Meximoney y ofrece in
 
 En Registros se puede descargar una plantilla CSV compatible con las columnas Fecha, Descripción, Importe, Tipo y Moneda. La importación continúa siendo local, revisable y confirmable. Las CxP y plantillas recurrentes pueden editarse y la vista Por pagar muestra los próximos vencimientos ordenados, sin pagos ni tareas automáticas.
 
+## Ahorro, inversiones y patrimonio manual
+
+Las cuentas por cobrar y por pagar pueden vincularse opcionalmente a un contacto financiero privado. El nombre de contraparte queda conservado como rastro histórico y el servidor verifica que el contacto pertenezca a la propietaria del mismo espacio.
+
+La sección **Ahorro e inversiones** permite registrar posiciones de ahorro, renta fija, fondos o ETF, acciones, criptoactivos, terrenos, inmuebles, participaciones empresariales, retiro u otros activos. Cada posición conserva coste, valuación manual, fecha de valuación, entidad/proyecto, estado y un historial de aportaciones, retiros, rendimientos o ajustes. Una operación puede enlazarse a un movimiento manual ya registrado; no crea pagos, compras, ventas, transferencias, cotizaciones ni acciones externas.
+
+**Patrimonio neto** consolida cuentas, inversiones incluidas y deudas cuando son comparables en la moneda de reporte. Una posición en otra moneda se excluye de ese total hasta que se registre explícitamente una valuación de conversión. Las inversiones no se consideran liquidez, y los cierres mensuales pueden incorporar estos activos para guardar un histórico manual.
+
 ## Notificaciones privadas dentro del sitio
 
 La pantalla **Notificaciones** permite activar o silenciar la bandeja interna y cada categoría: fechas de Calendario, documentos próximos a vencer, vencimientos de deudas y movimientos pendientes de revisión humana. Los avisos se generan al abrir o consultar la bandeja, se deduplican por elemento relacionado y pueden marcarse como leídos o descartarse manualmente.
