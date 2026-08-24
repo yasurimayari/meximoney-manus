@@ -16,6 +16,7 @@ import Statements from "./pages/Statements";
 import Workspace from "./pages/Workspace";
 import Review from "./pages/Review";
 import Notifications from "./pages/Notifications";
+import Contacts from "./pages/Contacts";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
@@ -34,6 +35,7 @@ function Router() {
       <Route path={"/espacio"}><DashboardLayout><Workspace /></DashboardLayout></Route>
       <Route path={"/revision"}><DashboardLayout><Review /></DashboardLayout></Route>
       <Route path={"/notificaciones"}><DashboardLayout><Notifications /></DashboardLayout></Route>
+      <Route path={"/contactos"}><DashboardLayout><Contacts /></DashboardLayout></Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

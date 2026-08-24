@@ -10,6 +10,7 @@ import {
   debts,
   decisionRecords,
   exchangeRates,
+  financialContacts,
   financeDocuments,
   financeTasks,
   financialGoals,
@@ -150,7 +151,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, receivableRows, receivablePaymentRows, templateRows, payableRows, payablePaymentRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, templateRows, payableRows, payablePaymentRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
@@ -169,6 +170,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(financialProjects).where(eq(financialProjects.ownerId, ownerId)),
     db.select().from(exchangeRates).where(eq(exchangeRates.ownerId, ownerId)),
     db.select().from(collaborationInvites).where(eq(collaborationInvites.ownerId, ownerId)),
+    db.select().from(financialContacts).where(eq(financialContacts.userId, ownerId)),
     db.select().from(receivables).where(eq(receivables.userId, ownerId)),
     db.select().from(receivablePayments).where(eq(receivablePayments.userId, ownerId)),
     db.select().from(recurringTemplates).where(eq(recurringTemplates.userId, ownerId)),
@@ -221,6 +223,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     projects: projectRows,
     exchangeRates: exchangeRateRows,
     collaborators: inviteRows,
+    contacts: contactRows,
     accounts: accountRows,
     categories: categoryRows,
     transactions: transactionRows,
@@ -257,6 +260,7 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(payablePayments).where(eq(payablePayments.userId, userId));
     await tx.delete(payables).where(eq(payables.userId, userId));
     await tx.delete(recurringTemplates).where(eq(recurringTemplates.userId, userId));
+    await tx.delete(financialContacts).where(eq(financialContacts.userId, userId));
     await tx.delete(budgets).where(eq(budgets.userId, userId));
     await tx.delete(calendarColorPreferences).where(eq(calendarColorPreferences.userId, userId));
     await tx.delete(calendarEvents).where(eq(calendarEvents.userId, userId));

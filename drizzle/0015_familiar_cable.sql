@@ -1,0 +1,1 @@
+ALTER TABLE `workspaceEntities` MODIFY COLUMN `status` enum('active','paused','inactive','planned','dissolved') NOT NULL DEFAULT 'active';

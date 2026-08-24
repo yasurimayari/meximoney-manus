@@ -53,6 +53,16 @@ En **Plantillas recurrentes**, se pueden crear, editar o eliminar plantillas pri
 
 La pestaña **Por pagar** registra obligaciones con proveedores, contador, socios, amistades u otros acreedores. Cada CxP conserva origen, ámbito, entidad/proyecto opcionales, fechas, importe y estados manuales **pendiente**, **vencida**, **pagada** y **conciliada**. Los pagos parciales recalculan el saldo y pueden enlazarse a un gasto aprobado ya existente, en la misma moneda; el vínculo no crea ni duplica gastos.
 
+## Ampliación de Fase B: configuración y control manual
+
+Los **Contactos** son privados y permiten clasificar clientes, proveedores, socios, amistades, familia, contador/a u otras contrapartes. Se pueden asociar opcionalmente con una entidad o proyecto, pausar o archivar, y se eliminan con el borrado completo de datos financieros.
+
+Perfil y privacidad, Notificaciones y Espacio se encuentran en el menú de identidad del pie lateral, también con encabezados correctos en móvil. Desde Espacio la propietaria puede editar, pausar, reactivar, planear, inactivar o marcar como disuelta una entidad, sin borrar el historial asociado. Los proyectos se pueden editar, pausar o reactivar de igual forma.
+
+La invitación de gestor o contador queda creada dentro de Meximoney y ofrece instrucciones copiables: la persona deberá registrarse con el mismo correo y aceptar desde su cuenta. **No existe envío automático de correo** hasta que se seleccione y configure de forma explícita un proveedor transaccional y sus credenciales. No se afirma ni simula una entrega de email.
+
+En Registros se puede descargar una plantilla CSV compatible con las columnas Fecha, Descripción, Importe, Tipo y Moneda. La importación continúa siendo local, revisable y confirmable. Las CxP y plantillas recurrentes pueden editarse y la vista Por pagar muestra los próximos vencimientos ordenados, sin pagos ni tareas automáticas.
+
 ## Notificaciones privadas dentro del sitio
 
 La pantalla **Notificaciones** permite activar o silenciar la bandeja interna y cada categoría: fechas de Calendario, documentos próximos a vencer, vencimientos de deudas y movimientos pendientes de revisión humana. Los avisos se generan al abrir o consultar la bandeja, se deduplican por elemento relacionado y pueden marcarse como leídos o descartarse manualmente.

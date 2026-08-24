@@ -25,7 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
 import { notificationBadgeLabel, unreadNotificationCount } from "@/lib/notificationBadge";
-import { ArrowLeftRight, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, EyeOff, FileDown, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck } from "lucide-react";
+import { ArrowLeftRight, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, ContactRound, EyeOff, FileDown, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -37,14 +37,12 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Panel", path: "/" },
   { icon: ArrowLeftRight, label: "Registros", path: "/movimientos" },
   { icon: Target, label: "Planificación", path: "/planificacion" },
-  { icon: CircleCheckBig, label: "Perfil y privacidad", path: "/calidad" },
+  { icon: ContactRound, label: "Contactos", path: "/contactos" },
   { icon: BarChart3, label: "Analítica", path: "/analitica" },
   { icon: CalendarDays, label: "Calendario", path: "/calendario" },
-  { icon: BellRing, label: "Notificaciones", path: "/notificaciones" },
   { icon: BookOpenCheck, label: "Estados", path: "/estados" },
   { icon: BotMessageSquare, label: "Asistente", path: "/asistente" },
   { icon: FileDown, label: "Exportar", path: "/exportar" },
-  { icon: Settings2, label: "Espacio", path: "/espacio" },
   { icon: ClipboardCheck, label: "Revisión", path: "/revision" },
 ];
 
@@ -168,7 +166,7 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const activeMenuItem = menuItems.find(item => item.path === location) ?? [{ path: "/calidad", label: "Perfil y privacidad" }, { path: "/notificaciones", label: "Notificaciones" }, { path: "/espacio", label: "Espacio" }].find(item => item.path === location);
   const isMobile = useIsMobile();
   const { data: notificationData } = trpc.finance.notifications.get.useQuery(undefined, { enabled: Boolean(user) });
   const unreadNotifications = notificationData ? unreadNotificationCount(notificationData.notifications) : 0;
@@ -280,7 +278,20 @@ function DashboardLayoutContent({
                   </div>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setLocation("/calidad")} className="cursor-pointer">
+                  <CircleCheckBig className="mr-2 h-4 w-4" />
+                  <span>Perfil y privacidad</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation("/notificaciones")} className="cursor-pointer">
+                  <BellRing className="mr-2 h-4 w-4" />
+                  <span>Notificaciones</span>
+                  {unreadNotifications ? <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[0.62rem] font-bold text-primary-foreground">{notificationBadgeLabel(unreadNotifications)}</span> : null}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation("/espacio")} className="cursor-pointer">
+                  <Settings2 className="mr-2 h-4 w-4" />
+                  <span>Espacio</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={logout}
                   className="cursor-pointer text-destructive focus:text-destructive"

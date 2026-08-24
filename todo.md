@@ -111,3 +111,11 @@
 - [x] Implementar cuentas por pagar manuales para proveedores, contador, socios, amistades y otros acreedores, con abonos, saldo y estados trazables.
 - [x] Validar privacidad, importes, accesibilidad, respuesta móvil y regresiones de la primera versión de Fase B.
 - [x] Validar aislamiento entre usuarias para importaciones, plantillas recurrentes, cuentas por pagar y pagos antes de cerrar la primera versión de Fase B.
+- [x] Crear una sección privada de contactos financieros categorizados para clientes, socios, proveedores, amistades, familia y otros vínculos económicos.
+- [x] Consolidar Perfil, privacidad, notificaciones, Espacio y futuras configuraciones en el menú inferior asociado a la identidad de la usuaria.
+- [x] Permitir editar entidades del Espacio y alternar su estado activo, en pausa o planificado sin borrar su historial.
+- [x] Investigar y corregir el flujo de invitación de gestor o contador que actualmente no entrega el correo esperado; la invitación interna es transparente y el correo requiere un proveedor autorizado pendiente.
+- [x] Mover Calidad de datos al área de configuración y convertir sus alertas en acciones corregibles y navegables.
+- [x] Añadir plantilla descargable para CSV/Excel y mejorar la importación para que su estructura sea predecible.
+- [x] Añadir edición de plantillas recurrentes y cuentas por pagar existentes, y un calendario de vencimientos de CxP.
+- [x] Diseñar la captura rápida por texto natural como opción confirmable sin activarla por defecto.

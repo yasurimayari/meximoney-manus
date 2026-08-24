@@ -1,0 +1,56 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { trpc } from "@/lib/trpc";
+import { ContactRound, Mail, Pencil, Phone, Plus, PauseCircle, PlayCircle } from "lucide-react";
+import { FormEvent, useMemo, useState } from "react";
+import { toast } from "sonner";
+
+const contactTypes = [
+  ["client", "Cliente"], ["supplier", "Proveedor"], ["partner", "Socio/a"], ["friend", "Amistad"], ["family", "Familia"], ["employee", "Contador/a o gestor/a"], ["other", "Otro"],
+] as const;
+
+type Contact = { id: number; name: string; type: typeof contactTypes[number][0]; email: string | null; phone: string | null; entityId: number | null; projectId: number | null; defaultCurrency: string | null; status: "active" | "paused" | "archived"; notes: string | null };
+const blank = { name: "", type: "other" as Contact["type"], email: "", phone: "", entityId: "none", projectId: "none", defaultCurrency: "MXN", status: "active" as Contact["status"], notes: "" };
+
+export default function Contacts() {
+  const { data, isLoading } = trpc.finance.workspace.get.useQuery();
+  const utils = trpc.useUtils();
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Contact | null>(null);
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
+  const contacts = (data?.contacts ?? []) as Contact[];
+  const shown = useMemo(() => contacts.filter(contact => (typeFilter === "all" || contact.type === typeFilter) && (statusFilter === "all" || contact.status === statusFilter)), [contacts, statusFilter, typeFilter]);
+  const save = trpc.finance.workspace.contactSave.useMutation({ onSuccess: async () => { await utils.finance.workspace.get.invalidate(); setOpen(false); setEditing(null); toast.success("Contacto guardado en tu espacio privado."); }, onError: error => toast.error(error.message) });
+  const entityName = (id: number | null) => data?.entities.find(entity => entity.id === id)?.name;
+  const openNew = () => { setEditing(null); setOpen(true); };
+  const pause = (contact: Contact) => save.mutate({ ...contact, email: contact.email ?? null, phone: contact.phone ?? null, notes: contact.notes ?? null, defaultCurrency: contact.defaultCurrency ?? null, status: contact.status === "active" ? "paused" : "active" });
+
+  return <section className="space-y-6">
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div><p className="eyebrow">Relaciones financieras</p><h1 className="page-title">Contactos</h1><p className="page-subtitle">Registra de forma privada a las personas y organizaciones con las que intercambias dinero. No se envían comunicaciones desde aquí.</p></div>
+      <Button className="btn-primary" onClick={openNew}><Plus className="mr-2 h-4 w-4" />Nuevo contacto</Button>
+    </header>
+    <Card className="surface-card"><CardContent className="flex flex-col gap-3 p-4 sm:flex-row"><Select value={typeFilter} onValueChange={setTypeFilter}><SelectTrigger className="sm:w-52"><SelectValue placeholder="Tipo" /></SelectTrigger><SelectContent><SelectItem value="all">Todos los tipos</SelectItem>{contactTypes.map(([value, label]) => <SelectItem value={value} key={value}>{label}</SelectItem>)}</SelectContent></Select><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="sm:w-52"><SelectValue placeholder="Estado" /></SelectTrigger><SelectContent><SelectItem value="active">Activos</SelectItem><SelectItem value="paused">En pausa</SelectItem><SelectItem value="archived">Archivados</SelectItem><SelectItem value="all">Todos los estados</SelectItem></SelectContent></Select></CardContent></Card>
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {isLoading ? <Card className="surface-card"><CardContent className="p-5 text-sm text-muted-foreground">Cargando contactos…</CardContent></Card> : null}
+      {!isLoading && shown.length === 0 ? <Card className="surface-card md:col-span-2 xl:col-span-3"><CardContent className="flex min-h-44 flex-col items-center justify-center gap-3 p-6 text-center"><ContactRound className="h-7 w-7 text-muted-foreground"/><p className="font-medium">Aún no hay contactos en este filtro</p><p className="max-w-md text-sm text-muted-foreground">Crea clientes, proveedores, socios, amistades, familia o tu equipo de apoyo financiero.</p><Button variant="outline" onClick={openNew}>Crear contacto</Button></CardContent></Card> : null}
+      {shown.map(contact => <Card key={contact.id} className="surface-card"><CardHeader className="pb-3"><div className="flex items-start justify-between gap-3"><div><CardTitle className="text-base">{contact.name}</CardTitle><CardDescription>{contactTypes.find(([value]) => value === contact.type)?.[1] ?? "Otro"}{entityName(contact.entityId) ? ` · ${entityName(contact.entityId)}` : ""}</CardDescription></div><Badge variant={contact.status === "active" ? "default" : "secondary"}>{contact.status === "active" ? "Activo" : contact.status === "paused" ? "En pausa" : "Archivado"}</Badge></div></CardHeader><CardContent className="space-y-3"><div className="min-h-10 space-y-1 text-sm text-muted-foreground">{contact.email ? <p className="flex items-center gap-2"><Mail className="h-3.5 w-3.5"/>{contact.email}</p> : null}{contact.phone ? <p className="flex items-center gap-2"><Phone className="h-3.5 w-3.5"/>{contact.phone}</p> : null}{!contact.email && !contact.phone ? <p>Sin datos de contacto adicionales.</p> : null}</div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => { setEditing(contact); setOpen(true); }}><Pencil className="mr-1.5 h-3.5 w-3.5"/>Editar</Button>{contact.status !== "archived" ? <Button variant="ghost" size="sm" onClick={() => pause(contact)} disabled={save.isPending}>{contact.status === "active" ? <><PauseCircle className="mr-1.5 h-3.5 w-3.5"/>Pausar</> : <><PlayCircle className="mr-1.5 h-3.5 w-3.5"/>Reactivar</>}</Button> : null}</div></CardContent></Card>)}
+    </div>
+    <Dialog open={open} onOpenChange={value => { setOpen(value); if (!value) setEditing(null); }}><ContactForm trigger={null} contact={editing} entities={data?.entities ?? []} projects={data?.projects ?? []} saving={save.isPending} onSubmit={input => save.mutate(input)} /></Dialog>
+  </section>;
+}
+
+function ContactForm({ contact, entities, projects, saving, onSubmit }: { trigger: React.ReactNode; contact: Contact | null; entities: { id: number; name: string }[]; projects: { id: number; name: string; entityId: number }[]; saving: boolean; onSubmit: (input: any) => void }) {
+  const initial = contact ? { name: contact.name, type: contact.type, email: contact.email ?? "", phone: contact.phone ?? "", entityId: contact.entityId?.toString() ?? "none", projectId: contact.projectId?.toString() ?? "none", defaultCurrency: contact.defaultCurrency ?? "MXN", status: contact.status, notes: contact.notes ?? "" } : blank;
+  const [form, setForm] = useState(initial);
+  const update = (key: keyof typeof initial, value: string) => setForm(current => ({ ...current, [key]: value }));
+  const submit = (event: FormEvent) => { event.preventDefault(); onSubmit({ id: contact?.id, name: form.name, type: form.type, email: form.email || null, phone: form.phone || null, entityId: form.entityId === "none" ? null : Number(form.entityId), projectId: form.projectId === "none" ? null : Number(form.projectId), defaultCurrency: form.defaultCurrency || null, status: form.status, notes: form.notes || null }); };
+  return <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{contact ? "Editar contacto" : "Nuevo contacto"}</DialogTitle><DialogDescription>La información queda privada en Meximoney y sólo se guarda al confirmar.</DialogDescription></DialogHeader><form onSubmit={submit} className="grid gap-4 py-2"><div className="grid gap-2"><Label htmlFor="contact-name">Nombre o razón social</Label><Input id="contact-name" required value={form.name} onChange={event => update("name", event.target.value)} /></div><div className="grid gap-2 sm:grid-cols-2"><div className="grid gap-2"><Label>Tipo</Label><Select value={form.type} onValueChange={value => update("type", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{contactTypes.map(([value, label]) => <SelectItem value={value} key={value}>{label}</SelectItem>)}</SelectContent></Select></div><div className="grid gap-2"><Label>Estado</Label><Select value={form.status} onValueChange={value => update("status", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Activo</SelectItem><SelectItem value="paused">En pausa</SelectItem><SelectItem value="archived">Archivado</SelectItem></SelectContent></Select></div></div><div className="grid gap-2 sm:grid-cols-2"><div className="grid gap-2"><Label htmlFor="contact-email">Correo</Label><Input id="contact-email" type="email" value={form.email} onChange={event => update("email", event.target.value)} /></div><div className="grid gap-2"><Label htmlFor="contact-phone">Teléfono</Label><Input id="contact-phone" value={form.phone} onChange={event => update("phone", event.target.value)} /></div></div><div className="grid gap-2 sm:grid-cols-2"><div className="grid gap-2"><Label>Entidad</Label><Select value={form.entityId} onValueChange={value => update("entityId", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sin entidad</SelectItem>{entities.map(entity => <SelectItem key={entity.id} value={String(entity.id)}>{entity.name}</SelectItem>)}</SelectContent></Select></div><div className="grid gap-2"><Label>Proyecto</Label><Select value={form.projectId} onValueChange={value => update("projectId", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sin proyecto</SelectItem>{projects.filter(project => form.entityId === "none" || project.entityId === Number(form.entityId)).map(project => <SelectItem key={project.id} value={String(project.id)}>{project.name}</SelectItem>)}</SelectContent></Select></div></div><div className="grid gap-2"><Label htmlFor="contact-notes">Notas privadas</Label><Textarea id="contact-notes" value={form.notes} onChange={event => update("notes", event.target.value)} maxLength={3000} /></div><Button type="submit" className="btn-primary" disabled={saving}>{saving ? "Guardando…" : "Guardar contacto"}</Button></form></DialogContent>;
+}

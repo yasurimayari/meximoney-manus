@@ -16,6 +16,7 @@ import {
   financeDocuments,
   financeNotifications,
   financeTasks,
+  financialContacts,
   financialGoals,
   financialProfiles,
   financialProjects,
@@ -187,7 +188,7 @@ export const appRouter = router({
         taxRegime: z.enum(["pfae_general", "resico", "other", "not_applicable"]),
         exchangeRatePolicy: z.enum(["manual", "manual_confirmed", "unconverted"]),
         humanReviewRequired: z.boolean(),
-        entities: z.array(z.object({ name: z.string().trim().min(2).max(180), shortCode: z.string().trim().max(32).nullable().optional(), countryCode: z.string().length(2), legalForm: z.enum(["individual", "pfae", "sa_de_cv", "sapi", "sl", "llc", "holding", "other"]), status: z.enum(["active", "inactive", "planned", "dissolved"]), functionalCurrency: z.string().length(3), taxRegime: z.enum(["pfae_general", "resico", "corporate", "not_applicable", "other"]), notes: z.string().max(3000).nullable().optional() })).min(1).max(12),
+        entities: z.array(z.object({ name: z.string().trim().min(2).max(180), shortCode: z.string().trim().max(32).nullable().optional(), countryCode: z.string().length(2), legalForm: z.enum(["individual", "pfae", "sa_de_cv", "sapi", "sl", "llc", "holding", "other"]), status: z.enum(["active", "paused", "inactive", "planned", "dissolved"]), functionalCurrency: z.string().length(3), taxRegime: z.enum(["pfae_general", "resico", "corporate", "not_applicable", "other"]), notes: z.string().max(3000).nullable().optional() })).min(1).max(12),
       })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede completar el onboarding del espacio." });
         const db = await requireDb();
@@ -199,7 +200,7 @@ export const appRouter = router({
         });
         return { success: true };
       }),
-      entitySave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(2).max(180), shortCode: z.string().trim().max(32).nullable().optional(), countryCode: z.string().length(2), legalForm: z.enum(["individual", "pfae", "sa_de_cv", "sapi", "sl", "llc", "holding", "other"]), status: z.enum(["active", "inactive", "planned", "dissolved"]), functionalCurrency: z.string().length(3), taxRegime: z.enum(["pfae_general", "resico", "corporate", "not_applicable", "other"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      entitySave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(2).max(180), shortCode: z.string().trim().max(32).nullable().optional(), countryCode: z.string().length(2), legalForm: z.enum(["individual", "pfae", "sa_de_cv", "sapi", "sl", "llc", "holding", "other"]), status: z.enum(["active", "paused", "inactive", "planned", "dissolved"]), functionalCurrency: z.string().length(3), taxRegime: z.enum(["pfae_general", "resico", "corporate", "not_applicable", "other"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar entidades." });
         const db = await requireDb(); const { id, ...values } = input;
         if (id) await db.update(workspaceEntities).set(values).where(and(eq(workspaceEntities.id, id), eq(workspaceEntities.ownerId, ctx.workspaceAccess.ownerId)));
@@ -211,6 +212,21 @@ export const appRouter = router({
         const db = await requireDb(); const { id, ...values } = input;
         if (id) await db.update(financialProjects).set(values).where(and(eq(financialProjects.id, id), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId)));
         else await db.insert(financialProjects).values({ ownerId: ctx.workspaceAccess.ownerId, ...values });
+        return { success: true };
+      }),
+      contactSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(2).max(180), type: z.enum(["client", "supplier", "partner", "friend", "family", "employee", "other"]), email: z.string().trim().email().max(320).nullable().optional(), phone: z.string().trim().max(64).nullable().optional(), defaultCurrency: z.string().trim().length(3).nullable().optional(), status: z.enum(["active", "paused", "archived"]), notes: z.string().trim().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar contactos financieros." });
+        const db = await requireDb(); const { id, ...values } = input;
+        if (values.entityId) {
+          const entity = await db.select({ id: workspaceEntities.id }).from(workspaceEntities).where(and(eq(workspaceEntities.id, values.entityId), eq(workspaceEntities.ownerId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!entity[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "La entidad seleccionada no pertenece a tu espacio." });
+        }
+        if (values.projectId) {
+          const project = await db.select({ id: financialProjects.id }).from(financialProjects).where(and(eq(financialProjects.id, values.projectId), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!project[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El proyecto seleccionado no pertenece a tu espacio." });
+        }
+        if (id) await db.update(financialContacts).set(values).where(and(eq(financialContacts.id, id), eq(financialContacts.userId, ctx.workspaceAccess.ownerId)));
+        else await db.insert(financialContacts).values({ userId: ctx.workspaceAccess.ownerId, ...values });
         return { success: true };
       }),
       exchangeRateSave: workspaceFinanceProcedure.input(z.object({ fromCurrency: z.string().length(3), toCurrency: z.string().length(3), rateMicros: z.number().int().min(1).max(2000000000), rateDate: z.number().int().positive(), source: z.enum(["manual", "confirmed_reference"]), notes: z.string().max(1000).nullable().optional() })).mutation(async ({ ctx, input }) => {
