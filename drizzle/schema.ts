@@ -434,7 +434,7 @@ export const budgets = mysqlTable("budgets", {
   scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
   periodStart: timestamp("periodStart").notNull(),
   plannedCents: int("plannedCents").notNull(),
-  type: mysqlEnum("type", ["income", "expense"]).notNull().default("expense"),
+  type: mysqlEnum("type", ["income", "expense", "savings", "investment"]).notNull().default("expense"),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

@@ -13,8 +13,8 @@ El inicio de sesión OAuth anterior puede depender de un servicio de autenticaci
 | Vista | Moneda | Periodo | Separación personal y empresarial |
 |---|---|---|---|
 | Panel | Muestra la moneda base del perfil en los importes consolidados. Las partidas en otra divisa sin conversión manual confirmada no se suman y se señalan como pendientes. | Indica el mes del resumen financiero. | Declara la gestión diferenciada de finanzas personales y empresariales en el encabezado. |
-| Registros | Cada movimiento conserva moneda original, importe de reporte, tipo de cambio manual y fecha cuando procede. Los traspasos usan dos registros enlazados, sin afectar ingresos ni gastos. | Las transacciones contienen una fecha de ocurrencia. | Los movimientos pueden asociarse a entidad y proyecto, además de su ámbito personal, empresarial o mixto. |
-| Planificación | Los importes previstos se muestran en la moneda del registro. Las cuentas por cobrar conservan su moneda original. | Los presupuestos y revisiones se asocian a un periodo mensual; las CxC tienen origen, fecha y vencimiento opcional. | Presupuestos, deudas, objetivos, CxC y tareas conservan el ámbito definido por la persona usuaria. |
+| Registros | Cada movimiento conserva moneda original, importe de reporte, tipo de cambio manual y fecha cuando procede. | Las transacciones contienen una fecha de ocurrencia. | Los movimientos pueden asociarse a entidad y proyecto, además de su ámbito personal, empresarial o mixto. |
+| Planificación | Los importes previstos se muestran en la moneda del registro. | Los presupuestos y revisiones se asocian a un periodo mensual. | Presupuestos, deudas, objetivos y tareas conservan el ámbito definido por la persona usuaria. |
 | Calidad | Permite configurar la moneda base del perfil. | La reserva fiscal tiene una fecha estimada opcional. | El contexto permite declarar residencia y restricciones sin mezclar datos de terceros. |
 | Analítica | Formatea indicadores y gráficos con la moneda base, excluyendo importes no convertidos de forma manual. | El selector permite consultar 3, 6 o 12 meses. | Los datos proceden de registros con ámbito y no combinan fuentes externas. |
 | Asistente Mexi | Explica importes en la moneda configurada cuando existen registros. | Usa el resumen del periodo actual disponible. | Analiza exclusivamente el conjunto manual del espacio privado, sin fuentes externas. |
@@ -31,45 +31,13 @@ Los documentos permiten clasificar referencias de residencia, fiscalidad, seguro
 
 La aceptación del consentimiento explícito es necesaria antes de guardar o analizar información financiera. La pantalla de Calidad permite también eliminar todos los datos financieros manuales del espacio, sin convertir esta acción en un pago, transferencia o cambio de inversión.
 
-## Traspasos y cuentas por cobrar manuales
+## Presupuesto, inversiones y cierres mensuales
 
-El acceso **Traspaso** en Registros crea, en una sola operación, una salida desde la cuenta de origen y una entrada en la cuenta de destino. Ambas partes quedan enlazadas, requieren dos cuentas activas propias en la misma moneda y se excluyen de ingresos, gastos, flujo de efectivo y estados mensuales. No actualiza saldos bancarios, no conecta bancos y no mueve dinero real. Para evitar inconsistencias, la eliminación de una transferencia se gestiona como una operación completa.
+La vista **Presupuesto vs. Real** compara cada partida mensual en la moneda base de reporte. Los ingresos y gastos reales proceden únicamente de movimientos manuales aprobados; los movimientos de otra moneda sólo entran si conservan una conversión manual confirmada a la moneda de reporte. Los ingresos por encima de lo previsto se señalan como favorables; gastos, ahorro e inversión por encima del importe previsto se señalan como desviación.
 
-La pestaña **Por cobrar** de Planificación registra importes que deben clientes o personas para YMC, ELM o el ámbito personal. Cada CxC incluye cliente o persona, origen identificable, importe, moneda, entidad/proyecto opcionales, fechas y los estados manuales **pendiente**, **vencida**, **pagada** y **conciliada**. Una CxC no es un ingreso: cuando el dinero llegue, la persona usuaria debe registrar el ingreso recibido por separado y confirmarlo manualmente.
+Las partidas de **Ahorro** se calculan con aportaciones manuales a posiciones de tipo `savings`; las partidas de **Inversión** usan aportaciones a las demás posiciones. Un traspaso entre cuentas, incluido Santander → Plata, no se convierte en ingreso o gasto. Puede quedar ligado a una aportación de la posición correspondiente sin duplicar el dato financiero.
 
-Los abonos se guardan como historial privado, con importe, fecha y nota. El saldo pendiente se calcula como importe original menos abonos acumulados; el sistema rechaza un abono que lo exceda. Un abono puede vincularse opcionalmente a un ingreso **ya registrado**, aprobado y de la misma moneda. La relación no crea, duplica ni modifica el ingreso: sólo conserva trazabilidad. Una CxC pasa a **pagada** cuando se cubre el total y a **conciliada** cuando todos sus abonos quedan vinculados a ingresos reales.
-
-## Cierre de Fase A y preparación de Fase B
-
-La **Fase A está concluida** conforme al alcance acordado: onboarding privado, entidades y proyectos, conversión manual, naturaleza de ingresos, referencias de Drive, colaboración controlada, filtros, exportaciones, notificaciones internas, traspasos, CxC, abonos y conciliación manual. Las validaciones preservan el aislamiento por usuario y no introducen bancos conectados, pagos automáticos, fiscalidad automatizada ni servicios externos de mensajería.
-
-La **primera versión de Fase B** ya incorpora captura y control de calidad manual. No conecta bancos, no utiliza OCR, no conserva los archivos de importación y no registra nada sin confirmación explícita.
-
-## Captura revisable, recurrencias y cuentas por pagar
-
-En **Registros**, la importación de archivos CSV, XLSX o XLS se analiza localmente para previsualizar hasta 300 filas. La persona usuaria asigna columnas de fecha, importe, detalle, tipo y moneda, define el contexto común y revisa cada fila antes de confirmar. Meximoney compara una huella de tipo, importe, moneda, fecha, cuenta y detalle para señalar posibles duplicados; una coincidencia se excluye hasta que la persona usuaria confirme expresamente conservarla. El archivo fuente no se guarda ni se envía a bancos u otros proveedores.
-
-En **Plantillas recurrentes**, se pueden crear, editar o eliminar plantillas privadas para cualquier proveedor o contraparte —por ejemplo, Notion, Squarespace, Google Workspace, contador u otros gastos propios—. La frecuencia es una referencia de organización; la acción **Aplicar ahora** crea un único movimiento confirmado cuando la persona usuaria lo decide. No existe cron, cargo programado ni conexión con el proveedor.
-
-La pestaña **Por pagar** registra obligaciones con proveedores, contador, socios, amistades u otros acreedores. Cada CxP conserva origen, ámbito, entidad/proyecto opcionales, fechas, importe y estados manuales **pendiente**, **vencida**, **pagada** y **conciliada**. Los pagos parciales recalculan el saldo y pueden enlazarse a un gasto aprobado ya existente, en la misma moneda; el vínculo no crea ni duplica gastos.
-
-## Ampliación de Fase B: configuración y control manual
-
-Los **Contactos** son privados y permiten clasificar clientes, proveedores, socios, amistades, familia, contador/a u otras contrapartes. Se pueden asociar opcionalmente con una entidad o proyecto, pausar o archivar, y se eliminan con el borrado completo de datos financieros.
-
-Perfil y privacidad, Notificaciones y Espacio se encuentran en el menú de identidad del pie lateral, también con encabezados correctos en móvil. Desde Espacio la propietaria puede editar, pausar, reactivar, planear, inactivar o marcar como disuelta una entidad, sin borrar el historial asociado. Los proyectos se pueden editar, pausar o reactivar de igual forma.
-
-La invitación de gestor o contador queda creada dentro de Meximoney y ofrece instrucciones copiables: la persona deberá registrarse con el mismo correo y aceptar desde su cuenta. **No existe envío automático de correo** hasta que se seleccione y configure de forma explícita un proveedor transaccional y sus credenciales. No se afirma ni simula una entrega de email.
-
-En Registros se puede descargar una plantilla CSV compatible con las columnas Fecha, Descripción, Importe, Tipo y Moneda. La importación continúa siendo local, revisable y confirmable. Las CxP y plantillas recurrentes pueden editarse y la vista Por pagar muestra los próximos vencimientos ordenados, sin pagos ni tareas automáticas.
-
-## Ahorro, inversiones y patrimonio manual
-
-Las cuentas por cobrar y por pagar pueden vincularse opcionalmente a un contacto financiero privado. El nombre de contraparte queda conservado como rastro histórico y el servidor verifica que el contacto pertenezca a la propietaria del mismo espacio.
-
-La sección **Ahorro e inversiones** permite registrar posiciones de ahorro, renta fija, fondos o ETF, acciones, criptoactivos, terrenos, inmuebles, participaciones empresariales, retiro u otros activos. Cada posición conserva coste, valuación manual, fecha de valuación, entidad/proyecto, estado y un historial de aportaciones, retiros, rendimientos o ajustes. Una operación puede enlazarse a un movimiento manual ya registrado; no crea pagos, compras, ventas, transferencias, cotizaciones ni acciones externas.
-
-**Patrimonio neto** consolida cuentas, inversiones incluidas y deudas cuando son comparables en la moneda de reporte. Una posición en otra moneda se excluye de ese total hasta que se registre explícitamente una valuación de conversión. Las inversiones no se consideran liquidez, y los cierres mensuales pueden incorporar estos activos para guardar un histórico manual.
+Los **cierres mensuales** conservan una fotografía privada de activos, pasivos, patrimonio neto y liquidez en el momento de guardar. La gráfica de Patrimonio muestra esas fotografías guardadas. Las exportaciones de inversiones se generan localmente en CSV, Excel o PDF desde posiciones y operaciones manuales; no transmiten el archivo importado ni ejecutan operaciones en plataformas financieras.
 
 ## Notificaciones privadas dentro del sitio
 

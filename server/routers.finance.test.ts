@@ -103,45 +103,6 @@ describe("finance.dashboard", () => {
     expect(inserted).toHaveBeenCalledWith(expect.objectContaining({ userId: 73, createdByUserId: 91, reviewStatus: "pending_review", status: "needs_review" }));
   });
 
-  it("crea ambas partes de un traspaso entre cuentas propias sin usar ingreso ni gasto", async () => {
-    const inserted = vi.fn();
-    const results = [
-      [{ accepted: true }],
-      [{ id: 10, name: "Santander", entityId: null, projectId: null, scope: "personal", currency: "MXN", status: "active" }],
-      [{ id: 11, name: "Inbursa", entityId: null, projectId: null, scope: "personal", currency: "MXN", status: "active" }],
-    ];
-    mocks.requireDb.mockResolvedValue({
-      select: () => ({ from: () => ({ where: () => ({ limit: async () => results.shift() }) }) }),
-      transaction: async (callback: any) => callback({ insert: () => ({ values: inserted }) }),
-    });
-    const caller = appRouter.createCaller(createContext(27));
-
-    await expect(caller.finance.workspace.transferSave({ sourceAccountId: 10, destinationAccountId: 11, amountCents: 125000, occurredAt: Date.now(), status: "confirmed", notes: "Fondeo" })).resolves.toMatchObject({ success: true });
-    expect(inserted).toHaveBeenCalledWith(expect.arrayContaining([
-      expect.objectContaining({ userId: 27, accountId: 10, type: "transfer_out", amountCents: 125000, currency: "MXN", notes: "Traspaso a Inbursa · Fondeo" }),
-      expect.objectContaining({ userId: 27, accountId: 11, type: "transfer_in", amountCents: 125000, currency: "MXN", notes: "Traspaso desde Santander · Fondeo" }),
-    ]));
-  });
-
-  it("impide un traspaso a la misma cuenta antes de crear registros", async () => {
-    mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }) });
-    const caller = appRouter.createCaller(createContext(27));
-
-    await expect(caller.finance.workspace.transferSave({ sourceAccountId: 10, destinationAccountId: 10, amountCents: 5000, occurredAt: Date.now(), status: "confirmed", notes: null })).rejects.toMatchObject({ code: "BAD_REQUEST" });
-  });
-
-  it("guarda una cuenta por cobrar en el espacio de la propietaria, separada del ingreso recibido", async () => {
-    const inserted = vi.fn();
-    mocks.requireDb.mockResolvedValue({
-      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
-      insert: () => ({ values: inserted }),
-    });
-    const caller = appRouter.createCaller(createContext(27));
-
-    await caller.finance.workspace.receivables.save({ entityId: null, projectId: null, counterparty: "Cliente de prueba", origin: "Servicio YMC", scope: "personal", amountCents: 40000, currency: "MXN", issuedAt: Date.now(), dueAt: null, paidAt: null, status: "pending", notes: null });
-    expect(inserted).toHaveBeenCalledWith(expect.objectContaining({ userId: 27, counterparty: "Cliente de prueba", origin: "Servicio YMC", amountCents: 40000, status: "pending" }));
-  });
-
   it("permite a la propietaria revocar una colaboración sin afectar otro espacio", async () => {
     const where = vi.fn();
     const set = vi.fn(() => ({ where }));

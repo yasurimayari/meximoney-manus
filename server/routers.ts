@@ -710,7 +710,7 @@ export const appRouter = router({
       }),
     }),
     budgets: router({
-      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), scope: scopeSchema, periodStart: z.number().int().positive(), plannedCents: moneySchema, type: z.enum(["income", "expense"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), scope: scopeSchema, periodStart: z.number().int().positive(), plannedCents: moneySchema, type: z.enum(["income", "expense", "savings", "investment"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb(); const { id, periodStart, ...values } = input; const payload = { ...values, periodStart: new Date(periodStart) };
         if (id) await db.update(budgets).set(payload).where(and(eq(budgets.id, id), eq(budgets.userId, ctx.user.id)));
         else await db.insert(budgets).values({ userId: ctx.user.id, ...payload }); return { success: true };

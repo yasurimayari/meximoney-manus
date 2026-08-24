@@ -96,39 +96,8 @@
 - [x] Diseñar reglas manuales de recordatorio para presupuesto y reserva fiscal, sin cálculos ni presentación fiscal automática.
 - [x] Evaluar Telegram como canal opcional de señal mínima, comparando privacidad, coste operativo y configuración requerida antes de integrarlo.
 - [x] Auditar la página histórica de Notion de Meximoney, comparar sus componentes con la aplicación actual y priorizar oportunidades sin implementarlas todavía.
-- [x] Implementar traspasos explícitos entre cuentas propias sin tratarlos como ingresos o gastos.
-- [x] Implementar cuentas por cobrar manuales para YMC, ELM y Personal, con origen identificable y estados pendiente, vencida, pagada y conciliada.
-- [x] Validar el aislamiento, los importes netos, los filtros, la accesibilidad y la experiencia móvil de traspasos y cuentas por cobrar.
-- [x] Corregir las acciones de fila de traspasos para eliminar el grupo completo y evitar edición o borrado parcial.
-- [x] Validar aislamiento entre usuarias y filtros de cuentas por cobrar por entidad, proyecto y moneda.
-- [x] Validar por teclado el formulario de traspaso y la pestaña de cuentas por cobrar, documentando foco y respuesta móvil.
-- [x] Implementar abonos parciales privados en CxC con saldo pendiente calculado de forma trazable.
-- [x] Permitir vincular una CxC pagada o conciliada con un ingreso real manual del mismo espacio, sin crear ni duplicar movimientos.
-- [x] Validar totales, aislamiento, accesibilidad y respuesta móvil de abonos y conciliación, y documentar el cierre de Fase A y la preparación de Fase B.
-- [x] Reconciliar la hoja de ruta original con las capacidades ya entregadas y presentar un plan revisado de Fase B para aprobación, sin ejecutar cambios.
-- [x] Implementar importación manual y revisable de CSV/Excel con previsualización, mapeo y confirmación antes de guardar.
-- [x] Añadir detección de duplicados y plantillas recurrentes privadas, editables y personalizables para cualquier proveedor o gasto.
-- [x] Implementar cuentas por pagar manuales para proveedores, contador, socios, amistades y otros acreedores, con abonos, saldo y estados trazables.
-- [x] Validar privacidad, importes, accesibilidad, respuesta móvil y regresiones de la primera versión de Fase B.
-- [x] Validar aislamiento entre usuarias para importaciones, plantillas recurrentes, cuentas por pagar y pagos antes de cerrar la primera versión de Fase B.
-- [x] Crear una sección privada de contactos financieros categorizados para clientes, socios, proveedores, amistades, familia y otros vínculos económicos.
-- [x] Consolidar Perfil, privacidad, notificaciones, Espacio y futuras configuraciones en el menú inferior asociado a la identidad de la usuaria.
-- [x] Permitir editar entidades del Espacio y alternar su estado activo, en pausa o planificado sin borrar su historial.
-- [x] Investigar y corregir el flujo de invitación de gestor o contador que actualmente no entrega el correo esperado; la invitación interna es transparente y el correo requiere un proveedor autorizado pendiente.
-- [x] Mover Calidad de datos al área de configuración y convertir sus alertas en acciones corregibles y navegables.
-- [x] Añadir plantilla descargable para CSV/Excel y mejorar la importación para que su estructura sea predecible.
-- [x] Añadir edición de plantillas recurrentes y cuentas por pagar existentes, y un calendario de vencimientos de CxP.
-- [x] Diseñar la captura rápida por texto natural como opción confirmable sin activarla por defecto.
-- [x] Vincular contactos financieros con las cuentas por cobrar y por pagar, preservando la trazabilidad y el aislamiento por usuaria.
-- [x] Diseñar e implementar una sección privada de ahorro e inversiones con aportaciones, activos, valoración manual y rendimiento registrado, sin cotizaciones ni ejecución automática.
-- [x] Completar la vista de patrimonio neto con filtros de entidad, proyecto y moneda, y una evolución manual clara basada en cierres.
-- [x] Evaluar un proveedor de correo gratuito compatible con Gmail para invitaciones; Resend queda recomendado y no se configura nada sin autorización explícita.
-- [x] Validar la consolidación patrimonial filtrada con inversiones manuales y la exclusión de posiciones sin conversión comparable.
-- [x] Preparar la activación autorizada de Resend para invitaciones, con dominio remitente verificado y sin exponer credenciales; acceso validado y envío no implementado mientras DNS siga pendiente.
-- [x] Validar el remitente hola@mexi.richeon.app ante Resend: el dominio existe y su estado actual es pendiente, por lo que no se realizaron envíos.
-- [x] Mantener bloqueado el envío de invitaciones hasta que Resend reporte `mexi.richeon.app` como verificado.
-- [x] Vincular contactos opcionalmente a movimientos manuales y plantillas recurrentes, con validación de pertenencia al espacio.
-- [x] Clarificar e implementar el flujo de traspaso entre una cuenta de origen y una cuenta de ahorro o inversión, sin duplicar ingresos ni gastos.
-- [x] Añadir importación CSV local, revisable y confirmable para posiciones de inversión actuales.
-- [x] Añadir un gráfico interactivo de evolución histórica de activos, pasivos y patrimonio neto en Patrimonio.
-- [x] Corregir el cierre o montaje nulo del diálogo de operaciones de inversión en /inversiones.
+- [x] Exportar historial de posiciones y operaciones de inversión a CSV, Excel y PDF.
+- [x] Completar el PDF de inversiones con fecha, notas y saltos de página para historiales extensos.
+- [x] Cubrir con pruebas la generación local de exportaciones de inversiones.
+- [x] Desarrollar cierres mensuales que incorporen patrimonio, activos, pasivos e inversiones para alimentar su evolución histórica.
+- [x] Añadir ahorro e inversión como dimensiones presupuestarias y una vista de Presupuesto vs. Real que señale desviaciones mensuales.

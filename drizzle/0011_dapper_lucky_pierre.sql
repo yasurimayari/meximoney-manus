@@ -1,0 +1,1 @@
+ALTER TABLE `budgets` MODIFY COLUMN `type` enum('income','expense','savings','investment') NOT NULL DEFAULT 'expense';
