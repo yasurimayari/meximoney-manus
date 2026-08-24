@@ -9,7 +9,7 @@ import { useMemo, useState } from "react";
 const money = (cents: number, currency: string) => new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 2 }).format(cents / 100);
 
 export default function Patrimony() {
-  const { data, isLoading } = trpc.finance.workspace.get.useQuery();
+  const { data, isLoading } = trpc.finance.workspace.get.useQuery(undefined, { staleTime: 0, refetchOnMount: "always" });
   const [filters, setFilters] = useState(emptyWorkspaceFilters);
   const snapshot = useMemo(() => data ? filterWorkspaceSnapshot(data, filters) : null, [data, filters]);
   if (isLoading || !data || !snapshot) return <section className="space-y-6"><p className="page-subtitle">Cargando patrimonio privado…</p></section>;

@@ -96,3 +96,9 @@
 - [x] Diseñar reglas manuales de recordatorio para presupuesto y reserva fiscal, sin cálculos ni presentación fiscal automática.
 - [x] Evaluar Telegram como canal opcional de señal mínima, comparando privacidad, coste operativo y configuración requerida antes de integrarlo.
 - [x] Auditar la página histórica de Notion de Meximoney, comparar sus componentes con la aplicación actual y priorizar oportunidades sin implementarlas todavía.
+- [x] Corregir la actualización inmediata de una posición nueva en Inversiones y Patrimonio.
+- [x] Rediseñar el PDF de historial de inversiones para una lectura más práctica.
+- [x] Mostrar en el Panel una alerta accionable cuando el cierre mensual del periodo esté pendiente.
+- [x] Permitir editar partidas de presupuesto y alternar entre vistas de tarjetas, resumen y progreso visual.
+- [x] Añadir vistas de tarjetas/lista y filtro por contactos activos en Contactos.
+- [x] Mover Calidad de tus datos fuera del Panel y convertir sus alertas en acciones editables, eliminables o marcables como resueltas.

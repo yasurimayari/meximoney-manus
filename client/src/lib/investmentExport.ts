@@ -127,6 +127,10 @@ export function buildInvestmentPdfLines(row: InvestmentExportRow) {
   ].filter(Boolean);
 }
 
+export function buildInvestmentPdfSummary(rows: InvestmentExportRow[]) {
+  return { positionCount: new Set(rows.map(row => row.Posición)).size, recordCount: rows.length, currencies: Array.from(new Set(rows.map(row => row.Moneda))).sort() };
+}
+
 export function exportInvestmentHistory(kind: "csv" | "xlsx" | "pdf", rows: InvestmentExportRow[]) {
   const date = new Date().toISOString().slice(0, 10);
   if (kind === "csv") {
@@ -140,21 +144,15 @@ export function exportInvestmentHistory(kind: "csv" | "xlsx" | "pdf", rows: Inve
   const document = new jsPDF({ unit: "pt", format: "a4" });
   const width = document.internal.pageSize.getWidth();
   const height = document.internal.pageSize.getHeight();
+  const summary = buildInvestmentPdfSummary(rows);
   let y = 54;
   const addHeader = (continuation = false) => {
-    document.setFillColor(0, 91, 81);
-    document.rect(0, 0, width, continuation ? 46 : 86, "F");
-    document.setTextColor(255, 255, 255);
-    document.setFont("helvetica", "bold");
-    document.setFontSize(18);
-    document.text(continuation ? "Historial de inversiones · continuación" : "Meximoney · Historial de inversiones", 42, continuation ? 29 : 36);
-    if (!continuation) {
-      document.setFont("helvetica", "normal");
-      document.setFontSize(9);
-      document.text(`Generado el ${new Date().toLocaleDateString("es-MX")} · Datos manuales`, 42, 58);
-    }
-    document.setTextColor(28, 56, 54);
-    y = continuation ? 74 : 116;
+    document.setFillColor(0, 91, 81); document.rect(0, 0, width, continuation ? 50 : 92, "F");
+    document.setTextColor(255, 255, 255); document.setFont("helvetica", "bold"); document.setFontSize(17);
+    document.text(continuation ? "Historial de inversiones · continuación" : "Meximoney · Historial de inversiones", 42, continuation ? 31 : 38);
+    if (!continuation) { document.setFont("helvetica", "normal"); document.setFontSize(8.5); document.text(`${summary.positionCount} posiciones · ${summary.recordCount} registros · ${summary.currencies.join(" / ") || "Sin moneda"}`, 42, 60); document.text(`Generado el ${new Date().toLocaleDateString("es-MX")} · Datos registrados manualmente`, 42, 76); }
+    y = continuation ? 76 : 118; document.setFillColor(238, 245, 243); document.rect(42, y - 16, width - 84, 19, "F"); document.setFont("helvetica", "bold"); document.setFontSize(7.5); document.setTextColor(44, 75, 71);
+    document.text("FECHA", 50, y - 4); document.text("POSICIÓN / CONTEXTO", 106, y - 4); document.text("MOVIMIENTO", 350, y - 4); document.text("IMPORTE", width - 50, y - 4, { align: "right" }); y += 14;
   };
   addHeader();
   if (rows.length === 0) {
@@ -163,25 +161,16 @@ export function exportInvestmentHistory(kind: "csv" | "xlsx" | "pdf", rows: Inve
     document.setTextColor(90, 107, 104);
     document.text("No hay posiciones ni operaciones manuales para exportar.", 42, y);
   }
-  rows.forEach((row, index) => {
-    const lines = buildInvestmentPdfLines(row).flatMap((line, lineIndex) => lineIndex === 3 ? document.splitTextToSize(line, width - 104) : [line]);
-    const blockHeight = 18 + lines.length * 13;
-    if (y + blockHeight > height - 42) {
-      document.addPage();
-      addHeader(true);
-    }
-    document.setDrawColor(224, 233, 229);
-    document.setFillColor(index % 2 === 0 ? 246 : 251, index % 2 === 0 ? 249 : 252, index % 2 === 0 ? 247 : 250);
-    document.roundedRect(42, y - 15, width - 84, blockHeight, 5, 5, "FD");
-    document.setTextColor(28, 56, 54);
-    document.setFont("helvetica", "bold");
-    document.setFontSize(10);
-    document.text(lines[0] ?? "", 54, y);
-    document.setFont("helvetica", "normal");
-    document.setTextColor(90, 107, 104);
-    document.setFontSize(8.5);
-    lines.slice(1).forEach((line, lineIndex) => document.text(line, 54, y + 13 + lineIndex * 13));
-    y += blockHeight + 9;
+  rows.forEach(row => {
+    const positionLines = document.splitTextToSize(row.Posición, 210) as string[];
+    const context = [row["Tipo de posición"], row.Institución].filter(Boolean).join(" · "); const contextLines = context ? document.splitTextToSize(context, 210) as string[] : [];
+    const noteLines = row.Notas ? document.splitTextToSize(`Notas: ${row.Notas}`, width - 148) as string[] : [];
+    const rowHeight = Math.max(31, (positionLines.length + contextLines.length) * 9 + 15) + (noteLines.length ? noteLines.length * 8.5 + 10 : 0);
+    if (y + rowHeight > height - 42) { document.addPage(); addHeader(true); }
+    document.setDrawColor(224, 233, 229); document.line(42, y + rowHeight - 5, width - 42, y + rowHeight - 5); document.setTextColor(28, 56, 54); document.setFont("helvetica", "bold"); document.setFontSize(8.5);
+    document.text(row.Fecha || "Sin fecha", 50, y); document.text(positionLines, 106, y); document.text(row.Operación, 350, y); document.text(new Intl.NumberFormat("es-MX", { style: "currency", currency: row.Moneda, minimumFractionDigits: 2 }).format(row.Importe), width - 50, y, { align: "right" });
+    document.setFont("helvetica", "normal"); document.setTextColor(90, 107, 104); document.setFontSize(7.5); if (contextLines.length) document.text(contextLines, 106, y + positionLines.length * 9 + 2); if (noteLines.length) document.text(noteLines, 106, y + Math.max(positionLines.length * 9 + contextLines.length * 9, 12) + 8); y += rowHeight;
   });
+  const pageCount = document.getNumberOfPages(); for (let page = 1; page <= pageCount; page += 1) { document.setPage(page); document.setFont("helvetica", "normal"); document.setFontSize(7.5); document.setTextColor(90, 107, 104); document.text(`Meximoney · Página ${page} de ${pageCount}`, width - 42, height - 24, { align: "right" }); }
   document.save(`meximoney-historial-inversiones-${date}.pdf`);
 }
