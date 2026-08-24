@@ -25,6 +25,7 @@ import {
   notificationPreferences,
   localCredentials,
   privacyConsents,
+  receivables,
   users,
   workspaceEntities,
 } from "../drizzle/schema";
@@ -222,12 +223,60 @@ export const appRouter = router({
       }),
       transactionSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), type: z.enum(["income", "expense", "transfer_out", "transfer_in"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), reportCurrency: z.string().length(3).nullable().optional(), reportAmountCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), occurredAt: z.number().int().positive(), isEssential: z.boolean(), transferGroupId: z.string().max(64).nullable().optional(), status: z.enum(["confirmed", "estimated", "needs_review"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner" && !ctx.workspaceAccess.canCreateDrafts) throw new TRPCError({ code: "FORBIDDEN", message: "Tu rol no permite crear borradores." });
+        if (input.type === "transfer_out" || input.type === "transfer_in") throw new TRPCError({ code: "BAD_REQUEST", message: "Usa el formulario de traspaso entre cuentas para crear ambas partes de forma coherente." });
         const db = await requireDb(); const { id, occurredAt, exchangeRateDate, ...values } = input;
         const isOwner = ctx.workspaceAccess.role === "owner";
         const payload = { ...values, occurredAt: new Date(occurredAt), exchangeRateDate: asDate(exchangeRateDate), reviewStatus: isOwner ? "approved" as const : "pending_review" as const, status: isOwner ? values.status : "needs_review" as const, createdByUserId: ctx.user.id, reviewedByUserId: isOwner ? ctx.user.id : null, reviewedAt: isOwner ? new Date() : null };
         if (id) await db.update(financialTransactions).set(payload).where(and(eq(financialTransactions.id, id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId)));
         else await db.insert(financialTransactions).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
         return { success: true };
+      }),
+      transferSave: workspaceFinanceProcedure.input(z.object({
+        sourceAccountId: z.number().int().positive(), destinationAccountId: z.number().int().positive(), amountCents: z.number().int().positive(), occurredAt: z.number().int().positive(), status: z.enum(["confirmed", "estimated", "needs_review"]), notes: z.string().max(3000).nullable().optional(),
+      })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner" && !ctx.workspaceAccess.canCreateDrafts) throw new TRPCError({ code: "FORBIDDEN", message: "Tu rol no permite crear borradores." });
+        if (input.sourceAccountId === input.destinationAccountId) throw new TRPCError({ code: "BAD_REQUEST", message: "Elige dos cuentas distintas para el traspaso." });
+        const db = await requireDb();
+        const [source, destination] = await Promise.all([
+          db.select().from(accounts).where(and(eq(accounts.id, input.sourceAccountId), eq(accounts.userId, ctx.workspaceAccess.ownerId))).limit(1),
+          db.select().from(accounts).where(and(eq(accounts.id, input.destinationAccountId), eq(accounts.userId, ctx.workspaceAccess.ownerId))).limit(1),
+        ]);
+        if (!source[0] || !destination[0]) throw new TRPCError({ code: "FORBIDDEN", message: "Las cuentas del traspaso deben pertenecer a tu espacio privado." });
+        if (source[0].status !== "active" || destination[0].status !== "active") throw new TRPCError({ code: "BAD_REQUEST", message: "Solo puedes traspasar entre cuentas activas." });
+        if (source[0].currency !== destination[0].currency) throw new TRPCError({ code: "BAD_REQUEST", message: "Este formulario admite cuentas en la misma moneda. Registra una conversión manual confirmada por separado si aplica." });
+        const isOwner = ctx.workspaceAccess.role === "owner";
+        const groupId = randomUUID();
+        const date = new Date(input.occurredAt);
+        const status = isOwner ? input.status : "needs_review" as const;
+        const reviewStatus = isOwner ? "approved" as const : "pending_review" as const;
+        const suffix = input.notes?.trim() ? ` · ${input.notes.trim()}` : "";
+        await db.transaction(async tx => {
+          await tx.insert(financialTransactions).values([
+            { userId: ctx.workspaceAccess.ownerId, entityId: source[0].entityId, projectId: source[0].projectId, accountId: source[0].id, type: "transfer_out", scope: source[0].scope, amountCents: input.amountCents, currency: source[0].currency, reportCurrency: source[0].currency, reportAmountCents: input.amountCents, incomeNature: "other", occurredAt: date, isEssential: false, transferGroupId: groupId, status, reviewStatus, createdByUserId: ctx.user.id, reviewedByUserId: isOwner ? ctx.user.id : null, reviewedAt: isOwner ? new Date() : null, notes: `Traspaso a ${destination[0].name}${suffix}` },
+            { userId: ctx.workspaceAccess.ownerId, entityId: destination[0].entityId, projectId: destination[0].projectId, accountId: destination[0].id, type: "transfer_in", scope: destination[0].scope, amountCents: input.amountCents, currency: destination[0].currency, reportCurrency: destination[0].currency, reportAmountCents: input.amountCents, incomeNature: "other", occurredAt: date, isEssential: false, transferGroupId: groupId, status, reviewStatus, createdByUserId: ctx.user.id, reviewedByUserId: isOwner ? ctx.user.id : null, reviewedAt: isOwner ? new Date() : null, notes: `Traspaso desde ${source[0].name}${suffix}` },
+          ]);
+        });
+        return { success: true, groupId };
+      }),
+      transferRemove: workspaceFinanceProcedure.input(z.object({ transferGroupId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar un traspaso completo." });
+        const db = await requireDb();
+        await db.delete(financialTransactions).where(and(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId), eq(financialTransactions.transferGroupId, input.transferGroupId)));
+        return { success: true };
+      }),
+      receivables: router({
+        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), counterparty: z.string().trim().min(1).max(180), origin: z.string().trim().min(1).max(220), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), issuedAt: z.number().int().positive(), dueAt: optionalDate, paidAt: optionalDate, status: z.enum(["pending", "overdue", "paid", "reconciled"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar cuentas por cobrar." });
+          const db = await requireDb(); const { id, issuedAt, dueAt, paidAt, ...values } = input;
+          const payload = { ...values, issuedAt: new Date(issuedAt), dueAt: asDate(dueAt), paidAt: asDate(paidAt) };
+          if (id) await db.update(receivables).set(payload).where(and(eq(receivables.id, id), eq(receivables.userId, ctx.workspaceAccess.ownerId)));
+          else await db.insert(receivables).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+          return { success: true };
+        }),
+        remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar cuentas por cobrar." });
+          const db = await requireDb(); await db.delete(receivables).where(and(eq(receivables.id, input.id), eq(receivables.userId, ctx.workspaceAccess.ownerId))); return { success: true };
+        }),
       }),
       reviewTransaction: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive(), approve: z.boolean() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner" && !ctx.workspaceAccess.canReview) throw new TRPCError({ code: "FORBIDDEN", message: "Tu rol no permite revisar movimientos." });
@@ -378,7 +427,13 @@ export const appRouter = router({
         else await db.insert(financialTransactions).values({ userId: ctx.user.id, ...payload });
         return { success: true };
       }),
-      remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(financialTransactions, input.id, ctx.user.id)),
+      remove: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const [transaction] = await db.select().from(financialTransactions).where(and(eq(financialTransactions.id, input.id), eq(financialTransactions.userId, ctx.user.id))).limit(1);
+        if (transaction?.transferGroupId) throw new TRPCError({ code: "BAD_REQUEST", message: "Elimina el traspaso completo desde el flujo de traspasos para mantener ambas cuentas coherentes." });
+        await deleteOwnedRow(financialTransactions, input.id, ctx.user.id);
+        return { success: true };
+      }),
     }),
     documents: router({
       save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().min(1).max(180), type: z.enum(["statement", "invoice", "contract", "policy", "tax", "receipt", "other"]), documentClass: z.enum(["general", "identity_residency", "tax_residency", "tax_filing", "insurance", "will_estate", "property", "investment_instrument", "loan_credit", "legal_contract"]).default("general"), scope: scopeSchema, relatedEntityType: z.enum(["none", "asset", "debt", "insurance", "tax", "estate"]).default("none"), relatedEntityId: z.number().int().positive().nullable().optional(), jurisdiction: z.string().max(120).nullable().optional(), referenceUrl: z.string().url().nullable().optional(), referenceProvider: z.enum(["google_drive", "url", "other"]).default("url"), issuedAt: optionalDate, expiresAt: optionalDate, reminderAt: optionalDate, verified: z.boolean(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {

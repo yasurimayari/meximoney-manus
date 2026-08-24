@@ -96,3 +96,9 @@
 - [x] Diseñar reglas manuales de recordatorio para presupuesto y reserva fiscal, sin cálculos ni presentación fiscal automática.
 - [x] Evaluar Telegram como canal opcional de señal mínima, comparando privacidad, coste operativo y configuración requerida antes de integrarlo.
 - [x] Auditar la página histórica de Notion de Meximoney, comparar sus componentes con la aplicación actual y priorizar oportunidades sin implementarlas todavía.
+- [x] Implementar traspasos explícitos entre cuentas propias sin tratarlos como ingresos o gastos.
+- [x] Implementar cuentas por cobrar manuales para YMC, ELM y Personal, con origen identificable y estados pendiente, vencida, pagada y conciliada.
+- [x] Validar el aislamiento, los importes netos, los filtros, la accesibilidad y la experiencia móvil de traspasos y cuentas por cobrar.
+- [x] Corregir las acciones de fila de traspasos para eliminar el grupo completo y evitar edición o borrado parcial.
+- [x] Validar aislamiento entre usuarias y filtros de cuentas por cobrar por entidad, proyecto y moneda.
+- [x] Validar por teclado el formulario de traspaso y la pestaña de cuentas por cobrar, documentando foco y respuesta móvil.

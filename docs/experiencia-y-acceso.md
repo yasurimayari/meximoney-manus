@@ -13,8 +13,8 @@ El inicio de sesión OAuth anterior puede depender de un servicio de autenticaci
 | Vista | Moneda | Periodo | Separación personal y empresarial |
 |---|---|---|---|
 | Panel | Muestra la moneda base del perfil en los importes consolidados. Las partidas en otra divisa sin conversión manual confirmada no se suman y se señalan como pendientes. | Indica el mes del resumen financiero. | Declara la gestión diferenciada de finanzas personales y empresariales en el encabezado. |
-| Registros | Cada movimiento conserva moneda original, importe de reporte, tipo de cambio manual y fecha cuando procede. | Las transacciones contienen una fecha de ocurrencia. | Los movimientos pueden asociarse a entidad y proyecto, además de su ámbito personal, empresarial o mixto. |
-| Planificación | Los importes previstos se muestran en la moneda del registro. | Los presupuestos y revisiones se asocian a un periodo mensual. | Presupuestos, deudas, objetivos y tareas conservan el ámbito definido por la persona usuaria. |
+| Registros | Cada movimiento conserva moneda original, importe de reporte, tipo de cambio manual y fecha cuando procede. Los traspasos usan dos registros enlazados, sin afectar ingresos ni gastos. | Las transacciones contienen una fecha de ocurrencia. | Los movimientos pueden asociarse a entidad y proyecto, además de su ámbito personal, empresarial o mixto. |
+| Planificación | Los importes previstos se muestran en la moneda del registro. Las cuentas por cobrar conservan su moneda original. | Los presupuestos y revisiones se asocian a un periodo mensual; las CxC tienen origen, fecha y vencimiento opcional. | Presupuestos, deudas, objetivos, CxC y tareas conservan el ámbito definido por la persona usuaria. |
 | Calidad | Permite configurar la moneda base del perfil. | La reserva fiscal tiene una fecha estimada opcional. | El contexto permite declarar residencia y restricciones sin mezclar datos de terceros. |
 | Analítica | Formatea indicadores y gráficos con la moneda base, excluyendo importes no convertidos de forma manual. | El selector permite consultar 3, 6 o 12 meses. | Los datos proceden de registros con ámbito y no combinan fuentes externas. |
 | Asistente Mexi | Explica importes en la moneda configurada cuando existen registros. | Usa el resumen del periodo actual disponible. | Analiza exclusivamente el conjunto manual del espacio privado, sin fuentes externas. |
@@ -30,6 +30,12 @@ Los formularios muestran estados vacíos, límites de caracteres, mensajes de er
 Los documentos permiten clasificar referencias de residencia, fiscalidad, seguros, testamento o sucesión, propiedades, instrumentos de inversión, créditos y contratos. Los vínculos con activos y deudas se guardan como referencia explícita dentro de Meximoney. En cambio, los documentos de seguros u obligaciones fiscales se **clasifican y recuerdan manualmente**: no se vinculan a una aseguradora, al SAT ni a ninguna entidad externa, y no activan trámites, pagos o avisos automáticos.
 
 La aceptación del consentimiento explícito es necesaria antes de guardar o analizar información financiera. La pantalla de Calidad permite también eliminar todos los datos financieros manuales del espacio, sin convertir esta acción en un pago, transferencia o cambio de inversión.
+
+## Traspasos y cuentas por cobrar manuales
+
+El acceso **Traspaso** en Registros crea, en una sola operación, una salida desde la cuenta de origen y una entrada en la cuenta de destino. Ambas partes quedan enlazadas, requieren dos cuentas activas propias en la misma moneda y se excluyen de ingresos, gastos, flujo de efectivo y estados mensuales. No actualiza saldos bancarios, no conecta bancos y no mueve dinero real. Para evitar inconsistencias, la eliminación de una transferencia se gestiona como una operación completa.
+
+La pestaña **Por cobrar** de Planificación registra importes que deben clientes o personas para YMC, ELM o el ámbito personal. Cada CxC incluye cliente o persona, origen identificable, importe, moneda, entidad/proyecto opcionales, fechas y los estados manuales **pendiente**, **vencida**, **pagada** y **conciliada**. Una CxC no es un ingreso: cuando el dinero llegue, la persona usuaria debe registrar el ingreso recibido por separado y confirmarlo manualmente.
 
 ## Notificaciones privadas dentro del sitio
 

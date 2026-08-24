@@ -206,6 +206,25 @@ export const financialTransactions = mysqlTable("financialTransactions", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const receivables = mysqlTable("receivables", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
+  counterparty: varchar("counterparty", { length: 180 }).notNull(),
+  origin: varchar("origin", { length: 220 }).notNull(),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  amountCents: int("amountCents").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  issuedAt: timestamp("issuedAt").notNull(),
+  dueAt: timestamp("dueAt"),
+  paidAt: timestamp("paidAt"),
+  status: mysqlEnum("status", ["pending", "overdue", "paid", "reconciled"]).notNull().default("pending"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const financeDocuments = mysqlTable("financeDocuments", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
