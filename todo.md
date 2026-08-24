@@ -124,3 +124,10 @@
 - [x] Completar la vista de patrimonio neto con filtros de entidad, proyecto y moneda, y una evolución manual clara basada en cierres.
 - [x] Evaluar un proveedor de correo gratuito compatible con Gmail para invitaciones; Resend queda recomendado y no se configura nada sin autorización explícita.
 - [x] Validar la consolidación patrimonial filtrada con inversiones manuales y la exclusión de posiciones sin conversión comparable.
+- [x] Preparar la activación autorizada de Resend para invitaciones, con dominio remitente verificado y sin exponer credenciales; acceso validado y envío no implementado mientras DNS siga pendiente.
+- [x] Validar el remitente hola@mexi.richeon.app ante Resend: el dominio existe y su estado actual es pendiente, por lo que no se realizaron envíos.
+- [x] Mantener bloqueado el envío de invitaciones hasta que Resend reporte `mexi.richeon.app` como verificado.
+- [x] Vincular contactos opcionalmente a movimientos manuales y plantillas recurrentes, con validación de pertenencia al espacio.
+- [x] Clarificar e implementar el flujo de traspaso entre una cuenta de origen y una cuenta de ahorro o inversión, sin duplicar ingresos ni gastos.
+- [x] Añadir importación CSV local, revisable y confirmable para posiciones de inversión actuales.
+- [x] Añadir un gráfico interactivo de evolución histórica de activos, pasivos y patrimonio neto en Patrimonio.

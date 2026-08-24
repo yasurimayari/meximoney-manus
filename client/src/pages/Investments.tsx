@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { ChartNoAxesCombined, Pencil, PiggyBank, Plus, RefreshCw, WalletCards } from "lucide-react";
+import { investmentTemplateCsv, parseInvestmentCsv, type InvestmentImportRow } from "@/lib/investmentImport";
+import { ChartNoAxesCombined, Download, Pencil, PiggyBank, Plus, Upload, WalletCards } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -23,6 +24,10 @@ export default function Investments() {
   const [editing, setEditing] = useState<any | null>(null);
   const [open, setOpen] = useState(false);
   const [operationFor, setOperationFor] = useState<any | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState<InvestmentImportRow[]>([]);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
   const investments = (data?.investments ?? []) as any[];
   const operations = (data?.investmentOperations ?? []) as any[];
   const reportCurrency = data?.dashboard.reportCurrency ?? "MXN";
@@ -31,9 +36,12 @@ export default function Investments() {
   const isOwner = data?.workspaceAccess.role === "owner";
   const includedValue = useMemo(() => investments.filter(item => item.includeInNetWorth && item.status !== "closed").reduce((sum, item) => sum + (item.currency === reportCurrency ? item.currentValueCents : item.reportCurrency === reportCurrency ? item.reportValueCents ?? 0 : 0), 0), [investments, reportCurrency]);
   const latestFor = (id: number) => operations.filter(item => item.investmentId === id).sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())[0];
+  const downloadTemplate = () => { const url = URL.createObjectURL(new Blob([investmentTemplateCsv()], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = "meximoney-inversiones-plantilla.csv"; link.click(); URL.revokeObjectURL(url); };
+  const readImport = (file: File | undefined) => { if (!file) return; const reader = new FileReader(); reader.onload = () => { const result = parseInvestmentCsv(String(reader.result ?? "")); setImportRows(result.rows); setImportErrors(result.errors); }; reader.readAsText(file); };
+  const confirmImport = async () => { if (importErrors.length || !importRows.length) return; setImporting(true); try { for (const row of importRows) await save.mutateAsync({ name: row.name, type: row.type as any, institution: row.institution || null, entityId: null, projectId: null, scope: "personal", currency: row.currency, costBasisCents: Math.round(row.cost * 100), currentValueCents: Math.round(row.current * 100), reportCurrency: row.currency === reportCurrency ? null : reportCurrency, reportValueCents: row.currency === reportCurrency ? null : null, exchangeRateMicros: null, exchangeRateDate: null, valuationDate: row.valuationDate ? new Date(`${row.valuationDate}T12:00:00`).getTime() : null, includeInNetWorth: row.includeInNetWorth, status: "active", notes: row.notes || null }); await utils.finance.workspace.get.invalidate(); setImportOpen(false); setImportRows([]); toast.success(`${importRows.length} posiciones importadas tras tu confirmación.`); } catch (error: any) { toast.error(error.message ?? "No se pudieron guardar las posiciones."); } finally { setImporting(false); } };
 
   return <section className="space-y-6">
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="eyebrow">Activo manual y privado</p><h1 className="page-title">Ahorro e inversiones</h1><p className="page-subtitle">Registra posiciones, aportaciones y valuaciones confirmadas por ti. No hay cotizaciones, compra/venta ni conexión bancaria.</p></div>{isOwner ? <Button className="btn-primary" onClick={() => { setEditing(null); setOpen(true); }}><Plus className="mr-2 h-4 w-4"/>Nueva posición</Button> : null}</header>
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="eyebrow">Activo manual y privado</p><h1 className="page-title">Ahorro e inversiones</h1><p className="page-subtitle">Registra posiciones, aportaciones y valuaciones confirmadas por ti. No hay cotizaciones, compra/venta ni conexión bancaria.</p></div>{isOwner ? <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="mr-2 h-4 w-4"/>Importar CSV</Button><Button className="btn-primary" onClick={() => { setEditing(null); setOpen(true); }}><Plus className="mr-2 h-4 w-4"/>Nueva posición</Button></div> : null}</header>
     <div className="grid gap-3 sm:grid-cols-3"><Metric icon={PiggyBank} label="Valor incluido en patrimonio" value={formatMoney(includedValue, reportCurrency)} /><Metric icon={ChartNoAxesCombined} label="Posiciones activas" value={String(investments.filter(item => item.status === "active").length)} /><Metric icon={WalletCards} label="Moneda de reporte" value={reportCurrency} /></div>
     <Card className="surface-card"><CardContent className="p-4 text-sm text-muted-foreground"><strong className="text-foreground">Evita el doble conteo:</strong> registra aquí el activo económico —por ejemplo, un terreno, Bitcoin o la posición de ahorro— y usa una cuenta sólo para el efectivo disponible. Si el activo está en otra moneda, captura también su conversión manual antes de incluirlo en el patrimonio consolidado.</CardContent></Card>
     <div className="grid gap-4 lg:grid-cols-2">
@@ -43,6 +51,7 @@ export default function Investments() {
     </div>
     <Dialog open={open} onOpenChange={value => { setOpen(value); if (!value) setEditing(null); }}><InvestmentForm investment={editing} entities={data?.entities ?? []} projects={data?.projects ?? []} reportCurrency={reportCurrency} saving={save.isPending} onSubmit={(input: any) => save.mutate(input)} /></Dialog>
     <Dialog open={!!operationFor} onOpenChange={value => { if (!value) setOperationFor(null); }}><OperationForm investment={operationFor} transactions={data?.transactions ?? []} saving={operationSave.isPending} onSubmit={(input: any) => operationSave.mutate(input)} /></Dialog>
+    <Dialog open={importOpen} onOpenChange={value => { setImportOpen(value); if (!value) { setImportRows([]); setImportErrors([]); } }}><DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>Importar posiciones desde CSV</DialogTitle><DialogDescription>El archivo se lee en este navegador, no se conserva y sólo se guardará al confirmar la vista previa.</DialogDescription></DialogHeader><div className="space-y-4 py-2"><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={downloadTemplate}><Download className="mr-2 h-4 w-4"/>Descargar plantilla</Button><Input type="file" accept=".csv,text/csv" onChange={event => readImport(event.target.files?.[0])}/></div><p className="text-xs text-muted-foreground">Columnas: Nombre, Tipo, Institucion, Moneda, Costo, Valor_actual, Fecha_valoracion, Incluir_patrimonio y Notas. Tipos permitidos: savings, fixed_income, fund_etf, stock, crypto, land, property, business_equity, retirement u other.</p>{importErrors.length ? <div className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{importErrors.map(error => <p key={error}>{error}</p>)}</div> : null}{importRows.length && !importErrors.length ? <div className="space-y-2"><p className="text-sm font-medium">Vista previa: {importRows.length} posiciones</p><div className="max-h-56 overflow-auto rounded-md border"><table className="w-full text-sm"><thead><tr className="bg-muted/50 text-left"><th className="p-2">Nombre</th><th className="p-2">Tipo</th><th className="p-2">Valor</th></tr></thead><tbody>{importRows.map((row, index) => <tr key={`${row.name}-${index}`} className="border-t"><td className="p-2">{row.name}</td><td className="p-2">{row.type}</td><td className="p-2">{row.current} {row.currency}</td></tr>)}</tbody></table></div><Button className="btn-primary" disabled={importing} onClick={confirmImport}>{importing ? "Guardando…" : "Confirmar e importar"}</Button></div> : null}</div></DialogContent></Dialog>
   </section>;
 }
 

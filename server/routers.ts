@@ -262,10 +262,14 @@ export const appRouter = router({
         await db.update(collaborationInvites).set({ status: "revoked" }).where(and(eq(collaborationInvites.id, input.inviteId), eq(collaborationInvites.ownerId, ctx.workspaceAccess.ownerId)));
         return { success: true };
       }),
-      transactionSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), type: z.enum(["income", "expense", "transfer_out", "transfer_in"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), reportCurrency: z.string().length(3).nullable().optional(), reportAmountCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), occurredAt: z.number().int().positive(), isEssential: z.boolean(), transferGroupId: z.string().max(64).nullable().optional(), status: z.enum(["confirmed", "estimated", "needs_review"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      transactionSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), type: z.enum(["income", "expense", "transfer_out", "transfer_in"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), reportCurrency: z.string().length(3).nullable().optional(), reportAmountCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), occurredAt: z.number().int().positive(), isEssential: z.boolean(), transferGroupId: z.string().max(64).nullable().optional(), status: z.enum(["confirmed", "estimated", "needs_review"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner" && !ctx.workspaceAccess.canCreateDrafts) throw new TRPCError({ code: "FORBIDDEN", message: "Tu rol no permite crear borradores." });
         if (input.type === "transfer_out" || input.type === "transfer_in") throw new TRPCError({ code: "BAD_REQUEST", message: "Usa el formulario de traspaso entre cuentas para crear ambas partes de forma coherente." });
         const db = await requireDb(); const { id, occurredAt, exchangeRateDate, ...values } = input;
+        if (values.contactId) {
+          const contact = await db.select({ id: financialContacts.id }).from(financialContacts).where(and(eq(financialContacts.id, values.contactId), eq(financialContacts.userId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!contact[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El contacto seleccionado no pertenece a tu espacio privado." });
+        }
         const isOwner = ctx.workspaceAccess.role === "owner";
         const payload = { ...values, occurredAt: new Date(occurredAt), exchangeRateDate: asDate(exchangeRateDate), reviewStatus: isOwner ? "approved" as const : "pending_review" as const, status: isOwner ? values.status : "needs_review" as const, createdByUserId: ctx.user.id, reviewedByUserId: isOwner ? ctx.user.id : null, reviewedAt: isOwner ? new Date() : null };
         if (id) await db.update(financialTransactions).set(payload).where(and(eq(financialTransactions.id, id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId)));
@@ -273,7 +277,7 @@ export const appRouter = router({
         return { success: true };
       }),
       transferSave: workspaceFinanceProcedure.input(z.object({
-        sourceAccountId: z.number().int().positive(), destinationAccountId: z.number().int().positive(), amountCents: z.number().int().positive(), occurredAt: z.number().int().positive(), status: z.enum(["confirmed", "estimated", "needs_review"]), notes: z.string().max(3000).nullable().optional(),
+        sourceAccountId: z.number().int().positive(), destinationAccountId: z.number().int().positive(), investmentId: z.number().int().positive().nullable().optional(), amountCents: z.number().int().positive(), occurredAt: z.number().int().positive(), status: z.enum(["confirmed", "estimated", "needs_review"]), notes: z.string().max(3000).nullable().optional(),
       })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner" && !ctx.workspaceAccess.canCreateDrafts) throw new TRPCError({ code: "FORBIDDEN", message: "Tu rol no permite crear borradores." });
         if (input.sourceAccountId === input.destinationAccountId) throw new TRPCError({ code: "BAD_REQUEST", message: "Elige dos cuentas distintas para el traspaso." });
@@ -285,6 +289,10 @@ export const appRouter = router({
         if (!source[0] || !destination[0]) throw new TRPCError({ code: "FORBIDDEN", message: "Las cuentas del traspaso deben pertenecer a tu espacio privado." });
         if (source[0].status !== "active" || destination[0].status !== "active") throw new TRPCError({ code: "BAD_REQUEST", message: "Solo puedes traspasar entre cuentas activas." });
         if (source[0].currency !== destination[0].currency) throw new TRPCError({ code: "BAD_REQUEST", message: "Este formulario admite cuentas en la misma moneda. Registra una conversión manual confirmada por separado si aplica." });
+        if (input.investmentId) {
+          const [investment] = await db.select().from(investments).where(and(eq(investments.id, input.investmentId), eq(investments.userId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!investment || investment.currency !== destination[0].currency) throw new TRPCError({ code: "BAD_REQUEST", message: "La posición vinculada debe pertenecer a tu espacio y usar la moneda del traspaso." });
+        }
         const isOwner = ctx.workspaceAccess.role === "owner";
         const groupId = randomUUID();
         const date = new Date(input.occurredAt);
@@ -296,6 +304,10 @@ export const appRouter = router({
             { userId: ctx.workspaceAccess.ownerId, entityId: source[0].entityId, projectId: source[0].projectId, accountId: source[0].id, type: "transfer_out", scope: source[0].scope, amountCents: input.amountCents, currency: source[0].currency, reportCurrency: source[0].currency, reportAmountCents: input.amountCents, incomeNature: "other", occurredAt: date, isEssential: false, transferGroupId: groupId, status, reviewStatus, createdByUserId: ctx.user.id, reviewedByUserId: isOwner ? ctx.user.id : null, reviewedAt: isOwner ? new Date() : null, notes: `Traspaso a ${destination[0].name}${suffix}` },
             { userId: ctx.workspaceAccess.ownerId, entityId: destination[0].entityId, projectId: destination[0].projectId, accountId: destination[0].id, type: "transfer_in", scope: destination[0].scope, amountCents: input.amountCents, currency: destination[0].currency, reportCurrency: destination[0].currency, reportAmountCents: input.amountCents, incomeNature: "other", occurredAt: date, isEssential: false, transferGroupId: groupId, status, reviewStatus, createdByUserId: ctx.user.id, reviewedByUserId: isOwner ? ctx.user.id : null, reviewedAt: isOwner ? new Date() : null, notes: `Traspaso desde ${source[0].name}${suffix}` },
           ]);
+          if (input.investmentId) {
+            const [incoming] = await tx.select({ id: financialTransactions.id }).from(financialTransactions).where(and(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId), eq(financialTransactions.transferGroupId, groupId), eq(financialTransactions.type, "transfer_in"))).limit(1);
+            if (incoming) await tx.insert(investmentOperations).values({ userId: ctx.workspaceAccess.ownerId, investmentId: input.investmentId, linkedTransactionId: incoming.id, type: "contribution", amountCents: input.amountCents, currency: destination[0].currency, occurredAt: date, notes: `Aportación desde traspaso ${source[0].name} → ${destination[0].name}${suffix}` });
+          }
         });
         return { success: true, groupId };
       }),
@@ -462,9 +474,14 @@ export const appRouter = router({
         }),
       }),
       recurringTemplates: router({
-        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(180), counterparty: z.string().trim().max(180).nullable().optional(), type: z.enum(["income", "expense"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), cadence: z.enum(["weekly", "monthly", "quarterly", "annual"]), nextOccurrenceAt: optionalDate, status: z.enum(["active", "paused"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(180), counterparty: z.string().trim().max(180).nullable().optional(), type: z.enum(["income", "expense"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), cadence: z.enum(["weekly", "monthly", "quarterly", "annual"]), nextOccurrenceAt: optionalDate, status: z.enum(["active", "paused"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar plantillas recurrentes." });
-          const db = await requireDb(); const { id, nextOccurrenceAt, ...values } = input; const payload = { ...values, nextOccurrenceAt: asDate(nextOccurrenceAt) };
+          const db = await requireDb(); const { id, nextOccurrenceAt, ...values } = input;
+          if (values.contactId) {
+            const contact = await db.select({ id: financialContacts.id }).from(financialContacts).where(and(eq(financialContacts.id, values.contactId), eq(financialContacts.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!contact[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El contacto seleccionado no pertenece a tu espacio privado." });
+          }
+          const payload = { ...values, nextOccurrenceAt: asDate(nextOccurrenceAt) };
           if (id) await db.update(recurringTemplates).set(payload).where(and(eq(recurringTemplates.id, id), eq(recurringTemplates.userId, ctx.workspaceAccess.ownerId)));
           else await db.insert(recurringTemplates).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
           return { success: true };
@@ -478,7 +495,7 @@ export const appRouter = router({
           const db = await requireDb();
           const [template] = await db.select().from(recurringTemplates).where(and(eq(recurringTemplates.id, input.id), eq(recurringTemplates.userId, ctx.workspaceAccess.ownerId))).limit(1);
           if (!template || template.status !== "active") throw new TRPCError({ code: "NOT_FOUND", message: "La plantilla activa no pertenece a tu espacio." });
-          await db.insert(financialTransactions).values({ userId: ctx.workspaceAccess.ownerId, accountId: template.accountId, categoryId: template.categoryId, goalId: null, debtId: null, entityId: template.entityId, projectId: template.projectId, type: template.type, scope: template.scope, amountCents: template.amountCents, currency: template.currency, reportCurrency: template.currency, reportAmountCents: template.amountCents, exchangeRateMicros: null, exchangeRateDate: null, incomeNature: template.incomeNature, occurredAt: new Date(input.occurredAt), isEssential: false, transferGroupId: null, status: "confirmed", reviewStatus: "approved", createdByUserId: ctx.user.id, reviewedByUserId: ctx.user.id, reviewedAt: new Date(), notes: [template.name, template.counterparty].filter(Boolean).join(" · ") || template.notes });
+          await db.insert(financialTransactions).values({ userId: ctx.workspaceAccess.ownerId, accountId: template.accountId, categoryId: template.categoryId, goalId: null, debtId: null, contactId: template.contactId, entityId: template.entityId, projectId: template.projectId, type: template.type, scope: template.scope, amountCents: template.amountCents, currency: template.currency, reportCurrency: template.currency, reportAmountCents: template.amountCents, exchangeRateMicros: null, exchangeRateDate: null, incomeNature: template.incomeNature, occurredAt: new Date(input.occurredAt), isEssential: false, transferGroupId: null, status: "confirmed", reviewStatus: "approved", createdByUserId: ctx.user.id, reviewedByUserId: ctx.user.id, reviewedAt: new Date(), notes: [template.name, template.counterparty].filter(Boolean).join(" · ") || template.notes });
           return { success: true };
         }),
       }),
