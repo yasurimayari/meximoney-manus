@@ -24,6 +24,7 @@ import {
   monthlyFinancialStatements,
   payablePayments,
   payables,
+  passwordResetTokens,
   privacyConsents,
   qualityIssueAcknowledgements,
   receivables,
@@ -300,5 +301,6 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(financialProfiles).where(eq(financialProfiles.userId, userId));
     await tx.delete(privacyConsents).where(eq(privacyConsents.userId, userId));
     await tx.delete(qualityIssueAcknowledgements).where(eq(qualityIssueAcknowledgements.userId, userId));
+    await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
   });
 }

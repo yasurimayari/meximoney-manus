@@ -1,5 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -27,6 +27,7 @@ import {
   monthlyFinancialStatements,
   notificationPreferences,
   localCredentials,
+  passwordResetTokens,
   payablePayments,
   payables,
   privacyConsents,
@@ -37,7 +38,8 @@ import {
   users,
   workspaceEntities,
 } from "../drizzle/schema";
-import { hashPassword, verifyPassword } from "./credentials";
+import { createPasswordResetToken, hashPassword, hashPasswordResetToken, verifyPassword } from "./credentials";
+import { sendPasswordResetEmail } from "./passwordResetEmail";
 import { deleteAllFinancialData, deleteOwnedRow, getFinanceSnapshot, getProfile, requireDb, resolveWorkspaceAccess } from "./db";
 import { storagePut } from "./storage";
 import { requiresPersonalProfileConsent } from "./profilePrivacy";
@@ -171,6 +173,34 @@ export const appRouter = router({
       await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, record.user.id));
       const sessionToken = await setLocalSession(ctx, record.user);
       return { success: true, sessionToken, user: { name: record.user.name, email: record.user.email } };
+    }),
+    requestPasswordReset: publicProcedure.input(z.object({ email: z.string().trim().email().max(320).transform(value => value.toLowerCase()) })).mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      const record = await db.select({ userId: localCredentials.userId, email: localCredentials.email }).from(localCredentials).where(eq(localCredentials.email, input.email)).limit(1);
+      const deliveryReady = process.env.PASSWORD_RESET_EMAIL_ENABLED === "true";
+      const genericResponse = { success: true, deliveryReady, message: deliveryReady ? "Si existe una cuenta con ese correo, recibirás instrucciones para restablecer tu contraseña." : "La recuperación por correo está preparada y se activará cuando se verifique el remitente de Meximoney." };
+      if (!deliveryReady) return genericResponse;
+      if (!record[0]) return genericResponse;
+      const rawToken = createPasswordResetToken();
+      const tokenHash = hashPasswordResetToken(rawToken);
+      await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, record[0].userId));
+      await db.insert(passwordResetTokens).values({ userId: record[0].userId, tokenHash, expiresAt: new Date(Date.now() + 30 * 60 * 1000) });
+      const host = ctx.req.get("host");
+      const baseUrl = host === "mexifinance-stkndi6z.manus.space" ? `https://${host}` : "https://mexifinance-stkndi6z.manus.space";
+      try { await sendPasswordResetEmail({ to: record[0].email, resetUrl: `${baseUrl}/restablecer-contrasena?token=${encodeURIComponent(rawToken)}` }); } catch (error) { await db.delete(passwordResetTokens).where(eq(passwordResetTokens.tokenHash, tokenHash)); console.error("[Password reset] Email delivery failed", error); }
+      return genericResponse;
+    }),
+    resetPassword: publicProcedure.input(z.object({ token: z.string().min(30).max(200), password: z.string().min(12, "La contraseña debe tener al menos 12 caracteres.").max(128) })).mutation(async ({ input }) => {
+      const db = await requireDb();
+      const tokenHash = hashPasswordResetToken(input.token);
+      const token = await db.select().from(passwordResetTokens).where(and(eq(passwordResetTokens.tokenHash, tokenHash), isNull(passwordResetTokens.usedAt), gt(passwordResetTokens.expiresAt, new Date()))).limit(1);
+      if (!token[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El enlace de restablecimiento no es válido o ya venció." });
+      await db.transaction(async tx => {
+        await tx.update(localCredentials).set({ passwordHash: await hashPassword(input.password) }).where(eq(localCredentials.userId, token[0].userId));
+        await tx.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, token[0].id));
+        await tx.delete(passwordResetTokens).where(and(eq(passwordResetTokens.userId, token[0].userId), isNull(passwordResetTokens.usedAt)));
+      });
+      return { success: true };
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);

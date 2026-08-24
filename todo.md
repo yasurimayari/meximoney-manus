@@ -103,3 +103,7 @@
 - [x] Añadir vistas de tarjetas/lista y filtro por contactos activos en Contactos.
 - [x] Mover Calidad de tus datos fuera del Panel y convertir sus alertas en acciones editables, eliminables o marcables como resueltas.
 - [x] Mostrar una opción visible de iniciar sesión para usuarios registrados desde la pantalla pública de Meximoney.
+- [x] Añadir la interfaz y tokens seguros de recuperación y restablecimiento de contraseña.
+- [ ] Verificar el dominio remitente de Resend y completar la entrega real de recuperación de contraseña, informando un fallo de envío sin revelar si existe una cuenta.
+- [x] Explicar la diferencia entre la dirección publicada y la vista previa.
+- [x] Redirigir la vista previa al dominio publicado para impedir que una sesión de prueba parezca una cuenta nueva.

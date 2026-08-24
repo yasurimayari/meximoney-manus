@@ -19,12 +19,14 @@ import Notifications from "./pages/Notifications";
 import Contacts from "./pages/Contacts";
 import Investments from "./pages/Investments";
 import Patrimony from "./pages/Patrimony";
+import PasswordReset from "./pages/PasswordReset";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
+      <Route path={"/restablecer-contrasena"} component={PasswordReset} />
       <Route path={"/"}><DashboardLayout><Home /></DashboardLayout></Route>
       <Route path={"/movimientos"}><DashboardLayout><Records /></DashboardLayout></Route>
       <Route path={"/planificacion"}><DashboardLayout><Planning /></DashboardLayout></Route>
