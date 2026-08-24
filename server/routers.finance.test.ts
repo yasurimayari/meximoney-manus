@@ -124,4 +124,37 @@ describe("finance.dashboard", () => {
 
     await expect(caller.finance.workspace.revokeInvite({ inviteId: 81 })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
+
+  it("actualiza costo y valor de una posición existente al guardar una aportación", async () => {
+    const position = { id: 11, userId: 27, currency: "MXN", costBasisCents: 500_00, currentValueCents: 500_00, valuationDate: new Date("2026-08-01T12:00:00Z") };
+    const inserted = vi.fn();
+    const where = vi.fn();
+    const set = vi.fn(() => ({ where }));
+    const transaction = vi.fn(async callback => callback({ insert: () => ({ values: inserted }), update: () => ({ set }) }));
+    let selectCall = 0;
+    const select = () => ({ from: () => ({ where: () => ({ limit: async () => [selectCall++ === 0 ? { accepted: true } : position] }) }) });
+    mocks.requireDb.mockResolvedValue({ select, transaction });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await caller.finance.workspace.investments.operationSave({ investmentId: 11, type: "contribution", amountCents: 500_00, currency: "MXN", occurredAt: Date.parse("2026-08-24T12:00:00Z"), linkedTransactionId: null, notes: null });
+
+    expect(inserted).toHaveBeenCalledWith(expect.objectContaining({ investmentId: 11, amountCents: 500_00, type: "contribution" }));
+    expect(set).toHaveBeenCalledWith(expect.objectContaining({ costBasisCents: 1_000_00, currentValueCents: 1_000_00 }));
+  });
+
+  it("recalcula costo y valor de la posición al eliminar una aportación", async () => {
+    const operation = { id: 501, investmentId: 11, userId: 27, type: "contribution" as const, amountCents: 500_00 };
+    const position = { id: 11, userId: 27, costBasisCents: 1_000_00, currentValueCents: 1_000_00 };
+    let sequence = 0;
+    const txSelect = () => ({ from: () => ({ where: () => ({ limit: async () => [sequence++ === 0 ? operation : position] }) }) });
+    const set = vi.fn(() => ({ where: vi.fn() }));
+    const transaction = vi.fn(async callback => callback({ select: txSelect, delete: () => ({ where: vi.fn() }), update: () => ({ set }) }));
+    const select = () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) });
+    mocks.requireDb.mockResolvedValue({ select, transaction });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await caller.finance.workspace.investments.operationRemove({ id: 501 });
+
+    expect(set).toHaveBeenCalledWith({ costBasisCents: 500_00, currentValueCents: 500_00 });
+  });
 });

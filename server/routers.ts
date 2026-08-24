@@ -1,5 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -45,6 +45,7 @@ import { storagePut } from "./storage";
 import { requiresPersonalProfileConsent } from "./profilePrivacy";
 import { calculateMonthlyStatement, monthBounds } from "./finance";
 import { comparableInvestmentValueCents } from "./investmentData";
+import { applyInvestmentDelta, investmentOperationDelta, totalsFromInvestmentOperations } from "./investmentOperations";
 import { findPossibleDuplicates } from "./imports";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM } from "./_core/llm";
@@ -493,15 +494,55 @@ export const appRouter = router({
           if (input.linkedTransactionId) {
             const [transaction] = await db.select().from(financialTransactions).where(and(eq(financialTransactions.id, input.linkedTransactionId), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId))).limit(1);
             if (!transaction || transaction.currency !== input.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "El movimiento vinculado debe pertenecer a tu espacio y usar la misma moneda." });
+            const transactionIds = transaction.transferGroupId
+              ? (await db.select({ id: financialTransactions.id }).from(financialTransactions).where(and(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId), eq(financialTransactions.transferGroupId, transaction.transferGroupId)))).map(row => row.id)
+              : [transaction.id];
+            const duplicateLink = await db.select({ id: investmentOperations.id }).from(investmentOperations).where(and(eq(investmentOperations.userId, ctx.workspaceAccess.ownerId), inArray(investmentOperations.linkedTransactionId, transactionIds))).limit(1);
+            if (duplicateLink[0] && duplicateLink[0].id !== input.id) throw new TRPCError({ code: "CONFLICT", message: "Ese movimiento ya está vinculado a una aportación; revisa el historial de la posición antes de registrar otra." });
           }
           const { id, occurredAt, ...values } = input; const payload = { ...values, occurredAt: new Date(occurredAt) };
-          if (id) await db.update(investmentOperations).set(payload).where(and(eq(investmentOperations.id, id), eq(investmentOperations.userId, ctx.workspaceAccess.ownerId)));
-          else await db.insert(investmentOperations).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+          await db.transaction(async tx => {
+            let previous: typeof investmentOperations.$inferSelect | undefined;
+            if (id) {
+              const rows = await tx.select().from(investmentOperations).where(and(eq(investmentOperations.id, id), eq(investmentOperations.userId, ctx.workspaceAccess.ownerId))).limit(1);
+              previous = rows[0];
+              if (!previous || previous.investmentId !== investment.id) throw new TRPCError({ code: "NOT_FOUND", message: "La operación no pertenece a esta posición." });
+              await tx.update(investmentOperations).set(payload).where(and(eq(investmentOperations.id, id), eq(investmentOperations.userId, ctx.workspaceAccess.ownerId)));
+            } else {
+              await tx.insert(investmentOperations).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+            }
+            const nextDelta = investmentOperationDelta(input.type, input.amountCents);
+            const previousDelta = previous ? investmentOperationDelta(previous.type, previous.amountCents) : { costBasisCents: 0, currentValueCents: 0 };
+            const nextValues = applyInvestmentDelta(investment, { costBasisCents: nextDelta.costBasisCents - previousDelta.costBasisCents, currentValueCents: nextDelta.currentValueCents - previousDelta.currentValueCents });
+            await tx.update(investments).set({ ...nextValues, valuationDate: new Date(Math.max(investment.valuationDate?.getTime() ?? 0, occurredAt)) }).where(and(eq(investments.id, investment.id), eq(investments.userId, ctx.workspaceAccess.ownerId)));
+          });
           return { success: true };
+        }),
+        reconcile: workspaceFinanceProcedure.input(z.object({ investmentId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede reconciliar posiciones de inversión." });
+          const db = await requireDb();
+          const [investment] = await db.select().from(investments).where(and(eq(investments.id, input.investmentId), eq(investments.userId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!investment) throw new TRPCError({ code: "NOT_FOUND", message: "La posición no pertenece a tu espacio privado." });
+          const history = await db.select({ type: investmentOperations.type, amountCents: investmentOperations.amountCents, occurredAt: investmentOperations.occurredAt }).from(investmentOperations).where(and(eq(investmentOperations.investmentId, investment.id), eq(investmentOperations.userId, ctx.workspaceAccess.ownerId)));
+          const totals = totalsFromInvestmentOperations(history);
+          const lastOccurredAt = history.reduce<Date | null>((latest, operation) => !latest || operation.occurredAt > latest ? operation.occurredAt : latest, investment.valuationDate);
+          await db.update(investments).set({ ...totals, valuationDate: lastOccurredAt }).where(and(eq(investments.id, investment.id), eq(investments.userId, ctx.workspaceAccess.ownerId)));
+          return { success: true, ...totals };
         }),
         operationRemove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar operaciones de inversión." });
-          const db = await requireDb(); await db.delete(investmentOperations).where(and(eq(investmentOperations.id, input.id), eq(investmentOperations.userId, ctx.workspaceAccess.ownerId))); return { success: true };
+          const db = await requireDb();
+          await db.transaction(async tx => {
+            const [operation] = await tx.select().from(investmentOperations).where(and(eq(investmentOperations.id, input.id), eq(investmentOperations.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!operation) throw new TRPCError({ code: "NOT_FOUND", message: "La operación no pertenece a tu espacio privado." });
+            const [investment] = await tx.select().from(investments).where(and(eq(investments.id, operation.investmentId), eq(investments.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!investment) throw new TRPCError({ code: "NOT_FOUND", message: "La posición no pertenece a tu espacio privado." });
+            const delta = investmentOperationDelta(operation.type, operation.amountCents);
+            const nextValues = applyInvestmentDelta(investment, { costBasisCents: -delta.costBasisCents, currentValueCents: -delta.currentValueCents });
+            await tx.delete(investmentOperations).where(eq(investmentOperations.id, operation.id));
+            await tx.update(investments).set(nextValues).where(and(eq(investments.id, investment.id), eq(investments.userId, ctx.workspaceAccess.ownerId)));
+          });
+          return { success: true };
         }),
       }),
       recurringTemplates: router({

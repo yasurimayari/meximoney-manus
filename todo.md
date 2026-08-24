@@ -107,3 +107,6 @@
 - [ ] Verificar el dominio remitente de Resend y completar la entrega real de recuperación de contraseña, informando un fallo de envío sin revelar si existe una cuenta.
 - [x] Explicar la diferencia entre la dirección publicada y la vista previa.
 - [x] Redirigir la vista previa al dominio publicado para impedir que una sesión de prueba parezca una cuenta nueva.
+- [x] Diagnosticar el aviso de configuración remota de Amplitude en la vista previa y confirmar si es externo a Meximoney.
+- [ ] Reconciliar posiciones históricas afectadas por el valor en cero y comprobar que aportaciones nuevas y pasadas actualizan inversión y patrimonio.
+- [x] Evitar aportaciones duplicadas enlazadas al mismo movimiento y permitir revisar o eliminar operaciones históricas de una posición.
