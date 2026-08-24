@@ -95,3 +95,4 @@
 - [x] Añadir filtro de no leídas, agrupación por categoría o fecha y enlaces contextuales desde la bandeja de notificaciones.
 - [x] Diseñar reglas manuales de recordatorio para presupuesto y reserva fiscal, sin cálculos ni presentación fiscal automática.
 - [x] Evaluar Telegram como canal opcional de señal mínima, comparando privacidad, coste operativo y configuración requerida antes de integrarlo.
+- [x] Auditar la página histórica de Notion de Meximoney, comparar sus componentes con la aplicación actual y priorizar oportunidades sin implementarlas todavía.
