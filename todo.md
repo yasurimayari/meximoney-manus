@@ -131,3 +131,4 @@
 - [x] Clarificar e implementar el flujo de traspaso entre una cuenta de origen y una cuenta de ahorro o inversión, sin duplicar ingresos ni gastos.
 - [x] Añadir importación CSV local, revisable y confirmable para posiciones de inversión actuales.
 - [x] Añadir un gráfico interactivo de evolución histórica de activos, pasivos y patrimonio neto en Patrimonio.
+- [x] Corregir el cierre o montaje nulo del diálogo de operaciones de inversión en /inversiones.
