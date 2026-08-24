@@ -41,14 +41,27 @@ snapshot = await query("finance.workspace.get", token);
 const transferRows = snapshot.transactions.filter(item => item.transferGroupId === transfer.groupId);
 const receivableOrigins = snapshot.receivables.map(item => item.origin).sort();
 const ymcReceivable = snapshot.receivables.find(item => item.counterparty === "Cliente YMC QA");
-await call("finance.workspace.receivables.save", token, { id: ymcReceivable.id, entityId: ymcReceivable.entityId, projectId: null, counterparty: ymcReceivable.counterparty, origin: ymcReceivable.origin, scope: ymcReceivable.scope, amountCents: ymcReceivable.amountCents, currency: ymcReceivable.currency, issuedAt: new Date(ymcReceivable.issuedAt).getTime(), dueAt: new Date(ymcReceivable.dueAt).getTime(), paidAt: Date.now(), status: "paid", notes: null });
+await call("finance.workspace.transactionSave", token, { accountId: santander.id, categoryId: null, goalId: null, debtId: null, entityId: ymc.id, projectId: null, type: "income", scope: "business", amountCents: 500000, currency: "MXN", reportCurrency: "MXN", reportAmountCents: 500000, exchangeRateMicros: null, exchangeRateDate: null, incomeNature: "business_revenue", occurredAt: Date.now(), isEssential: false, transferGroupId: null, status: "confirmed", notes: "Cobro real YMC QA" });
 snapshot = await query("finance.workspace.get", token);
-const paidReceivable = snapshot.receivables.find(item => item.id === ymcReceivable.id);
+const realIncome = snapshot.transactions.find(item => item.notes === "Cobro real YMC QA");
+await call("finance.workspace.receivables.paymentSave", token, { receivableId: ymcReceivable.id, linkedTransactionId: null, amountCents: 200000, currency: "MXN", paidAt: Date.now(), notes: "Abono inicial" });
+snapshot = await query("finance.workspace.get", token);
+const firstPayment = snapshot.receivablePayments.find(item => item.receivableId === ymcReceivable.id);
+let overpaymentBlocked = false;
+try { await call("finance.workspace.receivables.paymentSave", token, { receivableId: ymcReceivable.id, linkedTransactionId: null, amountCents: 300001, currency: "MXN", paidAt: Date.now(), notes: null }); } catch { overpaymentBlocked = true; }
+await call("finance.workspace.receivables.paymentSave", token, { receivableId: ymcReceivable.id, linkedTransactionId: realIncome.id, amountCents: 300000, currency: "MXN", paidAt: Date.now(), notes: "Abono final" });
+snapshot = await query("finance.workspace.get", token);
+const paidBeforeLink = snapshot.receivables.find(item => item.id === ymcReceivable.id);
+await call("finance.workspace.receivables.paymentSave", token, { id: firstPayment.id, receivableId: ymcReceivable.id, linkedTransactionId: realIncome.id, amountCents: 200000, currency: "MXN", paidAt: new Date(firstPayment.paidAt).getTime(), notes: firstPayment.notes });
+snapshot = await query("finance.workspace.get", token);
+const reconciledReceivable = snapshot.receivables.find(item => item.id === ymcReceivable.id);
+const linkedPayments = snapshot.receivablePayments.filter(item => item.receivableId === ymcReceivable.id);
 const report = {
   transferPair: transferRows.length === 2 && transferRows.some(item => item.type === "transfer_out" && item.accountId === santander.id) && transferRows.some(item => item.type === "transfer_in" && item.accountId === inbursa.id) && transferRows.every(item => item.amountCents === 125000),
-  transferExcludedFromIncome: snapshot.dashboard.cashFlow.incomeCents === 0 && snapshot.dashboard.cashFlow.expenseCents === 0,
+  transferExcludedFromIncome: snapshot.dashboard.cashFlow.incomeCents === 500000 && snapshot.dashboard.cashFlow.expenseCents === 0,
   receivablesByOrigin: JSON.stringify(receivableOrigins) === JSON.stringify(["Comisión ELM", "Préstamo personal", "Servicio de consultoría YMC"].sort()),
-  statuses: paidReceivable?.status === "paid" && Boolean(paidReceivable?.paidAt) && snapshot.receivables.some(item => item.status === "overdue"),
+  partialAndReconciled: firstPayment?.amountCents === 200000 && paidBeforeLink?.status === "paid" && reconciledReceivable?.status === "reconciled" && linkedPayments.reduce((sum, item) => sum + item.amountCents, 0) === 500000 && linkedPayments.every(item => item.linkedTransactionId === realIncome.id),
+  overpaymentBlocked,
   entityLinks: snapshot.receivables.some(item => item.entityId === ymc.id) && snapshot.receivables.some(item => item.entityId === elm.id) && snapshot.receivables.some(item => item.entityId === null),
 };
 if (!Object.values(report).every(Boolean)) throw new Error(`QA de traspasos/CxC falló: ${JSON.stringify(report)}`);

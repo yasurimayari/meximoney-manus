@@ -32,14 +32,21 @@ const transfer = await call("finance.workspace.transferSave", ownerToken, { sour
 await call("finance.workspace.receivables.save", ownerToken, { entityId: null, projectId: null, counterparty: "CxC privada", origin: "Prueba de aislamiento", scope: "personal", amountCents: 50000, currency: "MXN", issuedAt: Date.now(), dueAt: null, paidAt: null, status: "pending", notes: null });
 ownerSnapshot = await query("finance.workspace.get", ownerToken);
 const ownerReceivable = ownerSnapshot.receivables.find(item => item.counterparty === "CxC privada");
+await call("finance.workspace.receivables.paymentSave", ownerToken, { receivableId: ownerReceivable.id, linkedTransactionId: null, amountCents: 20000, currency: "MXN", paidAt: Date.now(), notes: "Abono privado" });
+ownerSnapshot = await query("finance.workspace.get", ownerToken);
+const ownerPayment = ownerSnapshot.receivablePayments.find(item => item.receivableId === ownerReceivable.id);
 const otherToken = await setup(other, "Otra QA");
 const otherBefore = await query("finance.workspace.get", otherToken);
 await call("finance.workspace.receivables.remove", otherToken, { id: ownerReceivable.id });
 await call("finance.workspace.transferRemove", otherToken, { transferGroupId: transfer.groupId });
+await call("finance.workspace.receivables.paymentRemove", otherToken, { id: ownerPayment.id });
+let paymentSaveBlocked = false;
+try { await call("finance.workspace.receivables.paymentSave", otherToken, { receivableId: ownerReceivable.id, linkedTransactionId: null, amountCents: 1, currency: "MXN", paidAt: Date.now(), notes: null }); } catch { paymentSaveBlocked = true; }
 const ownerAfter = await query("finance.workspace.get", ownerToken);
 const report = {
-  separateViews: !otherBefore.receivables.some(item => item.counterparty === "CxC privada") && !otherBefore.transactions.some(item => item.transferGroupId === transfer.groupId),
+  separateViews: !otherBefore.receivables.some(item => item.counterparty === "CxC privada") && !otherBefore.receivablePayments.some(item => item.id === ownerPayment.id) && !otherBefore.transactions.some(item => item.transferGroupId === transfer.groupId),
   protectedReceivable: ownerAfter.receivables.some(item => item.id === ownerReceivable.id),
+  protectedPayment: paymentSaveBlocked && ownerAfter.receivablePayments.some(item => item.id === ownerPayment.id),
   protectedTransfer: ownerAfter.transactions.filter(item => item.transferGroupId === transfer.groupId).length === 2,
 };
 if (!Object.values(report).every(Boolean)) throw new Error(`QA de aislamiento falló: ${JSON.stringify(report)}`);

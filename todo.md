@@ -102,3 +102,6 @@
 - [x] Corregir las acciones de fila de traspasos para eliminar el grupo completo y evitar edición o borrado parcial.
 - [x] Validar aislamiento entre usuarias y filtros de cuentas por cobrar por entidad, proyecto y moneda.
 - [x] Validar por teclado el formulario de traspaso y la pestaña de cuentas por cobrar, documentando foco y respuesta móvil.
+- [x] Implementar abonos parciales privados en CxC con saldo pendiente calculado de forma trazable.
+- [x] Permitir vincular una CxC pagada o conciliada con un ingreso real manual del mismo espacio, sin crear ni duplicar movimientos.
+- [x] Validar totales, aislamiento, accesibilidad y respuesta móvil de abonos y conciliación, y documentar el cierre de Fase A y la preparación de Fase B.

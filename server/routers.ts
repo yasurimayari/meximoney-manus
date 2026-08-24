@@ -26,6 +26,7 @@ import {
   localCredentials,
   privacyConsents,
   receivables,
+  receivablePayments,
   users,
   workspaceEntities,
 } from "../drizzle/schema";
@@ -93,6 +94,14 @@ const workspaceFinanceProcedure = protectedProcedure.use(async ({ ctx, next }) =
 
 function asDate(value: number | null | undefined) {
   return value ? new Date(value) : null;
+}
+
+export function receivableSettlement(receivable: { amountCents: number; dueAt: Date | null }, payments: Array<{ amountCents: number; linkedTransactionId: number | null; paidAt: Date }>) {
+  const paidCents = payments.reduce((sum, payment) => sum + payment.amountCents, 0);
+  const remainingCents = Math.max(0, receivable.amountCents - paidCents);
+  const completelyLinked = payments.length > 0 && payments.every(payment => payment.linkedTransactionId !== null);
+  const status: "pending" | "overdue" | "paid" | "reconciled" = remainingCents === 0 ? (completelyLinked ? "reconciled" : "paid") : receivable.dueAt && receivable.dueAt.getTime() < Date.now() ? "overdue" : "pending";
+  return { paidCents, remainingCents, status, paidAt: remainingCents === 0 ? payments.reduce<Date | null>((latest, payment) => !latest || payment.paidAt > latest ? payment.paidAt : latest, null) : null };
 }
 
 function createManualSnapshotText(snapshot: Awaited<ReturnType<typeof getFinanceSnapshot>>) {
@@ -271,6 +280,48 @@ export const appRouter = router({
           const payload = { ...values, issuedAt: new Date(issuedAt), dueAt: asDate(dueAt), paidAt: asDate(paidAt) };
           if (id) await db.update(receivables).set(payload).where(and(eq(receivables.id, id), eq(receivables.userId, ctx.workspaceAccess.ownerId)));
           else await db.insert(receivables).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+          return { success: true };
+        }),
+        paymentSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), receivableId: z.number().int().positive(), linkedTransactionId: z.number().int().positive().nullable().optional(), amountCents: z.number().int().positive(), currency: z.string().length(3), paidAt: z.number().int().positive(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede registrar o conciliar abonos." });
+          const db = await requireDb();
+          await db.transaction(async tx => {
+            const [receivable] = await tx.select().from(receivables).where(and(eq(receivables.id, input.receivableId), eq(receivables.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!receivable) throw new TRPCError({ code: "NOT_FOUND", message: "La cuenta por cobrar no pertenece a tu espacio." });
+            if (receivable.currency !== input.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "El abono debe usar la misma moneda que la cuenta por cobrar." });
+            const existingPayments = await tx.select().from(receivablePayments).where(and(eq(receivablePayments.receivableId, receivable.id), eq(receivablePayments.userId, ctx.workspaceAccess.ownerId)));
+            const otherPayments = existingPayments.filter(payment => payment.id !== input.id);
+            const alreadyPaid = otherPayments.reduce((sum, payment) => sum + payment.amountCents, 0);
+            if (alreadyPaid + input.amountCents > receivable.amountCents) throw new TRPCError({ code: "BAD_REQUEST", message: "El abono supera el saldo pendiente de esta cuenta por cobrar." });
+            if (input.linkedTransactionId) {
+              const [income] = await tx.select().from(financialTransactions).where(and(eq(financialTransactions.id, input.linkedTransactionId), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId))).limit(1);
+              if (!income || income.type !== "income" || income.currency !== input.currency || income.reviewStatus !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Selecciona un ingreso aprobado, de la misma moneda y de tu espacio privado." });
+              const linkedElsewhere = await tx.select().from(receivablePayments).where(and(eq(receivablePayments.userId, ctx.workspaceAccess.ownerId), eq(receivablePayments.linkedTransactionId, income.id)));
+              const linkedAmount = linkedElsewhere.filter(payment => payment.id !== input.id).reduce((sum, payment) => sum + payment.amountCents, 0);
+              if (linkedAmount + input.amountCents > income.amountCents) throw new TRPCError({ code: "BAD_REQUEST", message: "El importe vinculado supera el ingreso real seleccionado." });
+            }
+            const payload = { receivableId: receivable.id, linkedTransactionId: input.linkedTransactionId ?? null, amountCents: input.amountCents, currency: input.currency, paidAt: new Date(input.paidAt), notes: input.notes ?? null };
+            if (input.id) await tx.update(receivablePayments).set(payload).where(and(eq(receivablePayments.id, input.id), eq(receivablePayments.userId, ctx.workspaceAccess.ownerId)));
+            else await tx.insert(receivablePayments).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+            const updatedPayments = input.id ? [...otherPayments, { ...payload, id: input.id, userId: ctx.workspaceAccess.ownerId, createdAt: new Date(), updatedAt: new Date() }] : [...existingPayments, { ...payload, id: -1, userId: ctx.workspaceAccess.ownerId, createdAt: new Date(), updatedAt: new Date() }];
+            const settlement = receivableSettlement(receivable, updatedPayments);
+            await tx.update(receivables).set({ status: settlement.status, paidAt: settlement.paidAt }).where(and(eq(receivables.id, receivable.id), eq(receivables.userId, ctx.workspaceAccess.ownerId)));
+          });
+          return { success: true };
+        }),
+        paymentRemove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar abonos." });
+          const db = await requireDb();
+          await db.transaction(async tx => {
+            const [payment] = await tx.select().from(receivablePayments).where(and(eq(receivablePayments.id, input.id), eq(receivablePayments.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!payment) return;
+            const [receivable] = await tx.select().from(receivables).where(and(eq(receivables.id, payment.receivableId), eq(receivables.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            await tx.delete(receivablePayments).where(and(eq(receivablePayments.id, payment.id), eq(receivablePayments.userId, ctx.workspaceAccess.ownerId)));
+            if (!receivable) return;
+            const remainingPayments = await tx.select().from(receivablePayments).where(and(eq(receivablePayments.receivableId, receivable.id), eq(receivablePayments.userId, ctx.workspaceAccess.ownerId)));
+            const settlement = receivableSettlement(receivable, remainingPayments);
+            await tx.update(receivables).set({ status: settlement.status, paidAt: settlement.paidAt }).where(and(eq(receivables.id, receivable.id), eq(receivables.userId, ctx.workspaceAccess.ownerId)));
+          });
           return { success: true };
         }),
         remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {

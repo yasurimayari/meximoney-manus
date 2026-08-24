@@ -37,6 +37,14 @@ El acceso **Traspaso** en Registros crea, en una sola operación, una salida des
 
 La pestaña **Por cobrar** de Planificación registra importes que deben clientes o personas para YMC, ELM o el ámbito personal. Cada CxC incluye cliente o persona, origen identificable, importe, moneda, entidad/proyecto opcionales, fechas y los estados manuales **pendiente**, **vencida**, **pagada** y **conciliada**. Una CxC no es un ingreso: cuando el dinero llegue, la persona usuaria debe registrar el ingreso recibido por separado y confirmarlo manualmente.
 
+Los abonos se guardan como historial privado, con importe, fecha y nota. El saldo pendiente se calcula como importe original menos abonos acumulados; el sistema rechaza un abono que lo exceda. Un abono puede vincularse opcionalmente a un ingreso **ya registrado**, aprobado y de la misma moneda. La relación no crea, duplica ni modifica el ingreso: sólo conserva trazabilidad. Una CxC pasa a **pagada** cuando se cubre el total y a **conciliada** cuando todos sus abonos quedan vinculados a ingresos reales.
+
+## Cierre de Fase A y preparación de Fase B
+
+La **Fase A está concluida** conforme al alcance acordado: onboarding privado, entidades y proyectos, conversión manual, naturaleza de ingresos, referencias de Drive, colaboración controlada, filtros, exportaciones, notificaciones internas, traspasos, CxC, abonos y conciliación manual. Las validaciones preservan el aislamiento por usuario y no introducen bancos conectados, pagos automáticos, fiscalidad automatizada ni servicios externos de mensajería.
+
+La aplicación está preparada para pasar a **Fase B**, pero esa fase aún no se ha iniciado. El siguiente bloque debe definirse antes de construirlo para evitar ampliar el alcance sin decisión explícita.
+
 ## Notificaciones privadas dentro del sitio
 
 La pantalla **Notificaciones** permite activar o silenciar la bandeja interna y cada categoría: fechas de Calendario, documentos próximos a vencer, vencimientos de deudas y movimientos pendientes de revisión humana. Los avisos se generan al abrir o consultar la bandeja, se deduplican por elemento relacionado y pueden marcarse como leídos o descartarse manualmente.

@@ -28,6 +28,9 @@ const workspace = await query("finance.workspace.get", token);
 const santanderId = workspace.accounts.find(item => item.name === "Santander UI QA")?.id;
 const inbursaId = workspace.accounts.find(item => item.name === "Inbursa UI QA")?.id;
 if (!santanderId || !inbursaId) throw new Error("La QA no pudo localizar sus cuentas técnicas.");
+const ymcId = workspace.entities.find(item => item.shortCode === "YUI")?.id;
+await call("finance.workspace.transactionSave", token, { accountId: santanderId, categoryId: null, goalId: null, debtId: null, entityId: ymcId, projectId: null, type: "income", scope: "business", amountCents: 150000, currency: "MXN", reportCurrency: "MXN", reportAmountCents: 150000, exchangeRateMicros: null, exchangeRateDate: null, incomeNature: "business_revenue", occurredAt: Date.now(), isEssential: false, transferGroupId: null, status: "confirmed", notes: "Ingreso UI CxC" });
+await call("finance.workspace.receivables.save", token, { entityId: ymcId, projectId: null, counterparty: "Cliente UI abono", origin: "Servicio UI", scope: "business", amountCents: 150000, currency: "MXN", issuedAt: Date.now(), dueAt: null, paidAt: null, status: "pending", notes: null });
 
 const chrome = spawn("chromium", ["--headless", "--no-sandbox", "--disable-gpu", "--remote-debugging-port=9224", "--user-data-dir=/tmp/meximoney-transfers-receivables-ui-qa", "about:blank"], { stdio: "ignore" });
 try {
@@ -70,9 +73,17 @@ try {
   const receivableFocus = await evaluate(`document.activeElement?.tagName === 'INPUT'`);
   await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab" }); await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab" });
   const receivableTab = await evaluate(`document.activeElement?.tagName === 'INPUT'`);
+  await evaluate(`document.querySelector('[role="dialog"] button[aria-label="Close"]')?.click(); true`); await pause(300);
+  await evaluate(`Array.from(document.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Registrar abono')?.click(); true`); await pause(300);
+  const paymentForm = await evaluate(`document.body.textContent?.includes('Saldo disponible:') && Boolean(Array.from(document.querySelectorAll('label')).find(label => label.textContent?.trim() === 'Ingreso real ya registrado')) && document.body.textContent?.includes('Ingreso UI CxC')`);
+  await evaluate(`Array.from(document.querySelectorAll('[role="dialog"] select')).find(select => select.parentElement?.querySelector('label')?.textContent?.trim() === 'Ingreso real ya registrado')?.focus(); true`);
+  const paymentFocus = await evaluate(`document.activeElement?.tagName === 'SELECT'`);
+  await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab" }); await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab" });
+  const paymentTab = await evaluate(`document.activeElement?.tagName === 'TEXTAREA'`);
+  await evaluate(`document.querySelector('[role="dialog"] button[aria-label="Close"]')?.click(); true`); await pause(200);
   await cdp("Emulation.setDeviceMetricsOverride", { width: 375, height: 812, deviceScaleFactor: 1, mobile: true }); await pause(400);
   const mobile = await evaluate(`({ width: document.documentElement.scrollWidth, viewport: window.innerWidth, heading: document.querySelector('h1')?.textContent })`);
-  const report = { transferForm, transferVisible, transferFocus, transferTab, tabVisible, receivableForm, receivableVisible, receivableFocus, receivableTab, mobile: mobile.width <= mobile.viewport && mobile.heading === "Cuentas por cobrar" };
+  const report = { transferForm, transferVisible, transferFocus, transferTab, tabVisible, receivableForm, receivableVisible, receivableFocus, receivableTab, paymentForm, paymentFocus, paymentTab, mobile: mobile.width <= mobile.viewport && mobile.heading === "Cuentas por cobrar" };
   if (!Object.values(report).every(Boolean)) throw new Error(`QA visual de traspasos/CxC falló: ${JSON.stringify({ report, tabDebug, mobile, text: await evaluate('document.body.innerText.slice(0, 700)') })}`);
   console.log(JSON.stringify({ ...report, qaEmail: account.email }));
   socket.close();

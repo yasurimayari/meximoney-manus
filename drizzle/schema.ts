@@ -225,6 +225,19 @@ export const receivables = mysqlTable("receivables", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const receivablePayments = mysqlTable("receivablePayments", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  receivableId: int("receivableId").notNull(),
+  linkedTransactionId: int("linkedTransactionId"),
+  amountCents: int("amountCents").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  paidAt: timestamp("paidAt").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const financeDocuments = mysqlTable("financeDocuments", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

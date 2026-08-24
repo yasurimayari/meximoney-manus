@@ -21,6 +21,7 @@ import {
   monthlyFinancialStatements,
   privacyConsents,
   receivables,
+  receivablePayments,
   users,
   workspaceEntities,
 } from "../drizzle/schema";
@@ -146,7 +147,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, receivableRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, receivableRows, receivablePaymentRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
@@ -166,6 +167,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(exchangeRates).where(eq(exchangeRates.ownerId, ownerId)),
     db.select().from(collaborationInvites).where(eq(collaborationInvites.ownerId, ownerId)),
     db.select().from(receivables).where(eq(receivables.userId, ownerId)),
+    db.select().from(receivablePayments).where(eq(receivablePayments.userId, ownerId)),
   ]);
 
   const { start, end } = monthBounds(referenceDate);
@@ -226,12 +228,13 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     calendarEvents: calendarEventRows,
     documents: documentRows,
     receivables: receivableRows,
+    receivablePayments: receivablePaymentRows,
     decisions: decisionRows,
     dashboard: { periodStart: start, reportCurrency, cashFlow, netWorth, liquidity, essentialExpensesCents, qualityIssues },
   };
 }
 
-export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements | typeof receivables, id: number, userId: number) {
+export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements | typeof receivables | typeof receivablePayments, id: number, userId: number) {
   const db = await requireDb();
   await db.delete(table).where(and(eq(table.id, id), eq(table.userId, userId)));
 }
@@ -240,6 +243,7 @@ export async function deleteAllFinancialData(userId: number) {
   const db = await requireDb();
   await db.transaction(async tx => {
     await tx.delete(financialTransactions).where(eq(financialTransactions.userId, userId));
+    await tx.delete(receivablePayments).where(eq(receivablePayments.userId, userId));
     await tx.delete(receivables).where(eq(receivables.userId, userId));
     await tx.delete(budgets).where(eq(budgets.userId, userId));
     await tx.delete(calendarColorPreferences).where(eq(calendarColorPreferences.userId, userId));
