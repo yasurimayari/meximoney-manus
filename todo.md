@@ -110,3 +110,7 @@
 - [x] Diagnosticar el aviso de configuración remota de Amplitude en la vista previa y confirmar si es externo a Meximoney.
 - [x] Ejecutar la reconciliación mediante el procedimiento real de Meximoney y verificar su efecto en el snapshot de Patrimonio.
 - [x] Evitar aportaciones duplicadas enlazadas al mismo movimiento y permitir revisar o eliminar operaciones históricas de una posición.
+- [x] Añadir tarjetas de crédito manuales con límite, saldo utilizado, corte y fecha de pago.
+- [x] Permitir registrar gastos diarios asociados a una tarjeta de crédito sin duplicar gastos.
+- [x] Registrar pagos de tarjeta desde cuentas propias como traspasos que reduzcan el saldo de la tarjeta.
+- [x] Mostrar un resumen de tarjetas, saldo pendiente, crédito disponible y próximos cortes/pagos.

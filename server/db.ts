@@ -7,6 +7,7 @@ import {
   calendarEvents,
   categories,
   collaborationInvites,
+  creditCards,
   debts,
   decisionRecords,
   exchangeRates,
@@ -156,13 +157,14 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, qualityAcknowledgementRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, creditCardRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, qualityAcknowledgementRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
     db.select().from(financialTransactions).where(eq(financialTransactions.userId, ownerId)),
     db.select().from(budgets).where(eq(budgets.userId, ownerId)),
     db.select().from(debts).where(eq(debts.userId, ownerId)),
+    db.select().from(creditCards).where(eq(creditCards.userId, ownerId)),
     db.select().from(financialGoals).where(eq(financialGoals.userId, ownerId)),
     db.select().from(financeTasks).where(eq(financeTasks.userId, ownerId)),
     db.select().from(monthlyReviews).where(eq(monthlyReviews.userId, ownerId)),
@@ -192,7 +194,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const reportCurrencyAccounts = accountRows.filter(item => item.currency === reportCurrency);
   const reportCurrencyInvestments = investmentRows.map(item => ({ item, valueCents: comparableInvestmentValueCents(item, reportCurrency) })).filter((item): item is { item: typeof investmentRows[number]; valueCents: number } => item.valueCents !== null).map(({ item, valueCents }) => ({ ...item, currency: reportCurrency, currentValueCents: valueCents, isLiquid: false }));
   const investmentNetWorthAssets = reportCurrencyInvestments.map(item => ({ currentValueCents: item.currentValueCents, status: "active" as const }));
-  const reportCurrencyDebts = debtRows.filter(item => item.currency === reportCurrency);
+  const reportCurrencyDebts = [...debtRows, ...creditCardRows.filter(card => card.status !== "closed").map(card => ({ ...card, balanceCents: card.balanceCents, status: "active" as const }))].filter(item => item.currency === reportCurrency);
   const netWorth = calculateNetWorth([...reportCurrencyAccounts, ...investmentNetWorthAssets], reportCurrencyDebts);
   const essentialExpensesCents = transactionRows
     .filter(item => item.type === "expense" && item.isEssential && item.occurredAt >= start && item.occurredAt < end)
@@ -227,6 +229,9 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     ...debtRows
       .filter(item => item.status === "active" && !item.nextDueAt)
       .map(item => ({ code: "missing_debt_due_date", severity: "medium", label: `Vencimiento pendiente: ${item.name}` })),
+    ...creditCardRows
+      .filter(item => item.status === "active" && (!item.paymentDueDay || !item.statementClosingDay))
+      .map(item => ({ code: "missing_credit_card_cycle", severity: "medium", label: `Corte o fecha de pago pendiente: ${item.name}` })),
     ...goalRows
       .filter(item => item.status === "active" && !item.targetDate)
       .map(item => ({ code: "missing_goal_date", severity: "low", label: `Fecha objetivo pendiente: ${item.name}` })),
@@ -250,6 +255,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     transactions: transactionRows,
     budgets: budgetRows,
     debts: debtRows,
+    creditCards: creditCardRows,
     goals: goalRows,
     tasks: taskRows,
     reviews: reviewRows,
@@ -269,7 +275,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   };
 }
 
-export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements | typeof receivables | typeof receivablePayments | typeof recurringTemplates | typeof payables | typeof payablePayments | typeof investments | typeof investmentOperations, id: number, userId: number) {
+export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof creditCards | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements | typeof receivables | typeof receivablePayments | typeof recurringTemplates | typeof payables | typeof payablePayments | typeof investments | typeof investmentOperations, id: number, userId: number) {
   const db = await requireDb();
   await db.delete(table).where(and(eq(table.id, id), eq(table.userId, userId)));
 }
@@ -296,6 +302,7 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(decisionRecords).where(eq(decisionRecords.userId, userId));
     await tx.delete(financialGoals).where(eq(financialGoals.userId, userId));
     await tx.delete(debts).where(eq(debts.userId, userId));
+    await tx.delete(creditCards).where(eq(creditCards.userId, userId));
     await tx.delete(categories).where(eq(categories.userId, userId));
     await tx.delete(accounts).where(eq(accounts.userId, userId));
     await tx.delete(financialProfiles).where(eq(financialProfiles.userId, userId));

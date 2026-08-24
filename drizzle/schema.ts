@@ -180,6 +180,27 @@ export const accounts = mysqlTable("accounts", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const creditCards = mysqlTable("creditCards", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
+  name: varchar("name", { length: 140 }).notNull(),
+  issuer: varchar("issuer", { length: 140 }),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  creditLimitCents: int("creditLimitCents").notNull().default(0),
+  balanceCents: int("balanceCents").notNull().default(0),
+  interestRateBps: int("interestRateBps"),
+  minimumPaymentCents: int("minimumPaymentCents").notNull().default(0),
+  statementClosingDay: int("statementClosingDay"),
+  paymentDueDay: int("paymentDueDay"),
+  status: mysqlEnum("status", ["active", "paused", "closed"]).notNull().default("active"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const financialContacts = mysqlTable("financialContacts", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
@@ -216,6 +237,7 @@ export const financialTransactions = mysqlTable("financialTransactions", {
   categoryId: int("categoryId"),
   goalId: int("goalId"),
   debtId: int("debtId"),
+  creditCardId: int("creditCardId"),
   contactId: int("contactId"),
   type: mysqlEnum("type", ["income", "expense", "transfer_out", "transfer_in"]).notNull(),
   scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),

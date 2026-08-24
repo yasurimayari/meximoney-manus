@@ -95,7 +95,7 @@ describe("finance.dashboard", () => {
     mocks.resolveWorkspaceAccess.mockResolvedValue({ ownerId: 73, role: "manager", canCreateDrafts: true, canReview: false });
     mocks.requireDb.mockResolvedValue({
       select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
-      insert: () => ({ values: inserted }),
+      transaction: async (callback: any) => callback({ select: () => ({ from: () => ({ where: () => [] }) }), insert: () => ({ values: inserted }), update: () => ({ set: () => ({ where: vi.fn() }) }) }),
     });
     const caller = appRouter.createCaller(createContext(91));
     await caller.finance.workspace.transactionSave({ type: "income", scope: "business", amountCents: 15000, currency: "USD", reportCurrency: "MXN", reportAmountCents: 270000, exchangeRateMicros: 18000000, exchangeRateDate: Date.now(), incomeNature: "business_revenue", entityId: 4, projectId: null, accountId: null, categoryId: null, goalId: null, debtId: null, occurredAt: Date.now(), isEssential: false, status: "confirmed", transferGroupId: null, notes: "Cobro" });
@@ -156,5 +156,22 @@ describe("finance.dashboard", () => {
     await caller.finance.workspace.investments.operationRemove({ id: 501 });
 
     expect(set).toHaveBeenCalledWith({ costBasisCents: 500_00, currentValueCents: 500_00 });
+  });
+
+  it("registra el pago de una tarjeta como un traspaso y reduce su saldo sin crear un gasto", async () => {
+    const inserted = vi.fn();
+    const set = vi.fn(() => ({ where: vi.fn() }));
+    const answers = [[{ accepted: true }], [{ id: 91, userId: 27, name: "Tarjeta prueba", currency: "MXN", balanceCents: 1_000_00, status: "active", entityId: null, projectId: null, scope: "personal" }], [{ id: 12, userId: 27, name: "Banco prueba", currency: "MXN", status: "active", entityId: null, projectId: null, scope: "personal" }]];
+    const select = () => ({ from: () => ({ where: () => ({ limit: async () => answers.shift() ?? [] }) }) });
+    mocks.requireDb.mockResolvedValue({ select, transaction: async (callback: any) => callback({ insert: () => ({ values: inserted }), update: () => ({ set }) }) });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await caller.finance.workspace.creditCards.paymentSave({ creditCardId: 91, sourceAccountId: 12, amountCents: 400_00, occurredAt: Date.parse("2026-08-24T12:00:00Z"), status: "confirmed", notes: "Pago de prueba" });
+
+    expect(inserted).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ accountId: 12, type: "transfer_out", amountCents: 400_00 }),
+      expect.objectContaining({ creditCardId: 91, type: "transfer_in", amountCents: 400_00 }),
+    ]));
+    expect(set).toHaveBeenCalledWith({ balanceCents: 600_00 });
   });
 });

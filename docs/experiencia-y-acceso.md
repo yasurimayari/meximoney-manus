@@ -33,6 +33,10 @@ La aceptación del consentimiento explícito es necesaria antes de guardar o ana
 
 ## Presupuesto, inversiones y cierres mensuales
 
+Las **tarjetas de crédito** se registran como pasivos manuales independientes, con límite, saldo actual, pago mínimo, tasa, día de corte y día límite de pago. Un gasto cotidiano cargado a una tarjeta se registra una sola vez como gasto y aumenta su saldo. El pago desde una cuenta propia se registra como un par de traspasos: reduce el saldo de la tarjeta sin volver a crear gasto. La valuación de la cuenta bancaria de origen sigue siendo manual y debe actualizarse con el saldo que confirmes.
+
+Las tarjetas activas aparecen como pasivos en Patrimonio y se incluyen en los cierres mensuales guardados. Meximoney no consulta bancos, no descarga estados de cuenta ni ejecuta pagos.
+
 La vista **Presupuesto vs. Real** compara cada partida mensual en la moneda base de reporte. Los ingresos y gastos reales proceden únicamente de movimientos manuales aprobados; los movimientos de otra moneda sólo entran si conservan una conversión manual confirmada a la moneda de reporte. Los ingresos por encima de lo previsto se señalan como favorables; gastos, ahorro e inversión por encima del importe previsto se señalan como desviación.
 
 Las partidas de **Ahorro** se calculan con aportaciones manuales a posiciones de tipo `savings`; las partidas de **Inversión** usan aportaciones a las demás posiciones. Un traspaso entre cuentas, incluido Santander → Plata, no se convierte en ingreso o gasto. Puede quedar ligado a una aportación de la posición correspondiente sin duplicar el dato financiero.

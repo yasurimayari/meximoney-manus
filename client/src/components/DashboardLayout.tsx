@@ -25,7 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
 import { notificationBadgeLabel, unreadNotificationCount } from "@/lib/notificationBadge";
-import { ArrowLeftRight, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, ContactRound, EyeOff, FileDown, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck } from "lucide-react";
+import { ArrowLeftRight, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, ContactRound, CreditCard, EyeOff, FileDown, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -36,6 +36,7 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "Panel", path: "/" },
   { icon: ArrowLeftRight, label: "Registros", path: "/movimientos" },
+  { icon: CreditCard, label: "Tarjetas", path: "/tarjetas" },
   { icon: Target, label: "Planificación", path: "/planificacion" },
   { icon: ContactRound, label: "Contactos", path: "/contactos" },
   { icon: PiggyBank, label: "Ahorro e inversiones", path: "/inversiones" },
