@@ -43,3 +43,5 @@ El nuevo formato elimina secuencias numéricas de cuatro o más dígitos desde t
 Tras publicar el manejador actualizado, la usuaria activó el interruptor «Resumen diario por Telegram» desde la pantalla publicada de Notificaciones. La interfaz confirmó la actualización de la preferencia. El resumen diario queda programado a las 08:00 de Ciudad de México e incluirá sólo el alcance autorizado: título, fecha o días restantes, importe de pago o cuota y saldo relacionado con alertas de tarjeta o deuda.
 
 La divulgación visible se actualizó para reflejar exactamente ese alcance y mantener explícita la exclusión de números de cuenta, credenciales, movimientos completos e instrucciones de pago. La compilación estática y 68 pruebas de regresión finalizaron correctamente antes de publicar dicha divulgación.
+
+La verificación posterior confirmó que `telegramEnabled` está activo y que el perfil conserva una única tarea diaria registrada. La marca diaria permanece vacía antes de la próxima ejecución, por lo que no se ha deduplicado ni suprimido indebidamente el primer resumen operativo.
