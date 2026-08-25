@@ -230,31 +230,4 @@ describe("finance.dashboard", () => {
       expect.objectContaining({ accountId: 13, type: "transfer_in", amountCents: 250_00, notes: "Traspaso desde Santander · Ajuste" }),
     ]));
   });
-
-  it("reduce sólo el principal de una cuota financiada sin crear un segundo gasto", async () => {
-    const inserted = vi.fn();
-    const set = vi.fn(() => ({ where: vi.fn() }));
-    const debt = { id: 44, userId: 27, currency: "MXN", balanceCents: 10_000_00, status: "active" as const };
-    let selectCall = 0;
-    const txSelect = () => ({ from: () => ({ where: () => ({ limit: async () => selectCall++ === 0 ? [debt] : [] }) }) });
-    mocks.requireDb.mockResolvedValue({
-      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
-      transaction: async (callback: any) => callback({ select: txSelect, insert: () => ({ values: inserted }), update: () => ({ set }) }),
-    });
-    const caller = appRouter.createCaller(createContext(27));
-
-    await caller.finance.debts.paymentSave({ debtId: 44, linkedTransactionId: null, totalPaymentCents: 1_000_00, principalCents: 850_00, currency: "MXN", paidAt: Date.parse("2026-08-25T12:00:00Z"), nextDueAt: null, notes: "Cuota con interés" });
-
-    expect(inserted).toHaveBeenCalledWith(expect.objectContaining({ debtId: 44, totalPaymentCents: 1_000_00, principalCents: 850_00 }));
-    expect(set).toHaveBeenCalledWith(expect.objectContaining({ balanceCents: 9_150_00, status: "active" }));
-  });
-
-  it("rechaza una cuota cuyo principal supere el importe pagado", async () => {
-    mocks.requireDb.mockResolvedValue({
-      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
-    });
-    const caller = appRouter.createCaller(createContext(27));
-
-    await expect(caller.finance.debts.paymentSave({ debtId: 44, linkedTransactionId: null, totalPaymentCents: 500_00, principalCents: 600_00, currency: "MXN", paidAt: Date.parse("2026-08-25T12:00:00Z"), nextDueAt: null, notes: null })).rejects.toMatchObject({ code: "BAD_REQUEST" });
-  });
 });

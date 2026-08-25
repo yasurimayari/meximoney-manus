@@ -1,4 +1,4 @@
-import { boolean, index, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -83,10 +83,8 @@ export const notificationPreferences = mysqlTable("notificationPreferences", {
   reviewsEnabled: boolean("reviewsEnabled").notNull().default(true),
   budgetEnabled: boolean("budgetEnabled").notNull().default(true),
   taxReserveEnabled: boolean("taxReserveEnabled").notNull().default(true),
-  telegramEnabled: boolean("telegramEnabled").notNull().default(false),
-  telegramScheduleCronTaskUid: varchar("telegramScheduleCronTaskUid", { length: 65 }),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, table => [index("notification_preferences_telegram_task_uid_idx").on(table.telegramScheduleCronTaskUid)]);
+});
 
 export const financeNotifications = mysqlTable("financeNotifications", {
   id: int("id").autoincrement().primaryKey(),
@@ -486,14 +484,9 @@ export const debts = mysqlTable("debts", {
   projectId: int("projectId"),
   name: varchar("name", { length: 140 }).notNull(),
   creditor: varchar("creditor", { length: 140 }),
-  type: mysqlEnum("type", ["credit_card", "loan", "financed_purchase", "mortgage", "tax", "business", "family", "other"]).notNull().default("other"),
+  type: mysqlEnum("type", ["credit_card", "loan", "mortgage", "tax", "business", "family", "other"]).notNull().default("other"),
   scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
   balanceCents: int("balanceCents").notNull().default(0),
-  originalAmountCents: int("originalAmountCents"),
-  installmentCents: int("installmentCents"),
-  installmentCount: int("installmentCount"),
-  financedItem: varchar("financedItem", { length: 180 }),
-  purchasedAt: timestamp("purchasedAt"),
   currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
   interestRateBps: int("interestRateBps"),
   minimumPaymentCents: int("minimumPaymentCents").notNull().default(0),
@@ -501,20 +494,6 @@ export const debts = mysqlTable("debts", {
   endDate: timestamp("endDate"),
   priority: mysqlEnum("priority", ["critical", "high", "medium", "low"]).notNull().default("medium"),
   status: mysqlEnum("status", ["active", "paid", "review"]).notNull().default("active"),
-  notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export const debtPayments = mysqlTable("debtPayments", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  debtId: int("debtId").notNull(),
-  linkedTransactionId: int("linkedTransactionId"),
-  totalPaymentCents: int("totalPaymentCents").notNull(),
-  principalCents: int("principalCents").notNull(),
-  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
-  paidAt: timestamp("paidAt").notNull(),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

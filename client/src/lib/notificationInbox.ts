@@ -5,5 +5,5 @@ export function filterNotificationInbox<T extends NotificationInboxItem>(notific
 }
 
 export function notificationDestination(type: string) {
-  return ({ calendar: "/calendario", document: "/movimientos", debt: "/planificacion", credit_card_cutoff: "/tarjetas", credit_card_payment: "/tarjetas", credit_card_overlimit: "/tarjetas", budget: "/planificacion", tax_reserve: "/calidad", review: "/revision" } as Record<string, string>)[type] ?? "/notificaciones";
+  return ({ calendar: "/calendario", document: "/movimientos", debt: "/planificacion", budget: "/planificacion", tax_reserve: "/calidad", review: "/revision" } as Record<string, string>)[type] ?? "/notificaciones";
 }

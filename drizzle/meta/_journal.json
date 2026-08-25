@@ -113,20 +113,6 @@
       "when": 1787622837752,
       "tag": "0015_skinny_wallflower",
       "breakpoints": true
-    },
-    {
-      "idx": 16,
-      "version": "5",
-      "when": 1787632162504,
-      "tag": "0016_reflective_landau",
-      "breakpoints": true
-    },
-    {
-      "idx": 17,
-      "version": "5",
-      "when": 1787634917730,
-      "tag": "0017_shiny_scorpion",
-      "breakpoints": true
     }
   ]
 }
