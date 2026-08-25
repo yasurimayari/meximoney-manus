@@ -25,3 +25,7 @@ Los avisos se generan al abrir la bandeja; no crean movimientos ni cambian saldo
 Una consulta no destructiva confirmó que las tarjetas activas mantienen sus saldos reales. HSBC Air y Klar permanecen sobregiradas; no se modificaron sus límites, saldos, ámbitos ni movimientos. La consulta posterior a la apertura de la bandeja confirmó que se almacenaron avisos internos de sobregiro y pago próximo para ambas tarjetas, además de un aviso de pago próximo para Plata Card. No se creó ningún movimiento ni se envió ningún mensaje externo.
 
 La pantalla de Notificaciones se configuró para actualizar su consulta cada vez que se abre, evitando que una respuesta previa de la misma sesión oculte avisos recién generados. La validación de tipos y las 64 pruebas regresaron correctamente; falta comprobar el resultado visual con esta actualización publicada.
+
+## Validación publicada
+
+La versión `8306ea25` cargó la bandeja privada sin errores. La pantalla mostró cinco avisos internos no leídos: sobregiro y pago próximo de HSBC Air; sobregiro y pago próximo de Klar; y pago próximo de Plata Card. Las categorías «Sobregiros» y «Pagos de tarjeta» aparecen como filtros y cada aviso ofrece abrir el contexto relacionado. Esta verificación fue de lectura: no se marcaron avisos, no se descartaron registros y no se cambiaron tarjetas, saldos ni movimientos.

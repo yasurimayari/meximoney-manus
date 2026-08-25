@@ -749,7 +749,7 @@ export const appRouter = router({
       get: privateFinanceProcedure.query(async ({ ctx }) => {
         const db = await requireDb();
         const [storedPreferences] = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, ctx.user.id)).limit(1);
-        const preferences = storedPreferences ?? { inAppEnabled: true, calendarEnabled: true, documentsEnabled: true, debtsEnabled: true, reviewsEnabled: true, budgetEnabled: true, taxReserveEnabled: true };
+        const preferences = storedPreferences ?? { inAppEnabled: true, calendarEnabled: true, documentsEnabled: true, debtsEnabled: true, reviewsEnabled: true, budgetEnabled: true, taxReserveEnabled: true, telegramEnabled: false, telegramScheduleCronTaskUid: null, telegramLastDigestDate: null };
         if (!preferences.inAppEnabled) return { preferences, notifications: [] };
         const snapshot = await getFinanceSnapshot(ctx.user.id);
         const now = new Date(); const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -773,6 +773,13 @@ export const appRouter = router({
       savePreferences: privateFinanceProcedure.input(z.object({ inAppEnabled: z.boolean(), calendarEnabled: z.boolean(), documentsEnabled: z.boolean(), debtsEnabled: z.boolean(), reviewsEnabled: z.boolean(), budgetEnabled: z.boolean(), taxReserveEnabled: z.boolean() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
         await db.insert(notificationPreferences).values({ userId: ctx.user.id, ...input }).onDuplicateKeyUpdate({ set: input });
+        return { success: true };
+      }),
+      setTelegramDaily: privateFinanceProcedure.input(z.object({ enabled: z.boolean() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const [storedPreferences] = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, ctx.user.id)).limit(1);
+        if (input.enabled && !storedPreferences?.telegramScheduleCronTaskUid) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Telegram aún no tiene una programación diaria válida. La integración se habilitará cuando termine su configuración segura." });
+        await db.insert(notificationPreferences).values({ userId: ctx.user.id, telegramEnabled: input.enabled }).onDuplicateKeyUpdate({ set: { telegramEnabled: input.enabled } });
         return { success: true };
       }),
       markRead: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {

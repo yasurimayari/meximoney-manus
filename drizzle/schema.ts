@@ -85,6 +85,7 @@ export const notificationPreferences = mysqlTable("notificationPreferences", {
   taxReserveEnabled: boolean("taxReserveEnabled").notNull().default(true),
   telegramEnabled: boolean("telegramEnabled").notNull().default(false),
   telegramScheduleCronTaskUid: varchar("telegramScheduleCronTaskUid", { length: 65 }),
+  telegramLastDigestDate: varchar("telegramLastDigestDate", { length: 10 }),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => [index("notification_preferences_telegram_task_uid_idx").on(table.telegramScheduleCronTaskUid)]);
 

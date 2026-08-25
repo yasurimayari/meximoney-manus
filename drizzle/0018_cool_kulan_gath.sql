@@ -1,0 +1,1 @@
+ALTER TABLE `notificationPreferences` ADD `telegramLastDigestDate` varchar(10);

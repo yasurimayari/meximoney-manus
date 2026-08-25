@@ -131,5 +131,8 @@
 - [x] Validar el dominio público y las pantallas autenticadas de compras financiadas después de la publicación independiente.
 - [x] Corregir el error React #310 detectado al cargar Planificación publicada tras restaurar el panel de cuotas.
 - [x] Reintroducir alertas internas de tarjetas, deudas y calendario sin cron ni canales externos.
-- [ ] Validar en el dominio publicado las alertas internas de tarjetas, deudas y calendario antes de continuar con Telegram.
-- [ ] Reintroducir Telegram en una publicación independiente sólo después de validar compras financiadas y alertas internas.
+- [x] Validar en el dominio publicado las alertas internas de tarjetas, deudas y calendario antes de continuar con Telegram.
+- [x] Reintroducir Telegram en una publicación independiente sólo después de validar compras financiadas y alertas internas.
+- [x] Publicar el manejador seguro de Telegram y el interruptor reversible sin crear aún la programación diaria.
+- [ ] Crear una programación diaria administrada por el proyecto a las 08:00 de Ciudad de México que se ejecute aun cuando Telegram esté desactivado y omita el envío en ese caso.
+- [ ] Validar la programación sin realizar un envío de Telegram de prueba sin autorización explícita.
