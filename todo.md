@@ -138,3 +138,8 @@
 - [x] Validar la configuración de la programación sin realizar un envío de Telegram de prueba sin autorización explícita.
 - [x] Enviar una prueba controlada de Telegram con autorización explícita, manteniendo el envío diario desactivado.
 - [x] Auditar el alcance aprobado, la implementación y la validación de las Fases A y B, distinguiendo funcionalidad completa de dependencias externas pendientes.
+- [x] Implementar una gestión visible de plantillas recurrentes configurables por la usuaria para completar la Fase B.
+- [x] Implementar captura rápida por texto natural con revisión y confirmación antes de guardar movimientos para completar la Fase B.
+- [ ] Validar en el dominio publicado la gestión de plantillas y la captura rápida sin crear movimientos de prueba ni alterar datos financieros.
+- [x] Diagnosticar el aviso de configuración remota de Amplitude y confirmar que no pertenece al código ni a los registros de Meximoney, sino a la vista técnica externa.
+- [x] Verificar y aclarar el estado operativo de Telegram antes de activar cualquier envío diario recurrente: la tarea existe, pero `telegramEnabled` permanece desactivado.

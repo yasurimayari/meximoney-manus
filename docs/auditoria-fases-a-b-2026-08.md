@@ -53,3 +53,9 @@ La clasificación PFAE de HSBC Air sin entidad específica, sus saldos sobregira
 La **Fase A puede considerarse cerrada**. La **Fase B está sustancialmente avanzada, pero no cerrada** por dos requisitos explícitos pendientes: una interfaz completa para plantillas recurrentes configurables por la usuaria y la captura rápida de movimientos por texto natural con revisión y confirmación antes de persistir.
 
 La verificación pendiente de Resend es una dependencia externa independiente de las Fases A y B. No debe usarse como motivo para reabrir la Fase A ni para afirmar que existe recuperación real de contraseña; simplemente mantiene bloqueado ese canal hasta que el estado del remitente sea `Verified`.
+
+## Hallazgos posteriores de operación
+
+El aviso `Amplitude Logger: Failed to fetch remote config` no aparece en el código cliente, el HTML ni los registros de navegador de Meximoney. La traza reportada procede del contenedor técnico de vista previa (`files.manuscdn.com/manus-space-dispatcher/spaceEditor`), no de la aplicación publicada. Por ello no afecta el registro de movimientos, la autenticación ni los cálculos de Meximoney y no existe una corrección que deba aplicarse al código de la aplicación.
+
+La tarea diaria de Telegram está registrada, pero la preferencia `telegramEnabled` permanece desactivada. Eso significa que a las 08:00 de Ciudad de México se ejecutará una comprobación que **no enviará** mensajes hasta que la usuaria active el interruptor visible en Notificaciones.

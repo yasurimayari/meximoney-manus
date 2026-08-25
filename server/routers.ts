@@ -50,6 +50,7 @@ import { comparableInvestmentValueCents } from "./investmentData";
 import { applyInvestmentDelta, investmentOperationDelta, totalsFromInvestmentOperations } from "./investmentOperations";
 import { findPossibleDuplicates } from "./imports";
 import { creditCardAlertCandidates } from "./creditCardAlerts";
+import { extractQuickCaptureDraft } from "./quickCapture";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM } from "./_core/llm";
 import { sdk } from "./_core/sdk";
@@ -219,6 +220,9 @@ export const appRouter = router({
     dashboard: protectedProcedure.query(({ ctx }) => getFinanceSnapshot(ctx.user.id)),
     workspace: router({
       get: protectedProcedure.query(({ ctx }) => getFinanceSnapshot(ctx.user.id)),
+      quickCapture: workspaceFinanceProcedure.input(z.object({ text: z.string().trim().min(4).max(800), defaultCurrency: z.string().trim().length(3) })).mutation(async ({ input }) => {
+        return extractQuickCaptureDraft(input.text, input.defaultCurrency);
+      }),
       onboarding: workspaceFinanceProcedure.input(z.object({
         workspaceName: z.string().trim().min(2).max(140),
         currency: z.string().length(3),
