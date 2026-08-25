@@ -19,3 +19,9 @@ El manejador acepta únicamente solicitudes autenticadas como tarea programada. 
 La migración `0018_cool_kulan_gath.sql` sólo añade `telegramLastDigestDate` a las preferencias de notificación; no modifica movimientos, tarjetas ni saldos. `pnpm check` y `pnpm test` terminaron correctamente con 26 archivos y 66 pruebas. La suite prueba que el resumen no incluye montos o divisas y que la clave diaria se calcula en horario de Ciudad de México.
 
 La construcción local de producción finalizó correctamente y el paquete generado contiene la sección «Resumen diario por Telegram». Se realizará una nueva publicación de control antes de crear la tarea diaria, porque la primera comprobación del dominio aún servía el paquete anterior.
+
+## Programación registrada y validación sin envío
+
+Se registró una única tarea diaria administrada por el proyecto con el identificador `2BKgs2j9xPoCKfhpui64Hs`, asociada de forma duradera con el perfil privado y configurada con la expresión UTC `0 0 14 * * *`, equivalente a las 08:00 de Ciudad de México. El inventario de tareas confirmó que está activa, usa exclusivamente la ruta autenticada `/api/scheduled/telegram-daily-digest` y conserva el horario diario correcto tras una validación temporal sin envío.
+
+La preferencia de Telegram se mantuvo explícitamente desactivada. La pantalla publicada muestra el control de Telegram disponible y apagado, junto con el alcance de privacidad aprobado. La consulta del historial no mostró ejecuciones ni mensajes de prueba. Una futura ejecución diaria comprobará la preferencia y devolverá una omisión segura mientras continúe desactivada.
