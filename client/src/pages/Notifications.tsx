@@ -104,7 +104,7 @@ export default function Notifications() {
         <div>
           <p className="eyebrow">Recordatorios privados</p>
           <h1>Lo importante, sin ruido.</h1>
-          <p>Estos avisos aparecen dentro de Meximoney; Telegram sólo comparte títulos cuando se habilita explícitamente.</p>
+          <p>Estos avisos aparecen dentro de Meximoney; Telegram comparte el resumen autorizado cuando se habilita explícitamente.</p>
         </div>
         <div className="workspace-role"><BellRing className="size-4" /> {unread} sin leer</div>
       </header>
@@ -123,7 +123,7 @@ export default function Notifications() {
         <div className="mt-5 rounded-xl border border-primary/15 bg-primary/[0.035] p-4">
           <div className="flex items-start gap-3">
             <MessageCircle className="mt-0.5 size-4 shrink-0 text-primary" />
-            <div className="min-w-0 flex-1"><p className="text-sm font-semibold">Resumen diario por Telegram</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Se ejecutará diariamente a las 08:00 de Ciudad de México. Si lo activas, Telegram recibirá sólo títulos de recordatorio; no incluye montos, saldos, datos bancarios ni ejecuta pagos. Al desactivarlo, la comprobación diaria continúa pero omite el envío.</p></div>
+            <div className="min-w-0 flex-1"><p className="text-sm font-semibold">Resumen diario por Telegram</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Se ejecutará diariamente a las 08:00 de Ciudad de México. Si lo activas, Telegram recibirá títulos, fechas o días restantes, importes de pago o cuota y saldos de alertas relacionadas. Nunca incluye números de cuenta, credenciales, movimientos completos ni ejecuta pagos. Al desactivarlo, la comprobación diaria continúa pero omite el envío.</p></div>
             <Switch checked={preferences.telegramEnabled} disabled={!preferences.telegramScheduleCronTaskUid || setTelegramDaily.isPending} aria-label="Resumen diario por Telegram" onCheckedChange={updateTelegram} />
           </div>
           {!preferences.telegramScheduleCronTaskUid ? <p className="mt-3 text-xs text-muted-foreground">La programación segura aún está pendiente. Este interruptor se habilitará cuando quede registrada.</p> : null}
