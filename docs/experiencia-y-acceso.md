@@ -37,6 +37,10 @@ Las **tarjetas de crédito** se registran como pasivos manuales independientes, 
 
 Las tarjetas activas aparecen como pasivos en Patrimonio y se incluyen en los cierres mensuales guardados. Meximoney no consulta bancos, no descarga estados de cuenta ni ejecuta pagos.
 
+Cada tarjeta conserva un ámbito **Personal**, **PFAE o empresarial** o **Mixto**. El saldo inicial puede exceder el límite de crédito: el exceso se muestra como **sobregiro registrado** y sigue formando parte del pasivo real, sin alterar movimientos históricos. Los gastos posteriores también se conservan aunque aumenten el sobregiro, para evitar ocultar obligaciones efectivas.
+
+Los ingresos y gastos manuales se editan desde Registros. Los traspasos entre cuentas se editan como una pareja atómica, de modo que salida y entrada conservan importe, fecha y moneda coherentes. Un pago de tarjeta se dirige a Tarjetas, y una aportación enlazada a una inversión se revisa en Ahorro e inversiones; esta separación evita desajustar el saldo de la tarjeta o la valuación de una posición al modificar sólo una parte.
+
 La vista **Presupuesto vs. Real** compara cada partida mensual en la moneda base de reporte. Los ingresos y gastos reales proceden únicamente de movimientos manuales aprobados; los movimientos de otra moneda sólo entran si conservan una conversión manual confirmada a la moneda de reporte. Los ingresos por encima de lo previsto se señalan como favorables; gastos, ahorro e inversión por encima del importe previsto se señalan como desviación.
 
 Las partidas de **Ahorro** se calculan con aportaciones manuales a posiciones de tipo `savings`; las partidas de **Inversión** usan aportaciones a las demás posiciones. Un traspaso entre cuentas, incluido Santander → Plata, no se convierte en ingreso o gasto. Puede quedar ligado a una aportación de la posición correspondiente sin duplicar el dato financiero.

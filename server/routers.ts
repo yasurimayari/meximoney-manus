@@ -320,7 +320,6 @@ export const appRouter = router({
             const priorEffect = previous?.creditCardId === card.id && previous.type === "expense" ? previous.amountCents : 0;
             const nextEffect = payload.creditCardId === card.id && payload.type === "expense" ? payload.amountCents : 0;
             const nextBalance = Math.max(0, card.balanceCents - priorEffect + nextEffect);
-            if (card.creditLimitCents > 0 && nextBalance > card.creditLimitCents) throw new TRPCError({ code: "BAD_REQUEST", message: `El gasto excede el límite registrado de ${card.name}.` });
             await tx.update(creditCards).set({ balanceCents: nextBalance }).where(and(eq(creditCards.id, card.id), eq(creditCards.userId, ctx.workspaceAccess.ownerId)));
           }
         });
@@ -329,7 +328,6 @@ export const appRouter = router({
       creditCards: router({
         save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(140), issuer: z.string().trim().max(140).nullable().optional(), scope: scopeSchema, currency: z.string().length(3), creditLimitCents: moneySchema, balanceCents: moneySchema, interestRateBps: z.number().int().min(0).nullable().optional(), minimumPaymentCents: moneySchema, statementClosingDay: z.number().int().min(1).max(31).nullable().optional(), paymentDueDay: z.number().int().min(1).max(31).nullable().optional(), status: z.enum(["active", "paused", "closed"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar tarjetas de crédito." });
-          if (input.creditLimitCents > 0 && input.balanceCents > input.creditLimitCents) throw new TRPCError({ code: "BAD_REQUEST", message: "El saldo inicial no puede superar el límite de crédito registrado." });
           const db = await requireDb(); const { id, ...values } = input;
           if (id) await db.update(creditCards).set(values).where(and(eq(creditCards.id, id), eq(creditCards.userId, ctx.workspaceAccess.ownerId)));
           else await db.insert(creditCards).values({ userId: ctx.workspaceAccess.ownerId, ...values });
@@ -398,6 +396,36 @@ export const appRouter = router({
           }
         });
         return { success: true, groupId };
+      }),
+      transferUpdate: workspaceFinanceProcedure.input(z.object({
+        transferGroupId: z.string().uuid(), sourceAccountId: z.number().int().positive(), destinationAccountId: z.number().int().positive(), amountCents: z.number().int().positive(), occurredAt: z.number().int().positive(), status: z.enum(["confirmed", "estimated", "needs_review"]), notes: z.string().max(3000).nullable().optional(),
+      })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner" && !ctx.workspaceAccess.canCreateDrafts) throw new TRPCError({ code: "FORBIDDEN", message: "Tu rol no permite editar traspasos." });
+        if (input.sourceAccountId === input.destinationAccountId) throw new TRPCError({ code: "BAD_REQUEST", message: "Elige dos cuentas distintas para el traspaso." });
+        const db = await requireDb();
+        const [source, destination, originalTransfers] = await Promise.all([
+          db.select().from(accounts).where(and(eq(accounts.id, input.sourceAccountId), eq(accounts.userId, ctx.workspaceAccess.ownerId))).limit(1),
+          db.select().from(accounts).where(and(eq(accounts.id, input.destinationAccountId), eq(accounts.userId, ctx.workspaceAccess.ownerId))).limit(1),
+          db.select().from(financialTransactions).where(and(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId), eq(financialTransactions.transferGroupId, input.transferGroupId))),
+        ]);
+        if (!source[0] || !destination[0]) throw new TRPCError({ code: "FORBIDDEN", message: "Las cuentas del traspaso deben pertenecer a tu espacio privado." });
+        if (source[0].currency !== destination[0].currency) throw new TRPCError({ code: "BAD_REQUEST", message: "Este formulario admite cuentas en la misma moneda. Registra una conversión manual confirmada por separado si aplica." });
+        const outgoing = originalTransfers.find(item => item.type === "transfer_out");
+        const incoming = originalTransfers.find(item => item.type === "transfer_in");
+        if (!outgoing || !incoming || originalTransfers.length !== 2) throw new TRPCError({ code: "BAD_REQUEST", message: "El traspaso no tiene una pareja editable completa. Revísalo antes de modificarlo." });
+        if (incoming.creditCardId) throw new TRPCError({ code: "BAD_REQUEST", message: "Edita los pagos de tarjeta desde Tarjetas para conservar su saldo correctamente." });
+        const [linkedInvestmentOperation] = await db.select().from(investmentOperations).where(and(eq(investmentOperations.userId, ctx.workspaceAccess.ownerId), eq(investmentOperations.linkedTransactionId, incoming.id))).limit(1);
+        if (linkedInvestmentOperation) throw new TRPCError({ code: "BAD_REQUEST", message: "Este traspaso está vinculado a una aportación de inversión. Revísalo desde Ahorro e inversiones para conservar la valuación trazable." });
+        const isOwner = ctx.workspaceAccess.role === "owner";
+        const status = isOwner ? input.status : "needs_review" as const;
+        const reviewStatus = isOwner ? "approved" as const : "pending_review" as const;
+        const occurredAt = new Date(input.occurredAt);
+        const suffix = input.notes?.trim() ? ` · ${input.notes.trim()}` : "";
+        await db.transaction(async tx => {
+          await tx.update(financialTransactions).set({ entityId: source[0].entityId, projectId: source[0].projectId, accountId: source[0].id, type: "transfer_out", scope: source[0].scope, amountCents: input.amountCents, currency: source[0].currency, reportCurrency: source[0].currency, reportAmountCents: input.amountCents, occurredAt, status, reviewStatus, reviewedByUserId: isOwner ? ctx.user.id : null, reviewedAt: isOwner ? new Date() : null, notes: `Traspaso a ${destination[0].name}${suffix}` }).where(and(eq(financialTransactions.id, outgoing.id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId)));
+          await tx.update(financialTransactions).set({ entityId: destination[0].entityId, projectId: destination[0].projectId, accountId: destination[0].id, type: "transfer_in", scope: destination[0].scope, amountCents: input.amountCents, currency: destination[0].currency, reportCurrency: destination[0].currency, reportAmountCents: input.amountCents, occurredAt, status, reviewStatus, reviewedByUserId: isOwner ? ctx.user.id : null, reviewedAt: isOwner ? new Date() : null, notes: `Traspaso desde ${source[0].name}${suffix}` }).where(and(eq(financialTransactions.id, incoming.id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId)));
+        });
+        return { success: true, transferGroupId: input.transferGroupId };
       }),
       transferRemove: workspaceFinanceProcedure.input(z.object({ transferGroupId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar un traspaso completo." });

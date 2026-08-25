@@ -174,4 +174,25 @@ describe("finance.dashboard", () => {
     ]));
     expect(set).toHaveBeenCalledWith({ balanceCents: 600_00 });
   });
+
+  it("conserva un saldo inicial sobregirado como pasivo real de la tarjeta", async () => {
+    const inserted = vi.fn();
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
+      insert: () => ({ values: inserted }),
+    });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.workspace.creditCards.save({
+      name: "Tarjeta sobregirada", issuer: "Emisor", scope: "business", currency: "MXN", creditLimitCents: 750_00, balanceCents: 6_673_88,
+      interestRateBps: 18_700, minimumPaymentCents: 200_00, statementClosingDay: 17, paymentDueDay: 27, status: "active", notes: null,
+    })).resolves.toEqual({ success: true });
+
+    expect(inserted).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 27,
+      scope: "business",
+      creditLimitCents: 750_00,
+      balanceCents: 6_673_88,
+    }));
+  });
 });

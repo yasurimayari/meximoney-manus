@@ -114,3 +114,9 @@
 - [x] Permitir registrar gastos diarios asociados a una tarjeta de crédito sin duplicar gastos.
 - [x] Registrar pagos de tarjeta desde cuentas propias como traspasos que reduzcan el saldo de la tarjeta.
 - [x] Mostrar un resumen de tarjetas, saldo pendiente, crédito disponible y próximos cortes/pagos.
+
+- [ ] Corregir la edición de Contactos para que cada formulario cargue y guarde exclusivamente el contacto seleccionado, sin sobrescribir otro registro.
+- [ ] Añadir un acceso explícito desde Registros para crear y gestionar Tarjetas de Crédito sin tratarlas como cuentas bancarias o activos líquidos.
+- [ ] Permitir declarar el ámbito de cada Tarjeta de Crédito como Personal, PFAE o Empresarial y conservarlo en sus reportes.
+- [ ] Permitir registrar y conservar saldos iniciales sobregirados de una tarjeta, mostrando el excedente sobre el límite como alerta en lugar de bloquearlo.
+- [ ] Habilitar edición segura de traspasos enlazados y aclarar en la interfaz qué movimientos especiales se editan desde su propio módulo.
