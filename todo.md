@@ -126,3 +126,8 @@
 - [x] Revalidar HSBC Air tras el cambio de ámbito, confirmando que límite, corte, pago, notas y movimientos se preservaron; el saldo sobregirado fue una actualización intencional de la usuaria.
 - [x] Documentar la confirmación de la usuaria de que HSBC Air y Klar tienen saldos sobregirados reales e intencionales.
 - [x] Verificar y documentar la regla de PFAE sin entidad específica: entra al consolidado empresarial y se excluye de filtros de una entidad única.
+
+- [x] Reintroducir compras financiadas y préstamos sin Telegram, conservando las migraciones existentes y sin incluir canales externos.
+- [ ] Validar el dominio público y las pantallas autenticadas de compras financiadas después de la publicación independiente.
+- [ ] Reintroducir alertas internas en una publicación independiente, validar el dominio y mantener canales externos desactivados.
+- [ ] Reintroducir Telegram en una publicación independiente sólo después de validar compras financiadas y alertas internas.

@@ -9,6 +9,7 @@ import {
   collaborationInvites,
   creditCards,
   debts,
+  debtPayments,
   decisionRecords,
   exchangeRates,
   financialContacts,
@@ -157,13 +158,14 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, creditCardRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, qualityAcknowledgementRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, creditCardRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, qualityAcknowledgementRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
     db.select().from(financialTransactions).where(eq(financialTransactions.userId, ownerId)),
     db.select().from(budgets).where(eq(budgets.userId, ownerId)),
     db.select().from(debts).where(eq(debts.userId, ownerId)),
+    db.select().from(debtPayments).where(eq(debtPayments.userId, ownerId)),
     db.select().from(creditCards).where(eq(creditCards.userId, ownerId)),
     db.select().from(financialGoals).where(eq(financialGoals.userId, ownerId)),
     db.select().from(financeTasks).where(eq(financeTasks.userId, ownerId)),
@@ -255,6 +257,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     transactions: transactionRows,
     budgets: budgetRows,
     debts: debtRows,
+    debtPayments: debtPaymentRows,
     creditCards: creditCardRows,
     goals: goalRows,
     tasks: taskRows,
@@ -275,7 +278,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   };
 }
 
-export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof creditCards | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements | typeof receivables | typeof receivablePayments | typeof recurringTemplates | typeof payables | typeof payablePayments | typeof investments | typeof investmentOperations, id: number, userId: number) {
+export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof debtPayments | typeof creditCards | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements | typeof receivables | typeof receivablePayments | typeof recurringTemplates | typeof payables | typeof payablePayments | typeof investments | typeof investmentOperations, id: number, userId: number) {
   const db = await requireDb();
   await db.delete(table).where(and(eq(table.id, id), eq(table.userId, userId)));
 }
@@ -284,6 +287,7 @@ export async function deleteAllFinancialData(userId: number) {
   const db = await requireDb();
   await db.transaction(async tx => {
     await tx.delete(financialTransactions).where(eq(financialTransactions.userId, userId));
+    await tx.delete(debtPayments).where(eq(debtPayments.userId, userId));
     await tx.delete(receivablePayments).where(eq(receivablePayments.userId, userId));
     await tx.delete(receivables).where(eq(receivables.userId, userId));
     await tx.delete(payablePayments).where(eq(payablePayments.userId, userId));
