@@ -9,7 +9,7 @@ import { budgetStatusLabel, budgetTypeLabel, calculateBudgetVsActual } from "@/l
 import { trpc } from "@/lib/trpc";
 import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { AlertTriangle, CalendarCheck2, Check, ChevronRight, CircleDollarSign, ClipboardCheck, FileClock, Goal, ListTodo, Pencil, Plus, Scale, Target, Trash2, WalletCards } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 
 type PlanningView = "budget" | "goals" | "debts" | "tasks" | "reviews" | "decisions";
@@ -35,7 +35,7 @@ export default function Planning() {
   const [workspaceFilters, setWorkspaceFilters] = useState(emptyWorkspaceFilters);
   const refresh = async () => { await utils.finance.dashboard.invalidate(); setDialogOpen(false); };
   const currency = data?.profile?.currency ?? "MXN";
-  const scopedData = useMemo(() => data ? filterWorkspaceSnapshot(data, workspaceFilters) : null, [data, workspaceFilters]);
+  const scopedData = data ? filterWorkspaceSnapshot(data, workspaceFilters) : null;
 
   if (isLoading || !data || !scopedData) return <div className="page-loading">Preparando tus planes financieros…</div>;
 
