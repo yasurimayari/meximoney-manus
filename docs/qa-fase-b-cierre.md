@@ -16,3 +16,11 @@ La compilación de tipos, la regresión de 27 archivos y 68 pruebas Vitest, y un
 ## Publicación
 
 El checkpoint inicial encontró un rechazo temporal de cuota de creación de compilaciones de infraestructura. La aplicación publicada continúa disponible con la versión anterior, sin HTTP 500 y sin cambios de datos. La verificación visual de los controles nuevos se repetirá cuando la publicación se propague; no se crearán movimientos ni plantillas de prueba durante esa QA.
+
+Tras respetar una ventana adicional de propagación, el dominio aún sirvió el paquete anterior. Se realizará un único reintento controlado de publicación y se verificará el paquete antes de interactuar con la interfaz publicada.
+
+La publicación se propagó correctamente después de esa espera. La ruta autenticada de Registros muestra los accesos «Captura rápida», «Importar CSV/Excel» y «Plantilla recurrente», además de la sección de plantillas en estado vacío. Al abrir Captura rápida se confirma el texto de privacidad, la advertencia de no introducir secretos y que ningún movimiento se guarda antes de una revisión posterior.
+
+Al probar la propuesta con el ejemplo no sensible «Pagué 349 pesos de Notion hoy», la interfaz devolvió el aviso «No fue posible interpretar el texto». No se creó ningún movimiento ni se modificó información financiera. El error se investigará y corregirá antes de cerrar la validación de Fase B.
+
+La causa fue un límite único de salida aplicado a un modelo GPT con razonamiento interno: los tokens se agotaban antes de devolver el JSON estructurado. El helper del servidor ahora admite el límite específico de finalización de GPT y la captura usa razonamiento mínimo con una reserva de salida visible. Una llamada de comprobación con el mismo ejemplo devolvió contenido estructurado, y `pnpm check` junto con las 68 pruebas volvió a finalizar correctamente. Falta republicar y repetir la validación visual sin guardar el borrador.

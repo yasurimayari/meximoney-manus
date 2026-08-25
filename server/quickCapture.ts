@@ -50,7 +50,8 @@ export async function extractQuickCaptureDraft(text: string, defaultCurrency: st
   const model = models.data.find(item => item.id === "gpt-5-mini")?.id ?? models.data.find(item => item.id === "gpt-5-nano")?.id ?? models.data[0]?.id;
   const response = await invokeLLM({
     model,
-    maxTokens: 700,
+    maxCompletionTokens: 900,
+    reasoning: { effort: "minimal" },
     messages: [
       { role: "system", content: `Eres un extractor conservador de borradores de movimientos financieros manuales. Extrae sólo información explícita del texto. No inventes una fecha, moneda, importe, tipo, ámbito, cuenta, categoría ni contacto. Convierte importes explícitos a centavos enteros. Si la fecha sólo dice hoy, usa la fecha actual ${new Date().toISOString().slice(0, 10)}; si es ambigua, usa null y añade una revisión. La moneda predeterminada es ${defaultCurrency.toUpperCase()}, pero úsala sólo si el texto no indica otra moneda y el importe es explícito. El resultado es un borrador: nunca ordenes guardar, transferir, pagar ni conectar una cuenta.` },
       { role: "user", content: text },

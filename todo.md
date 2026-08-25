@@ -141,5 +141,6 @@
 - [x] Implementar una gestión visible de plantillas recurrentes configurables por la usuaria para completar la Fase B.
 - [x] Implementar captura rápida por texto natural con revisión y confirmación antes de guardar movimientos para completar la Fase B.
 - [ ] Validar en el dominio publicado la gestión de plantillas y la captura rápida sin crear movimientos de prueba ni alterar datos financieros.
+- [x] Corregir el fallo de interpretación detectado en la captura rápida publicada antes de cerrar la Fase B.
 - [x] Diagnosticar el aviso de configuración remota de Amplitude y confirmar que no pertenece al código ni a los registros de Meximoney, sino a la vista técnica externa.
 - [x] Verificar y aclarar el estado operativo de Telegram antes de activar cualquier envío diario recurrente: la tarea existe, pero `telegramEnabled` permanece desactivado.
