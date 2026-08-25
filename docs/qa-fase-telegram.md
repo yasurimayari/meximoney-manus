@@ -25,3 +25,9 @@ La construcción local de producción finalizó correctamente y el paquete gener
 Se registró una única tarea diaria administrada por el proyecto con el identificador `2BKgs2j9xPoCKfhpui64Hs`, asociada de forma duradera con el perfil privado y configurada con la expresión UTC `0 0 14 * * *`, equivalente a las 08:00 de Ciudad de México. El inventario de tareas confirmó que está activa, usa exclusivamente la ruta autenticada `/api/scheduled/telegram-daily-digest` y conserva el horario diario correcto tras una validación temporal sin envío.
 
 La preferencia de Telegram se mantuvo explícitamente desactivada. La pantalla publicada muestra el control de Telegram disponible y apagado, junto con el alcance de privacidad aprobado. La consulta del historial no mostró ejecuciones ni mensajes de prueba. Una futura ejecución diaria comprobará la preferencia y devolverá una omisión segura mientras continúe desactivada.
+
+## Prueba controlada autorizada
+
+Con autorización explícita de la usuaria se envió una única prueba controlada. Telegram confirmó la entrega. El contenido incluyó sólo títulos de recordatorio y una indicación de que la prueba no activa los envíos diarios.
+
+Una consulta posterior confirmó que `telegramEnabled` permanece en `false`, que la tarea diaria sigue asociada a la preferencia privada y que no existe una marca de resumen diario enviado. Por tanto, la tarea continuará ejecutándose a las 08:00 de Ciudad de México, pero omitirá cualquier envío hasta que la usuaria active el interruptor desde Notificaciones.
