@@ -128,7 +128,8 @@
 - [x] Verificar y documentar la regla de PFAE sin entidad específica: entra al consolidado empresarial y se excluye de filtros de una entidad única.
 
 - [x] Reintroducir compras financiadas y préstamos sin Telegram, conservando las migraciones existentes y sin incluir canales externos.
-- [ ] Validar el dominio público y las pantallas autenticadas de compras financiadas después de la publicación independiente.
+- [x] Validar el dominio público y las pantallas autenticadas de compras financiadas después de la publicación independiente.
 - [x] Corregir el error React #310 detectado al cargar Planificación publicada tras restaurar el panel de cuotas.
-- [ ] Reintroducir alertas internas en una publicación independiente, validar el dominio y mantener canales externos desactivados.
+- [x] Reintroducir alertas internas de tarjetas, deudas y calendario sin cron ni canales externos.
+- [ ] Validar en el dominio publicado las alertas internas de tarjetas, deudas y calendario antes de continuar con Telegram.
 - [ ] Reintroducir Telegram en una publicación independiente sólo después de validar compras financiadas y alertas internas.

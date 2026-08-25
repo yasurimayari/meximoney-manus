@@ -2,13 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { filterNotificationInbox, notificationDestination } from "@/lib/notificationInbox";
 import { trpc } from "@/lib/trpc";
-import { BellRing, CalendarDays, CheckCheck, ChevronRight, FileClock, Landmark, PiggyBank, ReceiptText, ShieldCheck, X } from "lucide-react";
+import { BellRing, CalendarDays, CheckCheck, ChevronRight, CreditCard, FileClock, Landmark, PiggyBank, ReceiptText, ShieldCheck, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-const notificationIcons = { calendar: CalendarDays, document: FileClock, debt: Landmark, budget: PiggyBank, tax_reserve: ReceiptText, review: CheckCheck } as const;
-const categoryLabels: Record<string, string> = { calendar: "Calendario", document: "Documentos", debt: "Deudas", budget: "Presupuesto", tax_reserve: "Reserva fiscal", review: "Revisiones" };
+const notificationIcons = { calendar: CalendarDays, document: FileClock, debt: Landmark, credit_card_cutoff: CreditCard, credit_card_payment: CreditCard, credit_card_overlimit: CreditCard, budget: PiggyBank, tax_reserve: ReceiptText, review: CheckCheck } as const;
+const categoryLabels: Record<string, string> = { calendar: "Calendario", document: "Documentos", debt: "Deudas y cuotas", credit_card_cutoff: "Cortes de tarjeta", credit_card_payment: "Pagos de tarjeta", credit_card_overlimit: "Sobregiros", budget: "Presupuesto", tax_reserve: "Reserva fiscal", review: "Revisiones" };
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", year: "numeric" });
 
 function notificationDayLabel(occurredAt: Date | string) {
