@@ -45,3 +45,7 @@ Tras publicar el manejador actualizado, la usuaria activó el interruptor «Resu
 La divulgación visible se actualizó para reflejar exactamente ese alcance y mantener explícita la exclusión de números de cuenta, credenciales, movimientos completos e instrucciones de pago. La compilación estática y 68 pruebas de regresión finalizaron correctamente antes de publicar dicha divulgación.
 
 La verificación posterior confirmó que `telegramEnabled` está activo y que el perfil conserva una única tarea diaria registrada. La marca diaria permanece vacía antes de la próxima ejecución, por lo que no se ha deduplicado ni suprimido indebidamente el primer resumen operativo.
+
+La pantalla publicada de Notificaciones se cargó nuevamente con el interruptor activo y la divulgación correcta: títulos, fechas o días restantes, importes de pago o cuota y saldos de alertas relacionadas. También muestra de forma visible la exclusión de números de cuenta, credenciales, movimientos completos e instrucciones de pago. El dominio respondió correctamente y no se modificaron datos financieros durante esta validación.
+
+El inventario de programación confirmó que existe una única tarea activa de proyecto para `/api/scheduled/telegram-daily-digest` con cron UTC `0 0 14 * * *`, equivalente a las 08:00 de Ciudad de México en el horario vigente. La tarea permanece asociada con la preferencia privada activa, por lo que la siguiente ejecución diaria usará el alcance autorizado.

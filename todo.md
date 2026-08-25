@@ -148,4 +148,4 @@
 - [x] Publicar el resumen diario de Telegram con el contenido numérico expresamente autorizado antes de activar los envíos recurrentes.
 - [x] Activar el resumen diario de Telegram a las 08:00 de Ciudad de México con el contenido numérico expresamente autorizado.
 - [x] Actualizar el texto visible de Telegram para describir con precisión las fechas, importes y saldos autorizados.
-- [ ] Verificar la preferencia activa y documentar el alcance de privacidad del resumen diario de Telegram.
+- [x] Verificar la preferencia activa y documentar el alcance de privacidad del resumen diario de Telegram.
