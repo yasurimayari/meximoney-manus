@@ -779,7 +779,9 @@ export const appRouter = router({
       }),
       setTelegramDaily: privateFinanceProcedure.input(z.object({ enabled: z.boolean() })).mutation(async ({ ctx, input }) => {
         if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Telegram no está configurado de forma segura todavía." });
-        const sessionToken = parseCookie(ctx.req.headers.cookie ?? "")[COOKIE_NAME] ?? "";
+        const localSessionHeader = ctx.req.headers["x-meximoney-session"];
+        const localSessionToken = Array.isArray(localSessionHeader) ? localSessionHeader[0] : localSessionHeader;
+        const sessionToken = localSessionToken || parseCookie(ctx.req.headers.cookie ?? "")[COOKIE_NAME] || "";
         if (!sessionToken) throw new TRPCError({ code: "UNAUTHORIZED", message: "Inicia sesión nuevamente para configurar el resumen diario de Telegram." });
         const db = await requireDb();
         const [preferences] = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, ctx.user.id)).limit(1);
