@@ -31,3 +31,9 @@ La preferencia de Telegram se mantuvo explícitamente desactivada. La pantalla p
 Con autorización explícita de la usuaria se envió una única prueba controlada. Telegram confirmó la entrega. El contenido incluyó sólo títulos de recordatorio y una indicación de que la prueba no activa los envíos diarios.
 
 Una consulta posterior confirmó que `telegramEnabled` permanece en `false`, que la tarea diaria sigue asociada a la preferencia privada y que no existe una marca de resumen diario enviado. Por tanto, la tarea continuará ejecutándose a las 08:00 de Ciudad de México, pero omitirá cualquier envío hasta que la usuaria active el interruptor desde Notificaciones.
+
+## Alcance operativo autorizado
+
+La usuaria autorizó convertir el resumen en una herramienta operativa y confirmó que puede incluir: título de la alerta, fecha o días restantes, importe de pago o cuota y saldo asociado cuando la alerta corresponda a una tarjeta o deuda. Se mantienen excluidos los números de cuenta, credenciales, movimientos completos y cualquier instrucción de pago.
+
+El nuevo formato elimina secuencias numéricas de cuatro o más dígitos desde títulos para prevenir la divulgación accidental de números de cuenta. La lógica conserva fechas, importes y saldos en el detalle de los avisos, y la prueba de regresión confirma ambos comportamientos. Falta publicar este contenido y activar la preferencia diaria.

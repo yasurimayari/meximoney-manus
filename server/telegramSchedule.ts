@@ -6,6 +6,25 @@ import { sdk } from "./_core/sdk";
 import { creditCardAlertCandidates } from "./creditCardAlerts";
 import { buildTelegramDailyDigest, mexicoCityDateKey, sendTelegramDailyDigest } from "./telegramDigest";
 
+function formatMoney(cents: number, currency: string) {
+  return new Intl.NumberFormat("es-MX", { style: "currency", currency, maximumFractionDigits: 2 }).format(cents / 100);
+}
+
+function mexicoCityDayParts(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+  const read = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find(part => part.type === type)?.value ?? 0);
+  return { year: read("year"), month: read("month"), day: read("day") };
+}
+
+function deadlineDetails(date: Date, now: Date) {
+  const target = mexicoCityDayParts(date);
+  const today = mexicoCityDayParts(now);
+  const days = Math.round((Date.UTC(target.year, target.month - 1, target.day) - Date.UTC(today.year, today.month - 1, today.day)) / 86_400_000);
+  const label = new Intl.DateTimeFormat("es-MX", { timeZone: "America/Mexico_City", day: "numeric", month: "long" }).format(date);
+  const relative = days === 0 ? "hoy" : days === 1 ? "mañana" : `en ${days} días`;
+  return `Fecha: ${label} (${relative})`;
+}
+
 export async function telegramDailyDigestHandler(req: Request, res: Response) {
   try {
     const cronUser = await sdk.authenticateRequest(req);
@@ -25,11 +44,26 @@ export async function telegramDailyDigestHandler(req: Request, res: Response) {
 
     const snapshot = await getFinanceSnapshot(preferences.userId);
     const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const entries: Array<{ title: string }> = [];
-    if (preferences.calendarEnabled) snapshot.calendarEvents.filter(event => event.status === "planned" && event.startsAt >= now && event.startsAt <= inSevenDays).forEach(event => entries.push({ title: `Fecha próxima: ${event.title}` }));
-    if (preferences.debtsEnabled) snapshot.debts.filter(debt => debt.status === "active" && debt.nextDueAt && debt.nextDueAt >= now && debt.nextDueAt <= inSevenDays).forEach(debt => entries.push({ title: `Cuota o vencimiento próximo: ${debt.name}` }));
-    if (preferences.debtsEnabled) creditCardAlertCandidates(snapshot.creditCards ?? [], now, 7).forEach(candidate => entries.push({ title: candidate.title }));
-    if (preferences.taxReserveEnabled && snapshot.profile?.futureTaxDueAt && snapshot.profile.futureTaxDueAt >= now && snapshot.profile.futureTaxDueAt <= inSevenDays) entries.push({ title: "Fecha fiscal manual próxima" });
+    const entries: Array<{ title: string; details?: string[] }> = [];
+    if (preferences.calendarEnabled) snapshot.calendarEvents.filter(event => event.status === "planned" && event.startsAt >= now && event.startsAt <= inSevenDays).forEach(event => entries.push({ title: `Fecha próxima: ${event.title}`, details: [deadlineDetails(event.startsAt, now)] }));
+    if (preferences.debtsEnabled) snapshot.debts.filter(debt => debt.status === "active" && debt.nextDueAt && debt.nextDueAt >= now && debt.nextDueAt <= inSevenDays).forEach(debt => {
+      const scheduledPayment = debt.installmentCents || debt.minimumPaymentCents;
+      entries.push({
+        title: `Cuota o vencimiento próximo: ${debt.name}`,
+        details: [
+          deadlineDetails(debt.nextDueAt!, now),
+          scheduledPayment > 0 ? `Importe registrado: ${formatMoney(scheduledPayment, debt.currency)}` : "",
+          `Saldo pendiente: ${formatMoney(debt.balanceCents, debt.currency)}`,
+        ],
+      });
+    });
+    if (preferences.debtsEnabled) creditCardAlertCandidates(snapshot.creditCards ?? [], now, 7).forEach(candidate => {
+      const card = snapshot.creditCards?.find(item => item.id === candidate.relatedEntityId);
+      const details = [candidate.message];
+      if (card) details.push(`Saldo registrado: ${formatMoney(card.balanceCents, card.currency)}`);
+      entries.push({ title: candidate.title, details });
+    });
+    if (preferences.taxReserveEnabled && snapshot.profile?.futureTaxDueAt && snapshot.profile.futureTaxDueAt >= now && snapshot.profile.futureTaxDueAt <= inSevenDays) entries.push({ title: "Fecha fiscal manual próxima", details: [deadlineDetails(snapshot.profile.futureTaxDueAt, now)] });
 
     await sendTelegramDailyDigest(buildTelegramDailyDigest(entries, now));
     return res.json({ ok: true, reminders: entries.length, dateKey });

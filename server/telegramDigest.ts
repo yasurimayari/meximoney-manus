@@ -1,4 +1,4 @@
-export type TelegramDigestEntry = { title: string };
+export type TelegramDigestEntry = { title: string; details?: string[] };
 
 export function mexicoCityDateKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
@@ -10,7 +10,11 @@ export function buildTelegramDailyDigest(entries: TelegramDigestEntry[], date = 
   const day = new Intl.DateTimeFormat("es-MX", { timeZone: "America/Mexico_City", weekday: "long", day: "numeric", month: "long" }).format(date);
   const header = `Meximoney · recordatorio diario\n${day}`;
   if (!entries.length) return `${header}\n\nNo hay recordatorios financieros próximos en los siguientes 7 días.`;
-  const items = entries.slice(0, 12).map(entry => `• ${entry.title}`);
+  const redactTitle = (title: string) => title.replace(/\b\d{4,}\b/g, "••••");
+  const items = entries.slice(0, 12).map(entry => {
+    const details = entry.details?.filter(Boolean).map(detail => `  ${detail}`).join("\n") ?? "";
+    return `• ${redactTitle(entry.title)}${details ? `\n${details}` : ""}`;
+  });
   const extra = entries.length > 12 ? `\n• Y ${entries.length - 12} recordatorios más en Meximoney.` : "";
   return `${header}\n\n${items.join("\n")}${extra}\n\nRevisa el detalle y confirma cualquier pago manualmente en Meximoney.`;
 }

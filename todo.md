@@ -144,3 +144,7 @@
 - [x] Corregir el fallo de interpretación detectado en la captura rápida publicada antes de cerrar la Fase B.
 - [x] Diagnosticar el aviso de configuración remota de Amplitude y confirmar que no pertenece al código ni a los registros de Meximoney, sino a la vista técnica externa.
 - [x] Verificar y aclarar el estado operativo de Telegram antes de activar cualquier envío diario recurrente: la tarea existe, pero `telegramEnabled` permanece desactivado.
+- [x] Confirmar que la usuaria autoriza fechas o días restantes, importes de pago o cuota y saldos relacionados con alertas en Telegram.
+- [ ] Publicar el resumen diario de Telegram con el contenido numérico expresamente autorizado antes de activar los envíos recurrentes.
+- [ ] Activar el resumen diario de Telegram a las 08:00 de Ciudad de México con el contenido numérico expresamente autorizado.
+- [ ] Verificar la preferencia activa y documentar el alcance de privacidad del resumen diario de Telegram.
