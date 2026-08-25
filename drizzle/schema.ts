@@ -485,6 +485,7 @@ export const debts = mysqlTable("debts", {
   userId: int("userId").notNull(),
   entityId: int("entityId"),
   projectId: int("projectId"),
+  contactId: int("contactId"),
   name: varchar("name", { length: 140 }).notNull(),
   creditor: varchar("creditor", { length: 140 }),
   type: mysqlEnum("type", ["credit_card", "loan", "financed_purchase", "mortgage", "tax", "business", "family", "other"]).notNull().default("other"),

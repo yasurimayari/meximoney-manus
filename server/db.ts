@@ -207,7 +207,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
       .filter(item => (item.type === "income" || item.type === "expense") && !item.categoryId)
       .map(item => ({ code: "missing_category", severity: "medium", label: `Movimiento sin categoría: ${item.notes || `#${item.id}`}` })),
     ...transactionRows
-      .filter(item => !item.accountId)
+      .filter(item => !item.accountId && !item.creditCardId && !item.debtId)
       .map(item => ({ code: "missing_account", severity: "high", label: `Movimiento sin cuenta: ${item.notes || `#${item.id}`}` })),
     ...transactionRows
       .filter(item => (item.type === "income" || item.type === "expense") && reportedAmountCents(item, reportCurrency) === null)

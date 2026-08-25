@@ -272,6 +272,88 @@ export const appRouter = router({
         else await db.insert(financialContacts).values({ userId: ctx.workspaceAccess.ownerId, ...values });
         return { success: true };
       }),
+      contactLoans: router({
+        create: workspaceFinanceProcedure.input(z.object({
+          contactId: z.number().int().positive(),
+          name: z.string().trim().min(1).max(140),
+          balanceCents: z.number().int().positive(),
+          currency: z.string().length(3),
+          installmentCents: moneySchema,
+          nextDueAt: optionalDate,
+          priority: z.enum(["critical", "high", "medium", "low"]),
+          scope: scopeSchema,
+          notes: z.string().max(3000).nullable().optional(),
+        })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede registrar préstamos de contactos." });
+          const db = await requireDb();
+          const [contact] = await db.select().from(financialContacts).where(and(eq(financialContacts.id, input.contactId), eq(financialContacts.userId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!contact) throw new TRPCError({ code: "NOT_FOUND", message: "El contacto no pertenece a tu espacio privado." });
+          const type = contact.type === "family" ? "family" as const : "loan" as const;
+          await db.insert(debts).values({
+            userId: ctx.workspaceAccess.ownerId,
+            entityId: contact.entityId,
+            projectId: contact.projectId,
+            contactId: contact.id,
+            name: input.name,
+            creditor: contact.name,
+            type,
+            scope: input.scope,
+            balanceCents: input.balanceCents,
+            originalAmountCents: input.balanceCents,
+            installmentCents: input.installmentCents || null,
+            installmentCount: null,
+            financedItem: null,
+            purchasedAt: null,
+            currency: input.currency,
+            interestRateBps: null,
+            minimumPaymentCents: input.installmentCents,
+            nextDueAt: asDate(input.nextDueAt),
+            endDate: null,
+            priority: input.priority,
+            status: "active",
+            notes: input.notes ?? null,
+          });
+          return { success: true };
+        }),
+        paymentFromAccount: workspaceFinanceProcedure.input(z.object({
+          debtId: z.number().int().positive(),
+          sourceAccountId: z.number().int().positive(),
+          amountCents: z.number().int().positive(),
+          occurredAt: z.number().int().positive(),
+          nextDueAt: optionalDate,
+          status: z.enum(["confirmed", "estimated", "needs_review"]),
+          notes: z.string().max(3000).nullable().optional(),
+        })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede registrar pagos de préstamos." });
+          const db = await requireDb();
+          const [[debt], [source]] = await Promise.all([
+            db.select().from(debts).where(and(eq(debts.id, input.debtId), eq(debts.userId, ctx.workspaceAccess.ownerId))).limit(1),
+            db.select().from(accounts).where(and(eq(accounts.id, input.sourceAccountId), eq(accounts.userId, ctx.workspaceAccess.ownerId))).limit(1),
+          ]);
+          if (!debt || !debt.contactId) throw new TRPCError({ code: "NOT_FOUND", message: "El préstamo seleccionado no está vinculado a un contacto de tu espacio." });
+          if (!source || source.status !== "active") throw new TRPCError({ code: "BAD_REQUEST", message: "La cuenta de origen debe estar activa y pertenecer a tu espacio privado." });
+          if (debt.status !== "active" && debt.status !== "review") throw new TRPCError({ code: "BAD_REQUEST", message: "El préstamo debe estar activo para registrar un pago." });
+          if (debt.currency !== source.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "El pago requiere que la cuenta y el préstamo usen la misma moneda." });
+          if (input.amountCents > debt.balanceCents) throw new TRPCError({ code: "BAD_REQUEST", message: "El pago no puede superar el saldo pendiente del préstamo." });
+          const [contact] = await db.select().from(financialContacts).where(and(eq(financialContacts.id, debt.contactId), eq(financialContacts.userId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!contact) throw new TRPCError({ code: "NOT_FOUND", message: "El contacto vinculado al préstamo no pertenece a tu espacio." });
+          const groupId = randomUUID();
+          const occurredAt = new Date(input.occurredAt);
+          const suffix = input.notes?.trim() ? ` · ${input.notes.trim()}` : "";
+          await db.transaction(async tx => {
+            await tx.insert(financialTransactions).values([
+              { userId: ctx.workspaceAccess.ownerId, entityId: source.entityId, projectId: source.projectId, accountId: source.id, debtId: null, creditCardId: null, contactId: contact.id, type: "transfer_out", scope: source.scope, amountCents: input.amountCents, currency: source.currency, reportCurrency: source.currency, reportAmountCents: input.amountCents, exchangeRateMicros: null, exchangeRateDate: null, incomeNature: "other", occurredAt, isEssential: false, transferGroupId: groupId, status: input.status, reviewStatus: "approved", createdByUserId: ctx.user.id, reviewedByUserId: ctx.user.id, reviewedAt: new Date(), notes: `Pago a ${contact.name}${suffix}` },
+              { userId: ctx.workspaceAccess.ownerId, entityId: debt.entityId, projectId: debt.projectId, accountId: null, debtId: debt.id, creditCardId: null, contactId: contact.id, type: "transfer_in", scope: debt.scope, amountCents: input.amountCents, currency: debt.currency, reportCurrency: debt.currency, reportAmountCents: input.amountCents, exchangeRateMicros: null, exchangeRateDate: null, incomeNature: "other", occurredAt, isEssential: false, transferGroupId: groupId, status: input.status, reviewStatus: "approved", createdByUserId: ctx.user.id, reviewedByUserId: ctx.user.id, reviewedAt: new Date(), notes: `Pago desde ${source.name}${suffix}` },
+            ]);
+            const [counterpart] = await tx.select({ id: financialTransactions.id }).from(financialTransactions).where(and(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId), eq(financialTransactions.transferGroupId, groupId), eq(financialTransactions.type, "transfer_in"))).limit(1);
+            if (!counterpart) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No se pudo vincular el pago del préstamo." });
+            await tx.insert(debtPayments).values({ userId: ctx.workspaceAccess.ownerId, debtId: debt.id, linkedTransactionId: counterpart.id, totalPaymentCents: input.amountCents, principalCents: input.amountCents, currency: debt.currency, paidAt: occurredAt, notes: input.notes ?? null });
+            const nextBalance = debt.balanceCents - input.amountCents;
+            await tx.update(debts).set({ balanceCents: nextBalance, status: nextBalance === 0 ? "paid" : "active", nextDueAt: nextBalance === 0 ? null : asDate(input.nextDueAt) }).where(and(eq(debts.id, debt.id), eq(debts.userId, ctx.workspaceAccess.ownerId)));
+          });
+          return { success: true, groupId };
+        }),
+      }),
       exchangeRateSave: workspaceFinanceProcedure.input(z.object({ fromCurrency: z.string().length(3), toCurrency: z.string().length(3), rateMicros: z.number().int().min(1).max(2000000000), rateDate: z.number().int().positive(), source: z.enum(["manual", "confirmed_reference"]), notes: z.string().max(1000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede guardar tipos de cambio." });
         const db = await requireDb(); const { rateDate, ...values } = input;
@@ -426,6 +508,7 @@ export const appRouter = router({
         const incoming = originalTransfers.find(item => item.type === "transfer_in");
         if (!outgoing || !incoming || originalTransfers.length !== 2) throw new TRPCError({ code: "BAD_REQUEST", message: "El traspaso no tiene una pareja editable completa. Revísalo antes de modificarlo." });
         if (incoming.creditCardId) throw new TRPCError({ code: "BAD_REQUEST", message: "Edita los pagos de tarjeta desde Tarjetas para conservar su saldo correctamente." });
+        if (incoming.debtId) throw new TRPCError({ code: "BAD_REQUEST", message: "Edita los pagos de préstamos desde Contactos para conservar su saldo e historial correctamente." });
         const [linkedInvestmentOperation] = await db.select().from(investmentOperations).where(and(eq(investmentOperations.userId, ctx.workspaceAccess.ownerId), eq(investmentOperations.linkedTransactionId, incoming.id))).limit(1);
         if (linkedInvestmentOperation) throw new TRPCError({ code: "BAD_REQUEST", message: "Este traspaso está vinculado a una aportación de inversión. Revísalo desde Ahorro e inversiones para conservar la valuación trazable." });
         const isOwner = ctx.workspaceAccess.role === "owner";
@@ -445,10 +528,12 @@ export const appRouter = router({
         await db.transaction(async tx => {
           const transfers = await tx.select().from(financialTransactions).where(and(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId), eq(financialTransactions.transferGroupId, input.transferGroupId)));
           const cardPayment = transfers.find(item => item.creditCardId && item.type === "transfer_in");
+          const loanPayment = transfers.find(item => item.debtId && item.type === "transfer_in");
           if (cardPayment?.creditCardId) {
             const [card] = await tx.select().from(creditCards).where(and(eq(creditCards.id, cardPayment.creditCardId), eq(creditCards.userId, ctx.workspaceAccess.ownerId))).limit(1);
             if (card) await tx.update(creditCards).set({ balanceCents: card.balanceCents + cardPayment.amountCents }).where(and(eq(creditCards.id, card.id), eq(creditCards.userId, ctx.workspaceAccess.ownerId)));
           }
+          if (loanPayment?.debtId) throw new TRPCError({ code: "BAD_REQUEST", message: "No elimines un pago de préstamo desde Registros. Revísalo desde Contactos para conservar el saldo e historial correctamente." });
           await tx.delete(financialTransactions).where(and(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId), eq(financialTransactions.transferGroupId, input.transferGroupId)));
         });
         return { success: true };

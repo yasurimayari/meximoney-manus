@@ -134,6 +134,13 @@
       "when": 1787665076654,
       "tag": "0018_cool_kulan_gath",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1787678403650,
+      "tag": "0019_bouncy_raider",
+      "breakpoints": true
     }
   ]
 }

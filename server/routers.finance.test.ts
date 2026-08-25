@@ -175,6 +175,35 @@ describe("finance.dashboard", () => {
     expect(set).toHaveBeenCalledWith({ balanceCents: 600_00 });
   });
 
+  it("registra un pago de préstamo de contacto desde una cuenta como transferencia conciliada y reduce sólo esa deuda", async () => {
+    const inserted = vi.fn();
+    const updates: unknown[] = [];
+    const debt = { id: 44, userId: 27, contactId: 8, entityId: null, projectId: null, scope: "personal" as const, currency: "MXN", balanceCents: 1_000_00, status: "active" as const };
+    const source = { id: 12, userId: 27, name: "Santander", currency: "MXN", status: "active" as const, entityId: null, projectId: null, scope: "personal" as const };
+    const contact = { id: 8, userId: 27, name: "Sebastian", entityId: null, projectId: null };
+    const answers = [[{ accepted: true }], [debt], [source], [contact]];
+    const select = () => ({ from: () => ({ where: () => ({ limit: async () => answers.shift() ?? [] }) }) });
+    const set = vi.fn((values: unknown) => { updates.push(values); return { where: vi.fn() }; });
+    mocks.requireDb.mockResolvedValue({
+      select,
+      transaction: async (callback: any) => callback({
+        insert: () => ({ values: inserted }),
+        select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ id: 901 }] }) }) }),
+        update: () => ({ set }),
+      }),
+    });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await caller.finance.workspace.contactLoans.paymentFromAccount({ debtId: 44, sourceAccountId: 12, amountCents: 250_00, occurredAt: Date.parse("2026-08-25T12:00:00Z"), nextDueAt: null, status: "confirmed", notes: "Abono agosto" });
+
+    expect(inserted).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ accountId: 12, contactId: 8, type: "transfer_out", amountCents: 250_00 }),
+      expect.objectContaining({ debtId: 44, contactId: 8, type: "transfer_in", amountCents: 250_00 }),
+    ]));
+    expect(inserted).toHaveBeenCalledWith(expect.objectContaining({ debtId: 44, linkedTransactionId: 901, totalPaymentCents: 250_00, principalCents: 250_00 }));
+    expect(updates).toEqual(expect.arrayContaining([expect.objectContaining({ balanceCents: 750_00, status: "active" })]));
+  });
+
   it("conserva un saldo inicial sobregirado como pasivo real de la tarjeta", async () => {
     const inserted = vi.fn();
     mocks.requireDb.mockResolvedValue({
