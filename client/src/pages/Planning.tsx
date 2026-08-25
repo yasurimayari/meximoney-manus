@@ -35,9 +35,9 @@ export default function Planning() {
   const [workspaceFilters, setWorkspaceFilters] = useState(emptyWorkspaceFilters);
   const refresh = async () => { await utils.finance.dashboard.invalidate(); setDialogOpen(false); };
   const currency = data?.profile?.currency ?? "MXN";
+  const scopedData = useMemo(() => data ? filterWorkspaceSnapshot(data, workspaceFilters) : null, [data, workspaceFilters]);
 
-  if (isLoading || !data) return <div className="page-loading">Preparando tus planes financieros…</div>;
-  const scopedData = useMemo<typeof data>(() => filterWorkspaceSnapshot(data, workspaceFilters), [data, workspaceFilters]);
+  if (isLoading || !data || !scopedData) return <div className="page-loading">Preparando tus planes financieros…</div>;
 
   const title = {
     budget: ["Presupuesto mensual", "Planifica importes y contrasta el presupuesto con tus movimientos manuales."],

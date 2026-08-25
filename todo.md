@@ -129,5 +129,6 @@
 
 - [x] Reintroducir compras financiadas y préstamos sin Telegram, conservando las migraciones existentes y sin incluir canales externos.
 - [ ] Validar el dominio público y las pantallas autenticadas de compras financiadas después de la publicación independiente.
+- [x] Corregir el error React #310 detectado al cargar Planificación publicada tras restaurar el panel de cuotas.
 - [ ] Reintroducir alertas internas en una publicación independiente, validar el dominio y mantener canales externos desactivados.
 - [ ] Reintroducir Telegram en una publicación independiente sólo después de validar compras financiadas y alertas internas.
