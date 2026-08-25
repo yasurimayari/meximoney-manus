@@ -184,15 +184,50 @@ describe("finance.dashboard", () => {
     const caller = appRouter.createCaller(createContext(27));
 
     await expect(caller.finance.workspace.creditCards.save({
-      name: "Tarjeta sobregirada", issuer: "Emisor", scope: "business", currency: "MXN", creditLimitCents: 750_00, balanceCents: 6_673_88,
+      name: "Tarjeta sobregirada", issuer: "Emisor", scope: "pfae", currency: "MXN", creditLimitCents: 750_00, balanceCents: 6_673_88,
       interestRateBps: 18_700, minimumPaymentCents: 200_00, statementClosingDay: 17, paymentDueDay: 27, status: "active", notes: null,
     })).resolves.toEqual({ success: true });
 
     expect(inserted).toHaveBeenCalledWith(expect.objectContaining({
       userId: 27,
-      scope: "business",
+      scope: "pfae",
       creditLimitCents: 750_00,
       balanceCents: 6_673_88,
     }));
+  });
+
+  it("actualiza las dos partes de un traspaso como una sola operación", async () => {
+    const updates: unknown[] = [];
+    const source = { id: 12, userId: 27, name: "Santander", currency: "MXN", status: "active", entityId: null, projectId: null, scope: "personal" };
+    const destination = { id: 13, userId: 27, name: "Inbursa", currency: "MXN", status: "active", entityId: null, projectId: null, scope: "personal" };
+    const originalTransfers = [
+      { id: 301, userId: 27, accountId: 12, creditCardId: null, type: "transfer_out", amountCents: 100_00 },
+      { id: 302, userId: 27, accountId: 13, creditCardId: null, type: "transfer_in", amountCents: 100_00 },
+    ];
+    let selectCall = 0;
+    const select = () => {
+      const call = selectCall++;
+      return {
+        from: () => ({
+          where: () => call === 3 ? originalTransfers : { limit: async () => [call === 0 ? { accepted: true } : call === 1 ? source : call === 2 ? destination : null].filter(Boolean) },
+        }),
+      };
+    };
+    const set = vi.fn((values: unknown) => { updates.push(values); return { where: vi.fn() }; });
+    mocks.requireDb.mockResolvedValue({
+      select,
+      transaction: async (callback: any) => callback({ update: () => ({ set }) }),
+    });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await caller.finance.workspace.transferUpdate({
+      transferGroupId: "3d1e5f63-0cef-4b0a-93aa-4ac2e7dcc064", sourceAccountId: 12, destinationAccountId: 13, amountCents: 250_00,
+      occurredAt: Date.parse("2026-08-24T12:00:00Z"), status: "confirmed", notes: "Ajuste",
+    });
+
+    expect(updates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ accountId: 12, type: "transfer_out", amountCents: 250_00, notes: "Traspaso a Inbursa · Ajuste" }),
+      expect.objectContaining({ accountId: 13, type: "transfer_in", amountCents: 250_00, notes: "Traspaso desde Santander · Ajuste" }),
+    ]));
   });
 });

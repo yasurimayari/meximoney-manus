@@ -55,6 +55,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 
 const scopeSchema = z.enum(["personal", "business", "mixed"]);
+const creditCardScopeSchema = z.enum(["personal", "pfae", "business", "mixed"]);
 const moneySchema = z.number().int().min(0);
 const optionalDate = z.number().int().positive().nullable().optional();
 const calendarColorCategorySchema = z.enum(["tax", "credit_card_cutoff", "credit_card_payment", "loan_payment", "document_expiry", "insurance_renewal", "review", "other", "debt_due", "document_due", "task_due", "fiscal_reserve"]);
@@ -326,7 +327,7 @@ export const appRouter = router({
         return { success: true };
       }),
       creditCards: router({
-        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(140), issuer: z.string().trim().max(140).nullable().optional(), scope: scopeSchema, currency: z.string().length(3), creditLimitCents: moneySchema, balanceCents: moneySchema, interestRateBps: z.number().int().min(0).nullable().optional(), minimumPaymentCents: moneySchema, statementClosingDay: z.number().int().min(1).max(31).nullable().optional(), paymentDueDay: z.number().int().min(1).max(31).nullable().optional(), status: z.enum(["active", "paused", "closed"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(140), issuer: z.string().trim().max(140).nullable().optional(), scope: creditCardScopeSchema, currency: z.string().length(3), creditLimitCents: moneySchema, balanceCents: moneySchema, interestRateBps: z.number().int().min(0).nullable().optional(), minimumPaymentCents: moneySchema, statementClosingDay: z.number().int().min(1).max(31).nullable().optional(), paymentDueDay: z.number().int().min(1).max(31).nullable().optional(), status: z.enum(["active", "paused", "closed"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar tarjetas de crédito." });
           const db = await requireDb(); const { id, ...values } = input;
           if (id) await db.update(creditCards).set(values).where(and(eq(creditCards.id, id), eq(creditCards.userId, ctx.workspaceAccess.ownerId)));
@@ -347,7 +348,7 @@ export const appRouter = router({
           await db.transaction(async tx => {
             await tx.insert(financialTransactions).values([
               { userId: ctx.workspaceAccess.ownerId, entityId: source.entityId, projectId: source.projectId, accountId: source.id, type: "transfer_out", scope: source.scope, amountCents: input.amountCents, currency: source.currency, reportCurrency: source.currency, reportAmountCents: input.amountCents, incomeNature: "other", occurredAt, isEssential: false, transferGroupId: groupId, status: input.status, reviewStatus: "approved", createdByUserId: ctx.user.id, reviewedByUserId: ctx.user.id, reviewedAt: new Date(), notes: `Pago a ${card.name}${suffix}` },
-              { userId: ctx.workspaceAccess.ownerId, entityId: card.entityId, projectId: card.projectId, creditCardId: card.id, type: "transfer_in", scope: card.scope, amountCents: input.amountCents, currency: card.currency, reportCurrency: card.currency, reportAmountCents: input.amountCents, incomeNature: "other", occurredAt, isEssential: false, transferGroupId: groupId, status: input.status, reviewStatus: "approved", createdByUserId: ctx.user.id, reviewedByUserId: ctx.user.id, reviewedAt: new Date(), notes: `Pago desde ${source.name}${suffix}` },
+              { userId: ctx.workspaceAccess.ownerId, entityId: card.entityId, projectId: card.projectId, creditCardId: card.id, type: "transfer_in", scope: card.scope === "pfae" ? "business" : card.scope, amountCents: input.amountCents, currency: card.currency, reportCurrency: card.currency, reportAmountCents: input.amountCents, incomeNature: "other", occurredAt, isEssential: false, transferGroupId: groupId, status: input.status, reviewStatus: "approved", createdByUserId: ctx.user.id, reviewedByUserId: ctx.user.id, reviewedAt: new Date(), notes: `Pago desde ${source.name}${suffix}` },
             ]);
             await tx.update(creditCards).set({ balanceCents: card.balanceCents - input.amountCents }).where(and(eq(creditCards.id, card.id), eq(creditCards.userId, ctx.workspaceAccess.ownerId)));
           });

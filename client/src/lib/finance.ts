@@ -26,6 +26,7 @@ export function fromCents(cents: number) {
 
 export const scopeLabel: Record<string, string> = {
   personal: "Personal",
+  pfae: "PFAE",
   business: "Empresarial",
   mixed: "Mixto",
 } as const;

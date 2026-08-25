@@ -96,10 +96,12 @@ export function calculateLiquidity(
   };
 }
 
-type Scope = "personal" | "business" | "mixed";
+type Scope = "personal" | "pfae" | "business" | "mixed";
 
 function isInScope(itemScope: Scope, selectedScope: Scope) {
-  return selectedScope === "mixed" ? true : itemScope === selectedScope;
+  if (selectedScope === "mixed") return true;
+  if (itemScope === "pfae") return selectedScope === "pfae" || selectedScope === "business";
+  return itemScope === selectedScope;
 }
 
 export function calculateMonthlyStatement(

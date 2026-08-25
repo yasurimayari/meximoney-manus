@@ -187,7 +187,7 @@ export const creditCards = mysqlTable("creditCards", {
   projectId: int("projectId"),
   name: varchar("name", { length: 140 }).notNull(),
   issuer: varchar("issuer", { length: 140 }),
-  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
+  scope: mysqlEnum("scope", ["personal", "pfae", "business", "mixed"]).notNull().default("personal"),
   currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
   creditLimitCents: int("creditLimitCents").notNull().default(0),
   balanceCents: int("balanceCents").notNull().default(0),

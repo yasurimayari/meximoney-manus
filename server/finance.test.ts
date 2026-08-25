@@ -66,6 +66,15 @@ describe("cálculos financieros manuales", () => {
     expect(statement).toEqual({ incomeCents: 100000, expenseCents: 35000, netCashFlowCents: 65000, assetCents: 150000, liabilityCents: 40000, netWorthCents: 110000, liquidCents: 150000 });
   });
 
+  it("incluye una tarjeta PFAE como pasivo del consolidado empresarial sin cambiar su etiqueta", () => {
+    const { start, end } = monthBounds(new Date("2026-08-15T12:00:00Z"));
+    const statement = calculateMonthlyStatement([], [], [
+      { balanceCents: 66_7388, status: "active" as const, scope: "pfae" as const },
+    ], start, end, "business");
+
+    expect(statement).toMatchObject({ liabilityCents: 66_7388, netWorthCents: -66_7388 });
+  });
+
   it("consolida sólo la moneda de reporte confirmada y deja visibles las partidas sin conversión", () => {
     const { start, end } = monthBounds(new Date("2026-08-15T12:00:00Z"));
     const summary = summarizeCashFlowInReportCurrency([
