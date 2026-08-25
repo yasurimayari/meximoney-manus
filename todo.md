@@ -149,7 +149,7 @@
 - [x] Activar el resumen diario de Telegram a las 08:00 de Ciudad de México con el contenido numérico expresamente autorizado.
 - [x] Actualizar el texto visible de Telegram para describir con precisión las fechas, importes y saldos autorizados.
 - [x] Verificar la preferencia activa y documentar el alcance de privacidad del resumen diario de Telegram.
-- [ ] Corregir los registros DNS del dominio remitente `mexi.richeon.app` en Resend, que actualmente muestra estado Failed, y volver a verificarlo antes de habilitar recuperación por correo.
+- [ ] Completar la propagación y verificación del dominio remitente `mexi.richeon.app` en Resend, actualmente Pending tras corregir los DNS, antes de habilitar recuperación por correo.
 - [x] Auditar el modelo actual de contactos, cuentas por pagar, deudas y movimientos para reutilizar relaciones existentes sin duplicar saldos ni movimientos.
 - [x] Definir y documentar el flujo de préstamo recibido de un contacto, incluyendo saldo inicial, pagos parciales, plazos manuales y vinculación obligatoria con el contacto.
 - [x] Permitir iniciar un pago parcial de una deuda de contacto desde una cuenta de origen, creando un movimiento financiero trazable y reduciendo solamente el saldo de la obligación correspondiente.
