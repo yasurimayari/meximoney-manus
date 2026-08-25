@@ -37,7 +37,11 @@ Las **tarjetas de crédito** se registran como pasivos manuales independientes, 
 
 Las tarjetas activas aparecen como pasivos en Patrimonio y se incluyen en los cierres mensuales guardados. Meximoney no consulta bancos, no descarga estados de cuenta ni ejecuta pagos.
 
-Cada tarjeta conserva un ámbito **Personal**, **PFAE o empresarial** o **Mixto**. El saldo inicial puede exceder el límite de crédito: el exceso se muestra como **sobregiro registrado** y sigue formando parte del pasivo real, sin alterar movimientos históricos. Los gastos posteriores también se conservan aunque aumenten el sobregiro, para evitar ocultar obligaciones efectivas.
+Cada tarjeta conserva un ámbito **Personal**, **PFAE**, **Empresarial** o **Mixto**. El saldo inicial puede exceder el límite de crédito: el exceso se muestra como **sobregiro registrado** y sigue formando parte del pasivo real, sin alterar movimientos históricos. Los gastos posteriores también se conservan aunque aumenten el sobregiro, para evitar ocultar obligaciones efectivas. En los cierres, una tarjeta PFAE conserva su etiqueta y se integra en el consolidado empresarial; en Patrimonio se muestra su ámbito junto al pasivo.
+
+Una tarjeta **PFAE** puede permanecer sin entidad asignada cuando sirve a varias entidades, como YMC y V&V. En ese caso se incluye en el consolidado empresarial y se excluye deliberadamente de los filtros de una entidad única; cada gasto se atribuye a YMC o V&V al registrarlo. Esto evita asignar el pasivo completo a una sola entidad de manera inexacta.
+
+Los saldos sobregirados se tratan como pasivos reales, no como errores de captura. Al actualizar manualmente una tarjeta, Meximoney conserva el importe aunque supere el límite y muestra el excedente por separado. Es importante conservar las notas y los movimientos asociados, porque el saldo no sustituye el historial de gastos ni pagos.
 
 Los ingresos y gastos manuales se editan desde Registros. Los traspasos entre cuentas se editan como una pareja atómica, de modo que salida y entrada conservan importe, fecha y moneda coherentes. Un pago de tarjeta se dirige a Tarjetas, y una aportación enlazada a una inversión se revisa en Ahorro e inversiones; esta separación evita desajustar el saldo de la tarjeta o la valuación de una posición al modificar sólo una parte.
 

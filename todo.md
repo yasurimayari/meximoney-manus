@@ -117,7 +117,12 @@
 
 - [x] Corregir la edición de Contactos para que cada formulario cargue y guarde exclusivamente el contacto seleccionado, sin sobrescribir otro registro.
 - [x] Añadir un acceso explícito desde Registros para crear y gestionar Tarjetas de Crédito sin tratarlas como cuentas bancarias o activos líquidos.
-- [ ] Separar el ámbito de cada Tarjeta de Crédito en opciones explícitas Personal, PFAE, Empresarial o Mixto y conservarlo en sus reportes.
+- [x] Separar el ámbito de cada Tarjeta de Crédito en opciones explícitas Personal, PFAE, Empresarial o Mixto y conservarlo en sus reportes.
 - [x] Permitir registrar y conservar saldos iniciales sobregirados de una tarjeta, mostrando el excedente sobre el límite como alerta en lugar de bloquearlo.
 - [x] Habilitar edición segura de traspasos enlazados y aclarar en la interfaz qué movimientos especiales se editan desde su propio módulo.
-- [ ] Validar que el ámbito explícito elegido en Tarjetas se refleje en Patrimonio, cierres mensuales y filtros aplicables.
+- [x] Validar que el ámbito explícito elegido en Tarjetas se refleje en Patrimonio, cierres mensuales y filtros aplicables.
+- [x] Verificar en sesión autenticada que una tarjeta PFAE o Empresarial se muestre correctamente en Patrimonio, sin guardar cambios innecesarios.
+- [x] Verificar en sesión autenticada los filtros de moneda, entidad y proyecto en Estados con HSBC PFAE, documentando la evidencia de cada uno.
+- [x] Revalidar HSBC Air tras el cambio de ámbito, confirmando que límite, corte, pago, notas y movimientos se preservaron; el saldo sobregirado fue una actualización intencional de la usuaria.
+- [x] Documentar la confirmación de la usuaria de que HSBC Air y Klar tienen saldos sobregirados reales e intencionales.
+- [x] Verificar y documentar la regla de PFAE sin entidad específica: entra al consolidado empresarial y se excluye de filtros de una entidad única.

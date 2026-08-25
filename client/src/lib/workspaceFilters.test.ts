@@ -30,6 +30,20 @@ describe("filterWorkspaceSnapshot", () => {
     expect(filtered.documents.map((item: any) => item.id)).toEqual([1]);
   });
 
+  it("conserva una tarjeta PFAE sin entidad ni proyecto bajo moneda y la excluye de filtros específicos", () => {
+    const snapshot = {
+      transactions: [], accounts: [], debts: [], investments: [], receivables: [], budgets: [], goals: [], documents: [], calendarEvents: [], statements: [],
+      creditCards: [
+        { id: 1, scope: "pfae", entityId: null, projectId: null, currency: "MXN" },
+        { id: 2, scope: "personal", entityId: 10, projectId: 20, currency: "MXN" },
+      ],
+    };
+
+    expect(filterWorkspaceSnapshot(snapshot, { entityId: "", projectId: "", currency: "MXN", reviewStatus: "" }).creditCards.map((item: any) => item.id)).toEqual([1, 2]);
+    expect(filterWorkspaceSnapshot(snapshot, { entityId: "10", projectId: "", currency: "MXN", reviewStatus: "" }).creditCards.map((item: any) => item.id)).toEqual([2]);
+    expect(filterWorkspaceSnapshot(snapshot, { entityId: "", projectId: "20", currency: "MXN", reviewStatus: "" }).creditCards.map((item: any) => item.id)).toEqual([2]);
+  });
+
   it("serializa en CSV únicamente los movimientos presentes en el conjunto filtrado", () => {
     const csv = buildTransactionsCsv({ categories: [], accounts: [], entities: [], projects: [], transactions: [{ id: 1, occurredAt: new Date("2026-08-01"), type: "income", scope: "business", amountCents: 1200, currency: "MXN", reportCurrency: "MXN", reportAmountCents: 1200, exchangeRateMicros: null, incomeNature: "business_revenue", categoryId: null, accountId: null, entityId: null, projectId: null, status: "confirmed", reviewStatus: "approved", notes: "Incluido" }] });
     expect(csv).toContain("Incluido");
