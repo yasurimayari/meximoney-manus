@@ -154,4 +154,4 @@
 - [x] Definir y documentar el flujo de préstamo recibido de un contacto, incluyendo saldo inicial, pagos parciales, plazos manuales y vinculación obligatoria con el contacto.
 - [x] Permitir iniciar un pago parcial de una deuda de contacto desde una cuenta de origen, creando un movimiento financiero trazable y reduciendo solamente el saldo de la obligación correspondiente.
 - [x] Añadir en Contactos un historial de préstamos y pagos, con importes, fechas, cuenta de origen, saldo restante y enlaces al movimiento relacionado.
-- [ ] Validar con pruebas Vitest y QA visual que los pagos parciales no dupliquen gastos ni alteren tarjetas, movimientos históricos o saldos fuera de la deuda seleccionada.
+- [x] Validar con pruebas Vitest y QA visual que los pagos parciales no dupliquen gastos ni alteren tarjetas, movimientos históricos o saldos fuera de la deuda seleccionada.
