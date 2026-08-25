@@ -21,7 +21,7 @@ function notificationDayLabel(occurredAt: Date | string) {
 export default function Notifications() {
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
-  const { data, isLoading } = trpc.finance.notifications.get.useQuery();
+  const { data, isLoading } = trpc.finance.notifications.get.useQuery(undefined, { refetchOnMount: "always" });
   const [preferences, setPreferences] = useState({ inAppEnabled: true, calendarEnabled: true, documentsEnabled: true, debtsEnabled: true, reviewsEnabled: true, budgetEnabled: true, taxReserveEnabled: true });
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [category, setCategory] = useState("all");

@@ -19,3 +19,9 @@ Los avisos se generan al abrir la bandeja; no crean movimientos ni cambian saldo
 ## Validación técnica
 
 `pnpm check` y `pnpm test` finalizaron correctamente: 25 archivos de prueba y 64 pruebas. La nueva suite cubre ajustes de fecha al último día del mes, avisos de corte/pago/sobregiro y exclusión de tarjetas pausadas. Falta comprobar la ruta publicada antes de marcar esta fase como validada.
+
+## Verificación de datos existentes
+
+Una consulta no destructiva confirmó que las tarjetas activas mantienen sus saldos reales. HSBC Air y Klar permanecen sobregiradas; no se modificaron sus límites, saldos, ámbitos ni movimientos. La consulta posterior a la apertura de la bandeja confirmó que se almacenaron avisos internos de sobregiro y pago próximo para ambas tarjetas, además de un aviso de pago próximo para Plata Card. No se creó ningún movimiento ni se envió ningún mensaje externo.
+
+La pantalla de Notificaciones se configuró para actualizar su consulta cada vez que se abre, evitando que una respuesta previa de la misma sesión oculte avisos recién generados. La validación de tipos y las 64 pruebas regresaron correctamente; falta comprobar el resultado visual con esta actualización publicada.
