@@ -225,4 +225,4 @@
 - [x] Auditar y mapear pendientes, revisiones, vencimientos y cierres existentes que alimentarán el control mensual transversal.
 - [x] Diseñar una rutina mensual transversal con checklist manual, estado por periodo y enlaces de solo lectura a las fuentes existentes.
 - [x] Implementar una vista de cierre y control mensual que concentre pendientes de movimientos, calendario, tarjetas, deudas, PFAE y patrimonio sin calcular ni modificar datos automáticamente.
-- [ ] Validar y publicar la Fase D con pruebas y QA sin crear, cerrar o alterar registros financieros reales.
+- [x] Validar y publicar la Fase D con pruebas y QA sin crear, cerrar o alterar registros financieros reales.
