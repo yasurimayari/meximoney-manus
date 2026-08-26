@@ -185,7 +185,7 @@
 - [x] Implementar una página de cambio de contraseña dentro de sesión, con verificación de contraseña actual, nueva contraseña confirmada e invalidación de solicitudes de recuperación anteriores.
 - [x] Registrar de forma privada el cambio autenticado sin exponer secretos y validar errores, aislamiento y regresión de acceso.
 - [x] Validar y publicar la nueva ruta protegida sin modificar la contraseña existente durante la QA.
-- [ ] Retomar el siguiente bloque priorizado del plan de Meximoney tras cerrar el cambio de contraseña autenticado.
+- [x] Retomar el siguiente bloque priorizado del plan de Meximoney tras cerrar el cambio de contraseña autenticado.
 - [x] Añadir un filtro temporal privado de 30, 90 y 180 días al historial de seguridad, sin ampliar sus datos almacenados ni alterar eventos existentes.
 - [x] Preparar una exportación privada y no sensible de la actividad de seguridad visible para la cuenta autenticada.
-- [ ] Validar y publicar los filtros y la exportación de actividad de seguridad, conservando aislamiento por usuaria y sin generar eventos de prueba.
+- [x] Validar y publicar los filtros y la exportación de actividad de seguridad, conservando aislamiento por usuaria y sin generar eventos de prueba.
