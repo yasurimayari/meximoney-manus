@@ -5,6 +5,7 @@ describe("buildFiscalInformativeCsv", () => {
   it("incluye datos manuales del periodo y omite URL de evidencia y correos de contacto", () => {
     const csv = buildFiscalInformativeCsv({
       period: "2026-08",
+      scopeLabel: "YMC · Consultoría",
       summary: { invoiced: 116000, reconciledCollections: 100000, pendingCollectionLinks: 16000, registeredBase: 100000, registeredVat: 16000, pendingReview: 1, missingEvidence: 0 },
       snapshot: {
         profile: { currency: "MXN" }, entities: [{ id: 1, shortCode: "YMC" }], projects: [{ id: 2, name: "Consultoría" }],
@@ -19,6 +20,7 @@ describe("buildFiscalInformativeCsv", () => {
     expect(csv).toContain("Factura agosto");
     expect(csv).toContain("FOLIO-MANUAL");
     expect(csv).toContain("Confirmar criterio manual");
+    expect(csv).toContain("YMC · Consultoría");
     expect(csv).not.toContain("cliente@example.com");
     expect(csv).not.toContain("https://privado.example/factura");
   });

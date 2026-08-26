@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { exportFiscalInformativeCsv } from "@/lib/fiscalExport";
 import { formatDate, formatMoney, fromCents, toCents } from "@/lib/finance";
 import { buildFiscalMonthlyComparison } from "../../../shared/fiscalReview";
+import { filterFiscalRecords, fiscalScopeLabel } from "../../../shared/fiscalScope";
 import { getFiscalCollectionStatus } from "@/lib/receivableFiscalSettlement";
 import { trpc } from "@/lib/trpc";
 import { AlertTriangle, CheckCircle2, ClipboardCheck, Download, FileText, Pencil, Plus, ReceiptText, RotateCcw, Trash2 } from "lucide-react";
@@ -30,11 +31,19 @@ export default function Fiscal() {
   const { data, isLoading } = trpc.finance.workspace.get.useQuery();
   const utils = trpc.useUtils();
   const [period, setPeriod] = useState(currentPeriod);
+  const [entityFilter, setEntityFilter] = useState("");
+  const [projectFilter, setProjectFilter] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const remove = trpc.finance.workspace.fiscalRecords.remove.useMutation({ onSuccess: async () => { await utils.finance.workspace.get.invalidate(); toast.success("Renglón fiscal eliminado"); }, onError: error => toast.error(error.message) });
 
-  const records = useMemo(() => (data?.fiscalRecords ?? []).filter((item: any) => periodKey(item.periodStart) === period), [data?.fiscalRecords, period]);
+  const selectedEntityId = entityFilter ? Number(entityFilter) : undefined;
+  const selectedProjectId = projectFilter ? Number(projectFilter) : undefined;
+  const availableFilterProjects = useMemo(() => (data?.projects ?? []).filter((project: any) => !selectedEntityId || project.entityId === selectedEntityId), [data?.projects, selectedEntityId]);
+  useEffect(() => { if (selectedProjectId && !availableFilterProjects.some((project: any) => project.id === selectedProjectId)) setProjectFilter(""); }, [availableFilterProjects, selectedProjectId]);
+  const scopedFiscalRecords = useMemo(() => filterFiscalRecords(data?.fiscalRecords ?? [], { entityId: selectedEntityId, projectId: selectedProjectId }), [data?.fiscalRecords, selectedEntityId, selectedProjectId]);
+  const scopeLabel = useMemo(() => fiscalScopeLabel({ entityId: selectedEntityId, projectId: selectedProjectId }, data?.entities ?? [], data?.projects ?? []), [data?.entities, data?.projects, selectedEntityId, selectedProjectId]);
+  const records = useMemo(() => scopedFiscalRecords.filter((item: any) => periodKey(item.periodStart) === period), [scopedFiscalRecords, period]);
   const summary = useMemo(() => {
     const active = records.filter((item: any) => item.reviewStatus !== "excluded");
     const receivableIds = new Set(active.map((item: any) => item.receivableId).filter(Boolean));
@@ -49,7 +58,7 @@ export default function Fiscal() {
       missingEvidence: active.filter((item: any) => !item.documentId).length,
     };
   }, [data?.receivablePayments, data?.receivables, records]);
-  const monthlyComparison = useMemo(() => buildFiscalMonthlyComparison(data?.fiscalRecords ?? [], period), [data?.fiscalRecords, period]);
+  const monthlyComparison = useMemo(() => buildFiscalMonthlyComparison(scopedFiscalRecords, period), [scopedFiscalRecords, period]);
 
   if (isLoading || !data) return <div className="page-loading">Preparando el libro PFAE…</div>;
   const currency = data.profile?.currency ?? "MXN";
@@ -63,7 +72,7 @@ export default function Fiscal() {
 
     <section className="content-card border-amber-300/60 bg-amber-50/60 text-sm text-amber-950"><div className="flex gap-3"><AlertTriangle className="mt-0.5 size-5 shrink-0" /><p><strong>Control manual obligatorio.</strong> Los importes de esta vista son los que registres y clasifiques. Los estados de CxC sólo resumen abonos existentes; no son un cálculo de IVA, ISR ni una declaración ante el SAT.</p></div></section>
 
-    <section className="content-card flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-base font-semibold">Periodo de revisión</h2><p className="text-sm text-muted-foreground">Los vínculos con CxC distinguen abonos conciliados con ingresos de los que todavía requieren revisión.</p></div><div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-end"><Button type="button" variant="outline" onClick={() => { exportFiscalInformativeCsv({ snapshot: data, records, period, summary }); toast.success("Exportación PFAE informativa preparada"); }}><Download className="size-4" /> Exportar CSV</Button><div className="w-full sm:w-48"><Label htmlFor="fiscal-period">Mes</Label><Input id="fiscal-period" type="month" value={period} onChange={event => setPeriod(event.target.value)} /></div></div></section>
+    <section className="content-card space-y-3"><div><h2 className="text-base font-semibold">Periodo y alcance de revisión</h2><p className="text-sm text-muted-foreground">Filtra renglones ya vinculados a una entidad o proyecto. Los registros sin vínculo permanecen sólo en el consolidado y no se reclasifican.</p></div><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4"><div><Label htmlFor="fiscal-period">Mes</Label><Input id="fiscal-period" type="month" value={period} onChange={event => setPeriod(event.target.value)} /></div><div><Label htmlFor="fiscal-entity-filter">Entidad</Label><select id="fiscal-entity-filter" value={entityFilter} onChange={event => { setEntityFilter(event.target.value); setProjectFilter(""); }}><option value="">Todas las entidades</option>{data.entities.map((entity: any) => <option key={entity.id} value={entity.id}>{entity.shortCode || entity.name}</option>)}</select></div><div><Label htmlFor="fiscal-project-filter">Proyecto</Label><select id="fiscal-project-filter" value={projectFilter} onChange={event => setProjectFilter(event.target.value)}><option value="">Todos los proyectos</option>{availableFilterProjects.map((project: any) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></div><div className="flex items-end"><Button className="w-full" type="button" variant="outline" onClick={() => { exportFiscalInformativeCsv({ snapshot: data, records, period, summary, scopeLabel }); toast.success("Exportación PFAE informativa preparada"); }}><Download className="size-4" /> Exportar CSV</Button></div></div><p className="text-xs text-muted-foreground">Alcance actual: <strong>{scopeLabel}</strong></p></section>
 
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
       <Metric label="Facturado registrado" value={formatMoney(summary.invoiced, currency)} hint="Renglones de ingreso facturado" />

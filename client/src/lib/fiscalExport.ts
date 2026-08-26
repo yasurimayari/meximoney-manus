@@ -19,7 +19,7 @@ const typeLabels: Record<string, string> = {
 const reviewLabels: Record<string, string> = { draft: "Borrador", pending_review: "Pendiente de revisión", reviewed: "Revisado", excluded: "Excluido" };
 const deductibilityLabels: Record<string, string> = { pending: "Pendiente", deductible: "Deducible", non_deductible: "No deducible", review: "Por revisar" };
 
-export function buildFiscalInformativeCsv({ snapshot, records, period, summary }: { snapshot: any; records: any[]; period: string; summary: any }) {
+export function buildFiscalInformativeCsv({ snapshot, records, period, summary, scopeLabel = "Todas las entidades · Todos los proyectos" }: { snapshot: any; records: any[]; period: string; summary: any; scopeLabel?: string }) {
   const entities = new Map((snapshot.entities ?? []).map((item: any) => [item.id, item.shortCode || item.name]));
   const projects = new Map((snapshot.projects ?? []).map((item: any) => [item.id, item.name]));
   const contacts = new Map((snapshot.contacts ?? []).map((item: any) => [item.id, item.name]));
@@ -28,6 +28,7 @@ export function buildFiscalInformativeCsv({ snapshot, records, period, summary }
   const rows: unknown[][] = [
     ["Meximoney — Exportación PFAE informativa"],
     ["Periodo", period],
+    ["Alcance manual", scopeLabel],
     ["Aviso", "Datos manuales informativos. No calcula impuestos, no genera CFDI y no constituye una declaración ante el SAT."],
     [],
     ["Resumen", "Valor registrado", "Moneda de control"],
