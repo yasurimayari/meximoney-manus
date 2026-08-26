@@ -181,3 +181,8 @@
 - [x] Diseñar el historial privado y el estado técnico del canal de correo con controles de aislamiento y lenguaje no sensible.
 - [x] Implementar una vista de seguridad que muestre el estado del remitente, el canal de recuperación y el historial privado de solicitudes.
 - [x] Validar con pruebas y QA publicada que el historial no expone secretos, está aislado por usuaria y no cambia credenciales o solicitudes existentes.
+- [x] Auditar las rutas, credenciales y controles existentes para incorporar un cambio de contraseña exclusivamente autenticado.
+- [x] Implementar una página de cambio de contraseña dentro de sesión, con verificación de contraseña actual, nueva contraseña confirmada e invalidación de solicitudes de recuperación anteriores.
+- [ ] Registrar de forma privada el cambio autenticado sin exponer secretos y validar errores, aislamiento y regresión de acceso.
+- [ ] Validar y publicar la nueva ruta protegida sin modificar la contraseña existente durante la QA.
+- [ ] Retomar el siguiente bloque priorizado del plan de Meximoney tras cerrar el cambio de contraseña autenticado.

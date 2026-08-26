@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
+import { hashPassword } from "./credentials";
 
 const mocks = vi.hoisted(() => ({
   createSessionToken: vi.fn(),
   insertedUsers: [] as Record<string, unknown>[],
   insertedCredentials: [] as Record<string, unknown>[],
+  credential: null as Record<string, unknown> | null,
+  changedPasswordHashes: [] as string[],
+  deletedRecoveryTokensFor: [] as number[],
+  insertedSecurityEvents: [] as Record<string, unknown>[],
 }));
 
 vi.mock("./_core/sdk", () => ({
@@ -20,7 +25,7 @@ vi.mock("./db", () => ({
     select: () => ({
       from: (table: any) => ({
         where: () => ({
-          limit: async () => table[Symbol.for("drizzle:Name")] === "localCredentials" ? [] : [{ id: 44, openId: "local_test", name: "Ana", email: "ana@example.com", loginMethod: "email_password", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }],
+          limit: async () => table[Symbol.for("drizzle:Name")] === "localCredentials" ? (mocks.credential ? [mocks.credential] : []) : [{ id: 44, openId: "local_test", name: "Ana", email: "ana@example.com", loginMethod: "email_password", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }],
           orderBy: () => ({ limit: async () => [] }),
         }),
       }),
@@ -32,6 +37,11 @@ vi.mock("./db", () => ({
       },
     }),
     update: () => ({ set: () => ({ where: async () => undefined }) }),
+    transaction: async (callback: (tx: any) => Promise<void>) => callback({
+      update: (table: any) => ({ set: (value: Record<string, unknown>) => ({ where: async () => { if (table[Symbol.for("drizzle:Name")] === "localCredentials") mocks.changedPasswordHashes.push(String(value.passwordHash)); } }) }),
+      delete: (table: any) => ({ where: async () => { if (table[Symbol.for("drizzle:Name")] === "passwordResetTokens") mocks.deletedRecoveryTokensFor.push(44); } }),
+      insert: (table: any) => ({ values: async (value: Record<string, unknown>) => { if (table[Symbol.for("drizzle:Name")] === "passwordResetEvents") mocks.insertedSecurityEvents.push(value); } }),
+    }),
   }),
 }));
 
@@ -107,5 +117,38 @@ describe("auth.securityStatus", () => {
 
     expect(result).toMatchObject({ emailRecoveryEnabled: true, channelLabel: "Canal habilitado", senderLabel: "Remitente configurado", events: [] });
     expect(JSON.stringify(result)).not.toMatch(/ana@example\.com|token|hash/i);
+  });
+});
+
+describe("auth.changePassword", () => {
+  const authenticatedUser = { id: 44, openId: "local_test", name: "Ana", email: "ana@example.com", loginMethod: "email_password", role: "user" as const, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() };
+
+  it("exige la contraseña actual y no altera credenciales cuando no coincide", async () => {
+    const { ctx } = createContext();
+    ctx.user = authenticatedUser;
+    mocks.credential = { id: 7, userId: 44, passwordHash: await hashPassword("ContraseñaAnterior#2026") };
+    mocks.changedPasswordHashes.length = 0;
+
+    await expect(appRouter.createCaller(ctx).auth.changePassword({ currentPassword: "NoCoincide#2026", newPassword: "ContraseñaNueva#2026" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+
+    expect(mocks.changedPasswordHashes).toHaveLength(0);
+  });
+
+  it("actualiza únicamente la contraseña de la sesión, invalida recuperaciones y registra un evento mínimo", async () => {
+    const { ctx } = createContext();
+    ctx.user = authenticatedUser;
+    mocks.credential = { id: 7, userId: 44, passwordHash: await hashPassword("ContraseñaAnterior#2026") };
+    mocks.changedPasswordHashes.length = 0;
+    mocks.deletedRecoveryTokensFor.length = 0;
+    mocks.insertedSecurityEvents.length = 0;
+
+    const result = await appRouter.createCaller(ctx).auth.changePassword({ currentPassword: "ContraseñaAnterior#2026", newPassword: "ContraseñaNueva#2026" });
+
+    expect(result).toEqual({ success: true });
+    expect(mocks.changedPasswordHashes[0]).toBeTruthy();
+    expect(mocks.changedPasswordHashes[0]).not.toContain("ContraseñaNueva#2026");
+    expect(mocks.deletedRecoveryTokensFor).toEqual([44]);
+    expect(mocks.insertedSecurityEvents).toEqual([{ userId: 44, eventType: "password_changed", sourceLabel: "authenticated_session" }]);
+    expect(JSON.stringify(mocks.insertedSecurityEvents)).not.toMatch(/Contraseña|hash|token/i);
   });
 });

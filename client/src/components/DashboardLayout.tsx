@@ -25,7 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
 import { notificationBadgeLabel, unreadNotificationCount } from "@/lib/notificationBadge";
-import { ArrowLeftRight, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, ContactRound, CreditCard, EyeOff, FileDown, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck, ReceiptText } from "lucide-react";
+import { ArrowLeftRight, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, ContactRound, CreditCard, EyeOff, FileDown, KeyRound, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck, ReceiptText } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -183,7 +183,7 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location) ?? [{ path: "/calidad", label: "Perfil y privacidad" }, { path: "/notificaciones", label: "Notificaciones" }, { path: "/espacio", label: "Espacio" }].find(item => item.path === location);
+  const activeMenuItem = menuItems.find(item => item.path === location) ?? [{ path: "/calidad", label: "Perfil y privacidad" }, { path: "/seguridad/cambiar-contrasena", label: "Cambiar contraseña" }, { path: "/notificaciones", label: "Notificaciones" }, { path: "/espacio", label: "Espacio" }].find(item => item.path === location);
   const isMobile = useIsMobile();
   const { data: notificationData } = trpc.finance.notifications.get.useQuery(undefined, { enabled: Boolean(user) });
   const unreadNotifications = notificationData ? unreadNotificationCount(notificationData.notifications) : 0;
@@ -299,6 +299,10 @@ function DashboardLayoutContent({
                 <DropdownMenuItem onClick={() => setLocation("/calidad")} className="cursor-pointer">
                   <CircleCheckBig className="mr-2 h-4 w-4" />
                   <span>Calidad, perfil y privacidad</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation("/seguridad/cambiar-contrasena")} className="cursor-pointer">
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  <span>Cambiar contraseña</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setLocation("/notificaciones")} className="cursor-pointer">
                   <BellRing className="mr-2 h-4 w-4" />

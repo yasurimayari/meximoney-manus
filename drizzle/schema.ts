@@ -46,7 +46,7 @@ export const passwordResetTokens = mysqlTable("passwordResetTokens", {
 export const passwordResetEvents = mysqlTable("passwordResetEvents", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
-  eventType: mysqlEnum("eventType", ["requested", "email_sent", "email_failed", "password_reset"]).notNull(),
+  eventType: mysqlEnum("eventType", ["requested", "email_sent", "email_failed", "password_reset", "password_changed"]).notNull(),
   channel: mysqlEnum("channel", ["email"]).default("email").notNull(),
   sourceLabel: varchar("sourceLabel", { length: 32 }).default("web").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

@@ -22,6 +22,7 @@ import Patrimony from "./pages/Patrimony";
 import CreditCards from "./pages/CreditCards";
 import Fiscal from "./pages/Fiscal";
 import PasswordReset from "./pages/PasswordReset";
+import ChangePassword from "./pages/ChangePassword";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
@@ -29,6 +30,7 @@ function Router() {
   return (
     <Switch>
       <Route path={"/restablecer-contrasena"} component={PasswordReset} />
+      <Route path={"/seguridad/cambiar-contrasena"}><DashboardLayout><ChangePassword /></DashboardLayout></Route>
       <Route path={"/"}><DashboardLayout><Home /></DashboardLayout></Route>
       <Route path={"/movimientos"}><DashboardLayout><Records /></DashboardLayout></Route>
       <Route path={"/planificacion"}><DashboardLayout><Planning /></DashboardLayout></Route>

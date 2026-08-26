@@ -72,6 +72,10 @@ const credentialInput = z.object({
   email: z.string().trim().email().max(320).transform(value => value.toLowerCase()),
   password: z.string().min(12, "La contraseña debe tener al menos 12 caracteres.").max(128),
 });
+const authenticatedPasswordChangeInput = z.object({
+  currentPassword: z.string().min(1).max(128),
+  newPassword: z.string().min(12, "La nueva contraseña debe tener al menos 12 caracteres.").max(128),
+});
 
 async function setLocalSession(ctx: { req: any; res: any }, user: { openId: string; name: string | null }) {
   const token = await sdk.createSessionToken(user.openId, { name: user.name || "Usuario Meximoney" });
@@ -217,6 +221,30 @@ export const appRouter = router({
         await tx.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, token[0].id));
         await tx.delete(passwordResetTokens).where(and(eq(passwordResetTokens.userId, token[0].userId), isNull(passwordResetTokens.usedAt)));
         await tx.insert(passwordResetEvents).values({ userId: token[0].userId, eventType: "password_reset" });
+      });
+      return { success: true };
+    }),
+    changePassword: protectedProcedure.input(authenticatedPasswordChangeInput).mutation(async ({ ctx, input }) => {
+      if (input.currentPassword === input.newPassword) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "La nueva contraseña debe ser distinta de la actual." });
+      }
+      const db = await requireDb();
+      const credential = await db.select({ id: localCredentials.id, passwordHash: localCredentials.passwordHash })
+        .from(localCredentials)
+        .where(eq(localCredentials.userId, ctx.user.id))
+        .limit(1);
+      if (!credential[0]) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Esta cuenta no tiene una contraseña local que se pueda cambiar desde Meximoney." });
+      }
+      if (!(await verifyPassword(input.currentPassword, credential[0].passwordHash))) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "La contraseña actual no es correcta." });
+      }
+
+      const passwordHash = await hashPassword(input.newPassword);
+      await db.transaction(async tx => {
+        await tx.update(localCredentials).set({ passwordHash }).where(eq(localCredentials.userId, ctx.user.id));
+        await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, ctx.user.id));
+        await tx.insert(passwordResetEvents).values({ userId: ctx.user.id, eventType: "password_changed", sourceLabel: "authenticated_session" });
       });
       return { success: true };
     }),
