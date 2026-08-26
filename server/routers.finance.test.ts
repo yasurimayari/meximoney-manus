@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 
 const mocks = vi.hoisted(() => ({
+  askClaudeForMexi: vi.fn(),
   deleteOwnedRow: vi.fn(),
   getFinanceSnapshot: vi.fn(),
   requireDb: vi.fn(),
@@ -15,6 +16,10 @@ vi.mock("./db", () => ({
   getProfile: vi.fn(),
   requireDb: mocks.requireDb,
   resolveWorkspaceAccess: mocks.resolveWorkspaceAccess,
+}));
+
+vi.mock("./claude", () => ({
+  askClaudeForMexi: mocks.askClaudeForMexi,
 }));
 
 import { appRouter } from "./routers";
@@ -41,6 +46,8 @@ describe("finance.dashboard", () => {
   beforeEach(() => {
     mocks.deleteOwnedRow.mockReset();
     mocks.deleteOwnedRow.mockResolvedValue({ success: true });
+    mocks.askClaudeForMexi.mockReset();
+    mocks.askClaudeForMexi.mockResolvedValue("Análisis preparado por Claude.");
     mocks.getFinanceSnapshot.mockReset();
     mocks.requireDb.mockReset();
     mocks.resolveWorkspaceAccess.mockReset();
@@ -69,6 +76,21 @@ describe("finance.dashboard", () => {
     const caller = appRouter.createCaller(createContext(27));
 
     await expect(caller.finance.assistant.chat({ message: "Resume mi situación" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("envía a Claude sólo una síntesis del espacio autenticado y devuelve su análisis", async () => {
+    mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }) });
+    mocks.getFinanceSnapshot.mockResolvedValue({
+      profile: { currency: "MXN" }, accounts: [], categories: [], transactions: [], debts: [], goals: [], tasks: [], calendarEvents: [], statements: [], dashboard: {},
+    });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.assistant.chat({ message: "Resume mi situación" })).resolves.toMatchObject({ content: "Análisis preparado por Claude." });
+    expect(mocks.getFinanceSnapshot).toHaveBeenCalledWith(27);
+    expect(mocks.askClaudeForMexi).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: expect.stringContaining("PREGUNTA DE LA USUARIA:\nResume mi situación"),
+    }));
+    expect(mocks.askClaudeForMexi.mock.calls[0]?.[0]?.prompt).not.toContain("ANTHROPIC_API_KEY");
   });
 
   it("aplica el identificador autenticado al eliminar calendario, estados y documentos", async () => {
