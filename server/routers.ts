@@ -41,6 +41,7 @@ import {
   receivables,
   receivablePayments,
   recurringTemplates,
+  surplusAllocationPolicies,
   users,
   workspaceEntities,
 } from "../drizzle/schema";
@@ -1317,6 +1318,26 @@ export const appRouter = router({
         if (currentControl[0]) await db.update(monthlyReviewControls).set(input.checks).where(and(eq(monthlyReviewControls.id, currentControl[0].id), eq(monthlyReviewControls.userId, ownerId)));
         else await db.insert(monthlyReviewControls).values(controlPayload);
         return { success: true, monthlyReviewId };
+      }),
+    }),
+    surplusPolicy: router({
+      save: privateFinanceProcedure.input(z.object({
+        reserveBps: z.number().int().min(0).max(10000),
+        debtBps: z.number().int().min(0).max(10000),
+        savingsBps: z.number().int().min(0).max(10000),
+        investmentBps: z.number().int().min(0).max(10000),
+        notes: z.string().max(2000).nullable().optional(),
+      }).superRefine((value, context) => {
+        if (value.reserveBps + value.debtBps + value.savingsBps + value.investmentBps !== 10000) context.addIssue({ code: "custom", message: "Los porcentajes deben sumar 100%." });
+      })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const access = await resolveWorkspaceAccess(ctx.user.id);
+        if (access.role !== "owner" && !access.canReview) throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para guardar la política de excedentes." });
+        const payload = { reserveBps: input.reserveBps, debtBps: input.debtBps, savingsBps: input.savingsBps, investmentBps: input.investmentBps, notes: input.notes ?? null };
+        const existing = await db.select({ id: surplusAllocationPolicies.id }).from(surplusAllocationPolicies).where(eq(surplusAllocationPolicies.userId, access.ownerId)).limit(1);
+        if (existing[0]) await db.update(surplusAllocationPolicies).set(payload).where(eq(surplusAllocationPolicies.id, existing[0].id));
+        else await db.insert(surplusAllocationPolicies).values({ userId: access.ownerId, ...payload });
+        return { success: true };
       }),
     }),
     statements: router({

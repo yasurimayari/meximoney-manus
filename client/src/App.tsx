@@ -24,6 +24,7 @@ import Fiscal from "./pages/Fiscal";
 import PasswordReset from "./pages/PasswordReset";
 import ChangePassword from "./pages/ChangePassword";
 import MonthlyControl from "./pages/MonthlyControl";
+import Simulations from "./pages/Simulations";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
@@ -41,6 +42,7 @@ function Router() {
       <Route path={"/calendario"}><DashboardLayout><Calendar /></DashboardLayout></Route>
       <Route path={"/estados"}><DashboardLayout><Statements /></DashboardLayout></Route>
       <Route path={"/control-mensual"}><DashboardLayout><MonthlyControl /></DashboardLayout></Route>
+      <Route path={"/simulaciones"}><DashboardLayout><Simulations /></DashboardLayout></Route>
       <Route path={"/exportar"}><DashboardLayout><Reports /></DashboardLayout></Route>
       <Route path={"/espacio"}><DashboardLayout><Workspace /></DashboardLayout></Route>
       <Route path={"/revision"}><DashboardLayout><Review /></DashboardLayout></Route>

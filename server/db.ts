@@ -36,6 +36,7 @@ import {
   receivables,
   receivablePayments,
   recurringTemplates,
+  surplusAllocationPolicies,
   users,
   workspaceEntities,
 } from "../drizzle/schema";
@@ -162,7 +163,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, creditCardRows, goalRows, taskRows, reviewRows, monthlyControlRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, qualityAcknowledgementRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, creditCardRows, goalRows, taskRows, reviewRows, monthlyControlRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, qualityAcknowledgementRows, surplusPolicyRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
@@ -195,6 +196,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(investments).where(eq(investments.userId, ownerId)),
     db.select().from(investmentOperations).where(eq(investmentOperations.userId, ownerId)),
     db.select().from(qualityIssueAcknowledgements).where(eq(qualityIssueAcknowledgements.userId, ownerId)),
+    db.select().from(surplusAllocationPolicies).where(eq(surplusAllocationPolicies.userId, ownerId)).limit(1),
   ]);
 
   const { start, end } = monthBounds(referenceDate);
@@ -283,6 +285,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     payablePayments: payablePaymentRows,
     investments: investmentRows,
     investmentOperations: investmentOperationRows,
+    surplusAllocationPolicy: surplusPolicyRows[0] ?? null,
     decisions: decisionRows,
     dashboard: { periodStart: start, reportCurrency, cashFlow, netWorth, liquidity, essentialExpensesCents, qualityIssues },
   };
@@ -315,6 +318,7 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(financeTasks).where(eq(financeTasks.userId, userId));
     await tx.delete(monthlyReviewControls).where(eq(monthlyReviewControls.userId, userId));
     await tx.delete(monthlyReviews).where(eq(monthlyReviews.userId, userId));
+    await tx.delete(surplusAllocationPolicies).where(eq(surplusAllocationPolicies.userId, userId));
     await tx.delete(monthlyFinancialStatements).where(eq(monthlyFinancialStatements.userId, userId));
     await tx.delete(decisionRecords).where(eq(decisionRecords.userId, userId));
     await tx.delete(financialGoals).where(eq(financialGoals.userId, userId));

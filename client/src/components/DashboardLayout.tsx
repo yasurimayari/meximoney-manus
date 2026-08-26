@@ -25,7 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
 import { notificationBadgeLabel, unreadNotificationCount } from "@/lib/notificationBadge";
-import { ArrowLeftRight, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, ContactRound, CreditCard, EyeOff, FileDown, KeyRound, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck, ReceiptText } from "lucide-react";
+import { ArrowLeftRight, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, ContactRound, CreditCard, EyeOff, FileDown, KeyRound, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck, ReceiptText, Calculator } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -42,6 +42,7 @@ const primaryMenuItems = [
   { icon: PiggyBank, label: "Ahorro e inversiones", path: "/inversiones" },
   { icon: Landmark, label: "Patrimonio", path: "/patrimonio" },
   { icon: BarChart3, label: "Analítica", path: "/analitica" },
+  { icon: Calculator, label: "Simulaciones", path: "/simulaciones" },
   { icon: CalendarDays, label: "Calendario", path: "/calendario" },
   { icon: ReceiptText, label: "Libro PFAE", path: "/fiscal" },
   { icon: BookOpenCheck, label: "Estados", path: "/estados" },

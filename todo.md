@@ -226,3 +226,8 @@
 - [x] Diseñar una rutina mensual transversal con checklist manual, estado por periodo y enlaces de solo lectura a las fuentes existentes.
 - [x] Implementar una vista de cierre y control mensual que concentre pendientes de movimientos, calendario, tarjetas, deudas, PFAE y patrimonio sin calcular ni modificar datos automáticamente.
 - [x] Validar y publicar la Fase D con pruebas y QA sin crear, cerrar o alterar registros financieros reales.
+- [x] Auditar los datos disponibles de deudas, tarjetas, presupuesto, flujo y objetivos para delimitar simulaciones transparentes.
+- [x] Diseñar fórmulas, supuestos, sensibilidad y límites de los simuladores de deuda, flujo, presupuesto y asignación de excedentes.
+- [x] Implementar comparadores de avalancha/bola de nieve y pagos extra sin modificar deudas, tarjetas ni transacciones reales.
+- [x] Implementar escenarios manuales de flujo, presupuesto adaptativo y política de asignación de excedentes sin ejecutar operaciones.
+- [ ] Validar fórmulas, supuestos, privacidad y experiencia publicada de Fase D sin crear datos financieros de prueba.

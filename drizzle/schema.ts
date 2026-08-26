@@ -649,6 +649,18 @@ export const monthlyReviewControls = mysqlTable("monthlyReviewControls", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const surplusAllocationPolicies = mysqlTable("surplusAllocationPolicies", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  reserveBps: int("reserveBps").notNull().default(10000),
+  debtBps: int("debtBps").notNull().default(0),
+  savingsBps: int("savingsBps").notNull().default(0),
+  investmentBps: int("investmentBps").notNull().default(0),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const decisionRecords = mysqlTable("decisionRecords", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
