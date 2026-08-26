@@ -197,3 +197,8 @@
 - [x] Diseñar una rutina mensual PFAE manual con pasos verificables, criterios de revisión y estado por periodo, sin automatizar decisiones fiscales.
 - [x] Implementar una exportación fiscal informativa por periodo con renglones manuales, vínculos y alertas de calidad, sin cálculos tributarios ni datos sensibles ajenos.
 - [x] Validar con pruebas y QA publicada la rutina y exportación PFAE sin crear renglones fiscales de prueba ni modificar registros existentes.
+- [x] Auditar las alertas internas, los campos de renglón PFAE y los estados mensuales para reutilizar datos sin programar tareas recurrentes ni duplicar información.
+- [x] Añadir un recordatorio interno derivado cuando la revisión PFAE del periodo anterior permanezca abierta, sin crear notificaciones externas ni cambiar estados automáticamente.
+- [x] Incorporar notas de decisión manuales por renglón PFAE, separadas de los cálculos y conservando el historial existente.
+- [x] Crear una comparación mensual de renglones revisados, pendientes, borrador y excluidos usando únicamente datos manuales existentes.
+- [ ] Validar con pruebas y QA publicada los recordatorios, notas y comparación, sin crear renglones, cerrar revisiones ni modificar datos financieros reales.

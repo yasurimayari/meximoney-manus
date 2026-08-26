@@ -11,13 +11,14 @@ describe("buildFiscalInformativeCsv", () => {
         contacts: [{ id: 3, name: "Cliente privado", email: "cliente@example.com" }], documents: [{ id: 4, name: "Factura agosto", url: "https://privado.example/factura" }],
         receivables: [{ id: 5, counterparty: "Cliente privado", amountCents: 116000, currency: "MXN" }], receivablePayments: [{ receivableId: 5, amountCents: 100000, linkedTransactionId: 6 }],
       },
-      records: [{ id: 1, createdAt: new Date("2026-08-01T12:00:00Z"), description: "Servicios agosto", recordType: "income_invoice", reviewStatus: "pending_review", deductibility: "pending", entityId: 1, projectId: 2, contactId: 3, receivableId: 5, documentId: 4, fiscalReference: "FOLIO-MANUAL", totalCents: 116000, taxableBaseCents: 100000, vatCents: 16000, currency: "MXN", invoiceIssuedAt: new Date("2026-08-01T12:00:00Z"), collectedAt: null, notes: "Revisar complemento" }],
+      records: [{ id: 1, createdAt: new Date("2026-08-01T12:00:00Z"), description: "Servicios agosto", recordType: "income_invoice", reviewStatus: "pending_review", deductibility: "pending", entityId: 1, projectId: 2, contactId: 3, receivableId: 5, documentId: 4, fiscalReference: "FOLIO-MANUAL", totalCents: 116000, taxableBaseCents: 100000, vatCents: 16000, currency: "MXN", invoiceIssuedAt: new Date("2026-08-01T12:00:00Z"), collectedAt: null, notes: "Revisar complemento", decisionNote: "Confirmar criterio manual" }],
     });
 
     expect(csv).toContain("Exportación PFAE informativa");
     expect(csv).toContain("Servicios agosto");
     expect(csv).toContain("Factura agosto");
     expect(csv).toContain("FOLIO-MANUAL");
+    expect(csv).toContain("Confirmar criterio manual");
     expect(csv).not.toContain("cliente@example.com");
     expect(csv).not.toContain("https://privado.example/factura");
   });

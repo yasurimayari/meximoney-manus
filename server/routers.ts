@@ -53,6 +53,7 @@ import { calculateMonthlyStatement, monthBounds } from "./finance";
 import { comparableInvestmentValueCents } from "./investmentData";
 import { applyInvestmentDelta, investmentOperationDelta, totalsFromInvestmentOperations } from "./investmentOperations";
 import { findPossibleDuplicates } from "./imports";
+import { getOpenFiscalReviewReminder } from "../shared/fiscalReview";
 import { creditCardAlertCandidates } from "./creditCardAlerts";
 import { extractQuickCaptureDraft } from "./quickCapture";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -739,10 +740,11 @@ export const appRouter = router({
           deductibility: z.enum(["pending", "deductible", "non_deductible", "review"]),
           reviewStatus: z.enum(["draft", "pending_review", "reviewed", "excluded"]),
           notes: z.string().max(3000).nullable().optional(),
+          decisionNote: z.string().max(3000).nullable().optional(),
         })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar el libro fiscal manual." });
           const db = await requireDb();
-          const { id, entityId, projectId, periodStart, invoiceIssuedAt, collectedAt, transactionId, receivableId, contactId, documentId, fiscalReference, notes, ...values } = input;
+          const { id, entityId, projectId, periodStart, invoiceIssuedAt, collectedAt, transactionId, receivableId, contactId, documentId, fiscalReference, notes, decisionNote, ...values } = input;
           const [entityRows, projectRows, transactionRows, receivableRows, contactRows, documentRows] = await Promise.all([
             entityId ? db.select().from(workspaceEntities).where(and(eq(workspaceEntities.id, entityId), eq(workspaceEntities.ownerId, ctx.workspaceAccess.ownerId))).limit(1) : Promise.resolve([]),
             projectId ? db.select().from(financialProjects).where(and(eq(financialProjects.id, projectId), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId))).limit(1) : Promise.resolve([]),
@@ -771,6 +773,7 @@ export const appRouter = router({
             documentId: documentId ?? null,
             fiscalReference: fiscalReference || null,
             notes: notes || null,
+            decisionNote: decisionNote || null,
             periodStart: new Date(periodStart),
             invoiceIssuedAt: asDate(invoiceIssuedAt),
             collectedAt: asDate(collectedAt),
@@ -1019,12 +1022,16 @@ export const appRouter = router({
         if (preferences.inAppEnabled && preferences.budgetEnabled) snapshot.budgets.filter(budget => budget.periodStart >= monthStart && budget.periodStart < nextMonthStart).forEach(budget => candidates.push({ type: "budget", title: "Revisión manual de presupuesto", message: "Revisa manualmente este presupuesto mensual frente a tus registros confirmados.", relatedEntityType: "budget", relatedEntityId: budget.id }));
         if (preferences.inAppEnabled && preferences.taxReserveEnabled && snapshot.profile?.futureTaxReserveCents > 0 && snapshot.profile.futureTaxDueAt && snapshot.profile.futureTaxDueAt >= now && snapshot.profile.futureTaxDueAt <= inSevenDays) candidates.push({ type: "tax_reserve", title: "Revisa tu reserva fiscal manual", message: "Hay una fecha de referencia cercana. Confirma tus datos antes de tomar cualquier decisión fiscal.", relatedEntityType: "financial_profile", relatedEntityId: snapshot.profile.id });
         if (preferences.inAppEnabled && preferences.reviewsEnabled && snapshot.workspaceAccess?.role !== "manager") snapshot.transactions.filter(transaction => transaction.reviewStatus === "pending_review").forEach(transaction => candidates.push({ type: "review", title: "Movimiento pendiente de revisión", message: "Hay un movimiento que espera confirmación humana.", relatedEntityType: "transaction", relatedEntityId: transaction.id }));
+        if (preferences.inAppEnabled && preferences.reviewsEnabled && snapshot.workspaceAccess?.role === "owner") {
+          const pfaeReminder = getOpenFiscalReviewReminder(snapshot.fiscalRecords ?? [], snapshot.fiscalPeriodReviews ?? [], now);
+          if (pfaeReminder) candidates.push({ type: "pfae_review", title: `Revisión PFAE pendiente: ${pfaeReminder.periodLabel}`, message: "El periodo anterior tiene renglones o una rutina abierta. Revísalo manualmente antes de cerrar tu expediente.", relatedEntityType: "fiscal_period_review", relatedEntityId: pfaeReminder.relatedEntityId });
+        }
         const existing = await db.select().from(financeNotifications).where(eq(financeNotifications.userId, ctx.user.id));
         const existingKeys = new Set(existing.map(notification => `${notification.type}:${notification.relatedEntityType}:${notification.relatedEntityId}`));
         const pending = candidates.filter(candidate => !existingKeys.has(`${candidate.type}:${candidate.relatedEntityType}:${candidate.relatedEntityId}`));
         if (pending.length) await db.insert(financeNotifications).values(pending.map(candidate => ({ userId: ctx.user.id, ...candidate })));
         const notifications = pending.length ? await db.select().from(financeNotifications).where(eq(financeNotifications.userId, ctx.user.id)) : existing;
-        const visibleTypes = new Set([preferences.calendarEnabled && "calendar", preferences.documentsEnabled && "document", preferences.debtsEnabled && "debt", preferences.debtsEnabled && "credit_card_cutoff", preferences.debtsEnabled && "credit_card_payment", preferences.debtsEnabled && "credit_card_overlimit", preferences.reviewsEnabled && "review", preferences.budgetEnabled && "budget", preferences.taxReserveEnabled && "tax_reserve"]);
+        const visibleTypes = new Set([preferences.calendarEnabled && "calendar", preferences.documentsEnabled && "document", preferences.debtsEnabled && "debt", preferences.debtsEnabled && "credit_card_cutoff", preferences.debtsEnabled && "credit_card_payment", preferences.debtsEnabled && "credit_card_overlimit", preferences.reviewsEnabled && "review", preferences.reviewsEnabled && "pfae_review", preferences.budgetEnabled && "budget", preferences.taxReserveEnabled && "tax_reserve"]);
         return { preferences, notifications: notifications.filter(notification => !notification.dismissedAt && visibleTypes.has(notification.type)).sort((left, right) => right.occurredAt.getTime() - left.occurredAt.getTime()) };
       }),
       savePreferences: privateFinanceProcedure.input(z.object({ inAppEnabled: z.boolean(), calendarEnabled: z.boolean(), documentsEnabled: z.boolean(), debtsEnabled: z.boolean(), reviewsEnabled: z.boolean(), budgetEnabled: z.boolean(), taxReserveEnabled: z.boolean() })).mutation(async ({ ctx, input }) => {

@@ -331,6 +331,7 @@ export const fiscalRecords = mysqlTable("fiscalRecords", {
   reviewedByUserId: int("reviewedByUserId"),
   reviewedAt: timestamp("reviewedAt"),
   notes: text("notes"),
+  decisionNote: text("decisionNote"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

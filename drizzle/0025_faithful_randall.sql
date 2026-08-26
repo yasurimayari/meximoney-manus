@@ -1,0 +1,1 @@
+ALTER TABLE `fiscalRecords` ADD `decisionNote` text;

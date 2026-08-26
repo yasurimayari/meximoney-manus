@@ -39,7 +39,7 @@ export function buildFiscalInformativeCsv({ snapshot, records, period, summary }
     ["Renglones pendientes de revisión", summary.pendingReview, ""],
     ["Renglones sin evidencia vinculada", summary.missingEvidence, ""],
     [],
-    ["Periodo", "Descripción", "Tipo", "Estado de revisión", "Deducibilidad manual", "Entidad", "Proyecto", "Contacto", "CxC", "Estado CxC", "Evidencia", "Referencia", "Total", "Base", "IVA", "Moneda", "Fecha de emisión", "Fecha de cobro", "Notas"],
+    ["Periodo", "Descripción", "Tipo", "Estado de revisión", "Deducibilidad manual", "Entidad", "Proyecto", "Contacto", "CxC", "Estado CxC", "Evidencia", "Referencia", "Total", "Base", "IVA", "Moneda", "Fecha de emisión", "Fecha de cobro", "Notas de revisión", "Nota de decisión manual"],
   ];
   records.slice().sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).forEach((record: any) => {
     const receivable: any = receivables.get(record.receivableId);
@@ -49,7 +49,7 @@ export function buildFiscalInformativeCsv({ snapshot, records, period, summary }
       deductibilityLabels[record.deductibility] || record.deductibility, entities.get(record.entityId) || "", projects.get(record.projectId) || "",
       contacts.get(record.contactId) || "", receivable?.counterparty || "", settlement?.status || "", documents.get(record.documentId) || "",
       record.fiscalReference || "", amount(record.totalCents), amount(record.taxableBaseCents), amount(record.vatCents), record.currency,
-      record.invoiceIssuedAt ? new Date(record.invoiceIssuedAt).toISOString().slice(0, 10) : "", record.collectedAt ? new Date(record.collectedAt).toISOString().slice(0, 10) : "", record.notes || "",
+      record.invoiceIssuedAt ? new Date(record.invoiceIssuedAt).toISOString().slice(0, 10) : "", record.collectedAt ? new Date(record.collectedAt).toISOString().slice(0, 10) : "", record.notes || "", record.decisionNote || "",
     ]);
   });
   return `\uFEFF${rows.map(row => row.map(escapeCsv).join(",")).join("\n")}`;
