@@ -201,4 +201,4 @@
 - [x] Añadir un recordatorio interno derivado cuando la revisión PFAE del periodo anterior permanezca abierta, sin crear notificaciones externas ni cambiar estados automáticamente.
 - [x] Incorporar notas de decisión manuales por renglón PFAE, separadas de los cálculos y conservando el historial existente.
 - [x] Crear una comparación mensual de renglones revisados, pendientes, borrador y excluidos usando únicamente datos manuales existentes.
-- [ ] Validar con pruebas y QA publicada los recordatorios, notas y comparación, sin crear renglones, cerrar revisiones ni modificar datos financieros reales.
+- [x] Validar con pruebas y QA publicada los recordatorios, notas y comparación, sin crear renglones, cerrar revisiones ni modificar datos financieros reales.
