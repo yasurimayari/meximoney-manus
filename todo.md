@@ -149,7 +149,7 @@
 - [x] Activar el resumen diario de Telegram a las 08:00 de Ciudad de México con el contenido numérico expresamente autorizado.
 - [x] Actualizar el texto visible de Telegram para describir con precisión las fechas, importes y saldos autorizados.
 - [x] Verificar la preferencia activa y documentar el alcance de privacidad del resumen diario de Telegram.
-- [ ] Completar la propagación y verificación del dominio remitente `mexi.richeon.app` en Resend, actualmente Pending tras corregir los DNS, antes de habilitar recuperación por correo.
+- [ ] Corregir el TXT DKIM ausente y completar la verificación del dominio remitente `mexi.richeon.app` en Resend, actualmente Failed, antes de habilitar recuperación por correo.
 - [x] Auditar el modelo actual de contactos, cuentas por pagar, deudas y movimientos para reutilizar relaciones existentes sin duplicar saldos ni movimientos.
 - [x] Definir y documentar el flujo de préstamo recibido de un contacto, incluyendo saldo inicial, pagos parciales, plazos manuales y vinculación obligatoria con el contacto.
 - [x] Permitir iniciar un pago parcial de una deuda de contacto desde una cuenta de origen, creando un movimiento financiero trazable y reduciendo solamente el saldo de la obligación correspondiente.
@@ -167,3 +167,7 @@
 - [x] Permitir editar todos los campos manuales de un objetivo sin alterar sus posiciones vinculadas ni saldos de inversión.
 - [x] Permitir archivar y restaurar objetivos, ocultándolos de vistas activas y de nuevas vinculaciones sin borrar su historial ni sus posiciones relacionadas.
 - [x] Validar con pruebas y QA publicada que editar o archivar un objetivo conserva inversiones, aportaciones, patrimonio y trazabilidad histórica.
+- [x] Auditar los vínculos actuales entre cuentas por cobrar, ingresos aprobados y registros fiscales para evitar duplicar cobros o importes facturados.
+- [x] Definir un estado manual visible de facturado, cobrado, cobrado parcialmente o pendiente de conciliación para cada registro PFAE vinculado a CxC.
+- [x] Mostrar en Libro PFAE la conciliación de una CxC vinculada, sus abonos reales y el saldo pendiente, sin crear ingresos ni cálculos tributarios automáticos.
+- [ ] Validar con pruebas y QA publicada que los importes de cobro sólo se informan desde vínculos existentes y no modifican movimientos, CxC, patrimonio ni declaraciones.
