@@ -191,6 +191,6 @@
 - [x] Validar y publicar los filtros y la exportación de actividad de seguridad, conservando aislamiento por usuaria y sin generar eventos de prueba.
 - [x] Auditar el alcance aprobado, la implementación, las pruebas y la QA publicada de todos los entregables de la Fase B.
 - [x] Corregir y validar cualquier pendiente verificable que se encuentre en la Fase B, sin alterar datos financieros históricos.
-- [ ] Auditar el Libro PFAE, CxC conciliada y los límites manuales de la Fase C, distinguiendo preparación fiscal de automatización prohibida.
-- [ ] Publicar y documentar el cierre de auditoría de las Fases B y C, incluyendo cualquier dependencia o límite residual.
+- [x] Auditar el Libro PFAE, CxC conciliada y los límites manuales de la Fase C, distinguiendo preparación fiscal de automatización prohibida.
+- [x] Publicar y documentar el cierre de auditoría de las Fases B y C, incluyendo cualquier dependencia o límite residual.
 - [x] Validar en servidor que entidad y proyecto vinculados a un renglón PFAE pertenecen al espacio privado y mantienen una relación coherente, con prueba de regresión.

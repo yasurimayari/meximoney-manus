@@ -18,3 +18,14 @@ La vista publicada de Libro PFAE muestra el control manual obligatorio, el selec
 El formulario «Nuevo renglón fiscal» se abrió sin guardar y expuso los campos manuales previstos: periodo, soporte, descripción, referencia, moneda, importe, base, IVA, área, fechas, deducibilidad, estado de revisión y vínculos a entidad/proyecto. El diálogo reafirma que no calcula impuestos, no genera CFDI y no presenta declaraciones. No se ingresó ni se persistió dato alguno durante la revisión.
 
 Durante la auditoría se detectó que el servidor verificaba los vínculos a movimiento, CxC, contacto y documento, pero no verificaba explícitamente la pertenencia y coherencia de entidad/proyecto. Se reforzó el procedimiento: ambos vínculos ahora deben pertenecer al espacio privado y, si se informan juntos, el proyecto debe pertenecer a la entidad elegida. Cuando se informa sólo un proyecto válido, su entidad queda alineada de forma determinista en el renglón fiscal. La corrección no modifica movimientos, CxC, CxP, saldos, tarjetas ni renglones históricos; sólo protege nuevos guardados o ediciones. Los tipos, la regresión automatizada y la compilación de producción finalizaron correctamente.
+
+La versión publicada posterior al refuerzo cargó correctamente el Libro PFAE en sesión autenticada, con el mismo estado vacío, métricas informativas y advertencia fiscal manual. No se abrió ningún guardado ni se añadieron renglones durante esta comprobación. La protección de coherencia se ejerce en el servidor y quedó cubierta por una prueba de regresión específica.
+
+## Dictamen de cierre
+
+| Fase | Dictamen | Alcance verificado | Pendiente funcional |
+|---|---|---|---|
+| Fase B — Captura y control de calidad | Cerrada | Importación CSV/Excel revisable, plantilla descargable, detección de duplicados, plantillas recurrentes manuales, contactos/CxC/CxP y captura rápida con revisión previa | Ninguno identificado |
+| Fase C — Libro PFAE manual | Cerrada dentro de su alcance aprobado | Renglones fiscales manuales, evidencia y revisión humana, vínculos privados, métricas informativas y conciliación CxC sin duplicar ingresos | Ninguno identificado |
+
+Los límites siguientes son deliberados, no pendientes: Meximoney no calcula IVA, ISR ni impuestos a pagar; no valida CFDI ante el SAT; no genera comprobantes; no presenta declaraciones; no infiere deducibilidad; no usa OCR; y no modifica movimientos, cuentas por cobrar, cuentas por pagar, saldos o patrimonio desde el Libro PFAE. Cualquier futura automatización fiscal requerirá un alcance nuevo, reglas verificadas por la usuaria y validación independiente antes de implementarse.
