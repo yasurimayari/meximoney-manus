@@ -723,10 +723,15 @@ export const appRouter = router({
         }),
       }),
       investments: router({
-        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(180), type: z.enum(["savings", "fixed_income", "fund_etf", "stock", "crypto", "land", "property", "business_equity", "retirement", "other"]), institution: z.string().trim().max(180).nullable().optional(), scope: scopeSchema, currency: z.string().length(3), costBasisCents: moneySchema, currentValueCents: moneySchema, reportCurrency: z.string().length(3).nullable().optional(), reportValueCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, valuationDate: optionalDate, includeInNetWorth: z.boolean(), status: z.enum(["active", "paused", "closed"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(180), type: z.enum(["savings", "fixed_income", "fund_etf", "stock", "crypto", "land", "property", "business_equity", "retirement", "other"]), institution: z.string().trim().max(180).nullable().optional(), scope: scopeSchema, currency: z.string().length(3), costBasisCents: moneySchema, currentValueCents: moneySchema, reportCurrency: z.string().length(3).nullable().optional(), reportValueCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, valuationDate: optionalDate, includeInNetWorth: z.boolean(), status: z.enum(["active", "paused", "closed"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar ahorro e inversiones." });
-          const db = await requireDb(); const { id, exchangeRateDate, valuationDate, ...values } = input;
-          const payload = { ...values, exchangeRateDate: asDate(exchangeRateDate), valuationDate: asDate(valuationDate) };
+          const db = await requireDb(); const { id, exchangeRateDate, valuationDate, goalId, ...values } = input;
+          if (goalId) {
+            const [goal] = await db.select().from(financialGoals).where(and(eq(financialGoals.id, goalId), eq(financialGoals.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!goal || goal.status !== "active") throw new TRPCError({ code: "BAD_REQUEST", message: "Selecciona un objetivo activo de tu espacio privado." });
+            if (goal.currency !== values.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "La posición y el objetivo vinculado deben usar la misma moneda." });
+          }
+          const payload = { ...values, goalId: goalId ?? null, exchangeRateDate: asDate(exchangeRateDate), valuationDate: asDate(valuationDate) };
           if (id) await db.update(investments).set(payload).where(and(eq(investments.id, id), eq(investments.userId, ctx.workspaceAccess.ownerId)));
           else await db.insert(investments).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
           return { success: true };

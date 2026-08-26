@@ -387,6 +387,7 @@ export const investments = mysqlTable("investments", {
   userId: int("userId").notNull(),
   entityId: int("entityId"),
   projectId: int("projectId"),
+  goalId: int("goalId"),
   name: varchar("name", { length: 180 }).notNull(),
   type: mysqlEnum("type", ["savings", "fixed_income", "fund_etf", "stock", "crypto", "land", "property", "business_equity", "retirement", "other"]).notNull().default("savings"),
   institution: varchar("institution", { length: 180 }),

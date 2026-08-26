@@ -322,4 +322,33 @@ describe("finance.dashboard", () => {
       collectedAt: null, deductibility: "pending", reviewStatus: "draft", notes: null,
     })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
+
+  it("vincula una posición con un objetivo propio de la misma moneda sin modificar su valor ni patrimonio", async () => {
+    const inserted = vi.fn();
+    const answers = [[{ accepted: true }], [{ id: 77, userId: 27, currency: "MXN", status: "active" }]];
+    const select = () => ({ from: () => ({ where: () => ({ limit: async () => answers.shift() ?? [] }) }) });
+    mocks.requireDb.mockResolvedValue({ select, insert: () => ({ values: inserted }) });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await caller.finance.workspace.investments.save({
+      goalId: 77, entityId: null, projectId: null, name: "Ahorro de emergencia", type: "savings", institution: "Plata", scope: "personal", currency: "MXN",
+      costBasisCents: 1_000_00, currentValueCents: 1_000_00, reportCurrency: null, reportValueCents: null, exchangeRateMicros: null,
+      exchangeRateDate: null, valuationDate: Date.parse("2026-08-25T12:00:00Z"), includeInNetWorth: true, status: "active", notes: null,
+    });
+
+    expect(inserted).toHaveBeenCalledWith(expect.objectContaining({ userId: 27, goalId: 77, currentValueCents: 1_000_00, includeInNetWorth: true }));
+  });
+
+  it("rechaza vincular una posición con un objetivo de moneda distinta", async () => {
+    const answers = [[{ accepted: true }], [{ id: 77, userId: 27, currency: "USD", status: "active" }]];
+    const select = () => ({ from: () => ({ where: () => ({ limit: async () => answers.shift() ?? [] }) }) });
+    mocks.requireDb.mockResolvedValue({ select });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.workspace.investments.save({
+      goalId: 77, entityId: null, projectId: null, name: "Ahorro MXN", type: "savings", institution: null, scope: "personal", currency: "MXN",
+      costBasisCents: 0, currentValueCents: 0, reportCurrency: null, reportValueCents: null, exchangeRateMicros: null,
+      exchangeRateDate: null, valuationDate: null, includeInNetWorth: true, status: "active", notes: null,
+    })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
 });

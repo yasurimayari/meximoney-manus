@@ -159,3 +159,7 @@
 - [x] Vincular los registros fiscales manuales con movimientos, contactos y cuentas por cobrar existentes para conservar trazabilidad de cliente, factura y cobro.
 - [x] Crear una vista predeclaración informativa por periodo que muestre importes registrados, pendientes de revisión y advertencias de calidad, sin calcular impuestos ni presentar declaraciones.
 - [ ] Validar con pruebas y QA publicada el aislamiento, la confirmación humana y la ausencia de automatización fiscal o modificaciones de movimientos históricos.
+- [x] Auditar el modelo de objetivos, inversiones y operaciones para reutilizar aportaciones y valores sin duplicar patrimonio ni movimientos.
+- [x] Definir la regla manual para vincular una posición de ahorro o inversión con uno o más objetivos, incluyendo el tratamiento de posiciones compartidas.
+- [x] Permitir relacionar posiciones de ahorro e inversión con objetivos desde ambas vistas y mostrar el valor asignado, aportaciones vinculadas y avance sin alterar la valuación de la posición.
+- [ ] Validar con pruebas y QA publicada que el vínculo de objetivos no cambia el saldo de inversiones, movimientos, patrimonio ni el avance de otros objetivos.
