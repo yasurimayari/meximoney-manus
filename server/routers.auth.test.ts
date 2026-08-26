@@ -92,7 +92,7 @@ describe("auth.requestPasswordReset", () => {
     expect(result).toMatchObject({
       success: true,
       deliveryReady: true,
-      message: "Si existe una cuenta con ese correo, recibirás instrucciones para restablecer tu contraseña.",
+      message: "Si existe una cuenta con ese correo, enviaremos instrucciones. Si no ves el mensaje en unos minutos, revisa spam o solicita otro enlace.",
     });
   });
 });

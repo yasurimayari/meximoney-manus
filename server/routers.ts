@@ -43,6 +43,7 @@ import {
 } from "../drizzle/schema";
 import { createPasswordResetToken, hashPassword, hashPasswordResetToken, verifyPassword } from "./credentials";
 import { sendPasswordResetEmail } from "./passwordResetEmail";
+import { passwordResetRequestResponse } from "./passwordResetResponse";
 import { deleteAllFinancialData, deleteOwnedRow, getFinanceSnapshot, getProfile, requireDb, resolveWorkspaceAccess } from "./db";
 import { storagePut } from "./storage";
 import { requiresPersonalProfileConsent } from "./profilePrivacy";
@@ -185,7 +186,7 @@ export const appRouter = router({
       const db = await requireDb();
       const record = await db.select({ userId: localCredentials.userId, email: localCredentials.email }).from(localCredentials).where(eq(localCredentials.email, input.email)).limit(1);
       const deliveryReady = process.env.PASSWORD_RESET_EMAIL_ENABLED === "true";
-      const genericResponse = { success: true, deliveryReady, message: deliveryReady ? "Si existe una cuenta con ese correo, recibirás instrucciones para restablecer tu contraseña." : "La recuperación por correo está preparada y se activará cuando se verifique el remitente de Meximoney." };
+      const genericResponse = passwordResetRequestResponse(deliveryReady);
       if (!deliveryReady) return genericResponse;
       if (!record[0]) return genericResponse;
       const rawToken = createPasswordResetToken();

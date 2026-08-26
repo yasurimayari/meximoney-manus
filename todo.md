@@ -104,7 +104,7 @@
 - [x] Mover Calidad de tus datos fuera del Panel y convertir sus alertas en acciones editables, eliminables o marcables como resueltas.
 - [x] Mostrar una opción visible de iniciar sesión para usuarios registrados desde la pantalla pública de Meximoney.
 - [x] Añadir la interfaz y tokens seguros de recuperación y restablecimiento de contraseña.
-- [ ] Verificar el dominio remitente de Resend y completar la entrega real de recuperación de contraseña, informando un fallo de envío sin revelar si existe una cuenta.
+- [x] Verificar el dominio remitente de Resend y completar la entrega real de recuperación de contraseña, informando un fallo de envío sin revelar si existe una cuenta.
 - [x] Explicar la diferencia entre la dirección publicada y la vista previa.
 - [x] Redirigir la vista previa al dominio publicado para impedir que una sesión de prueba parezca una cuenta nueva.
 - [x] Diagnosticar el aviso de configuración remota de Amplitude en la vista previa y confirmar si es externo a Meximoney.
@@ -149,7 +149,7 @@
 - [x] Activar el resumen diario de Telegram a las 08:00 de Ciudad de México con el contenido numérico expresamente autorizado.
 - [x] Actualizar el texto visible de Telegram para describir con precisión las fechas, importes y saldos autorizados.
 - [x] Verificar la preferencia activa y documentar el alcance de privacidad del resumen diario de Telegram.
-- [ ] Corregir el TXT DKIM ausente y completar la verificación del dominio remitente `mexi.richeon.app` en Resend, actualmente Failed, antes de habilitar recuperación por correo.
+- [x] Corregir el TXT DKIM ausente y completar la verificación del dominio remitente `mexi.richeon.app` en Resend, actualmente Failed, antes de habilitar recuperación por correo.
 - [x] Auditar el modelo actual de contactos, cuentas por pagar, deudas y movimientos para reutilizar relaciones existentes sin duplicar saldos ni movimientos.
 - [x] Definir y documentar el flujo de préstamo recibido de un contacto, incluyendo saldo inicial, pagos parciales, plazos manuales y vinculación obligatoria con el contacto.
 - [x] Permitir iniciar un pago parcial de una deuda de contacto desde una cuenta de origen, creando un movimiento financiero trazable y reduciendo solamente el saldo de la obligación correspondiente.
@@ -171,7 +171,9 @@
 - [x] Definir un estado manual visible de facturado, cobrado, cobrado parcialmente o pendiente de conciliación para cada registro PFAE vinculado a CxC.
 - [x] Mostrar en Libro PFAE la conciliación de una CxC vinculada, sus abonos reales y el saldo pendiente, sin crear ingresos ni cálculos tributarios automáticos.
 - [x] Validar con pruebas y QA publicada que los importes de cobro sólo se informan desde vínculos existentes y no modifican movimientos, CxC, patrimonio ni declaraciones.
-- [ ] Habilitar el envío real de recuperación de contraseña únicamente con el remitente de Resend verificado y conservar la respuesta genérica que evita enumerar cuentas.
+- [x] Habilitar el envío real de recuperación de contraseña únicamente con el remitente de Resend verificado y conservar la respuesta genérica que evita enumerar cuentas.
 - [ ] Validar una solicitud controlada de recuperación, la recepción del correo y el enlace de un solo uso sin exponer información de cuentas ni modificar contraseñas durante la prueba.
-- [ ] Publicar una instancia nueva que cargue `PASSWORD_RESET_EMAIL_ENABLED=true` y confirmar que la ruta publicada deja de mostrar el aviso de remitente pendiente antes de repetir el envío controlado.
-- [ ] Corregir la solicitud de recuperación que queda en espera en producción cuando el envío está habilitado, añadiendo un límite seguro de espera y un diagnóstico sin revelar cuentas.
+- [x] Publicar una instancia nueva que cargue `PASSWORD_RESET_EMAIL_ENABLED=true` y confirmar que la ruta publicada deja de mostrar el aviso de remitente pendiente antes de repetir el envío controlado.
+- [x] Corregir la solicitud de recuperación que queda en espera en producción cuando el envío está habilitado, añadiendo un límite seguro de espera y un diagnóstico sin revelar cuentas.
+- [ ] Implementar y validar un mensaje de fallo de envío no enumerativo para recuperación de contraseña cuando Resend rechace o agote el tiempo de espera, sin revelar si la cuenta existe.
+- [ ] Verificar en la UI publicada de `/restablecer-contrasena` la respuesta final tras enviar una solicitud: debe dejar de mostrar el aviso de remitente pendiente y reflejar el estado operativo actual del canal.
