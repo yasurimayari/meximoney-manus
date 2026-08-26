@@ -158,12 +158,12 @@
 - [x] Diseñar un libro PFAE manual con campos revisables de CFDI, facturado/cobrado, IVA, evidencia, deducibilidad y estado de revisión, sin reglas fiscales automáticas.
 - [x] Vincular los registros fiscales manuales con movimientos, contactos y cuentas por cobrar existentes para conservar trazabilidad de cliente, factura y cobro.
 - [x] Crear una vista predeclaración informativa por periodo que muestre importes registrados, pendientes de revisión y advertencias de calidad, sin calcular impuestos ni presentar declaraciones.
-- [ ] Validar con pruebas y QA publicada el aislamiento, la confirmación humana y la ausencia de automatización fiscal o modificaciones de movimientos históricos.
+- [x] Validar con pruebas y QA publicada el aislamiento, la confirmación humana y la ausencia de automatización fiscal o modificaciones de movimientos históricos.
 - [x] Auditar el modelo de objetivos, inversiones y operaciones para reutilizar aportaciones y valores sin duplicar patrimonio ni movimientos.
 - [x] Definir la regla manual para vincular una posición de ahorro o inversión con uno o más objetivos, incluyendo el tratamiento de posiciones compartidas.
 - [x] Permitir relacionar posiciones de ahorro e inversión con objetivos desde ambas vistas y mostrar el valor asignado, aportaciones vinculadas y avance sin alterar la valuación de la posición.
-- [ ] Validar con pruebas y QA publicada que el vínculo de objetivos no cambia el saldo de inversiones, movimientos, patrimonio ni el avance de otros objetivos.
+- [x] Validar con pruebas y QA publicada que el vínculo de objetivos no cambia el saldo de inversiones, movimientos, patrimonio ni el avance de otros objetivos.
 - [x] Auditar el flujo actual de Objetivos para sustituir la eliminación por edición y archivado no destructivo.
 - [x] Permitir editar todos los campos manuales de un objetivo sin alterar sus posiciones vinculadas ni saldos de inversión.
 - [x] Permitir archivar y restaurar objetivos, ocultándolos de vistas activas y de nuevas vinculaciones sin borrar su historial ni sus posiciones relacionadas.
-- [ ] Validar con pruebas y QA publicada que editar o archivar un objetivo conserva inversiones, aportaciones, patrimonio y trazabilidad histórica.
+- [x] Validar con pruebas y QA publicada que editar o archivar un objetivo conserva inversiones, aportaciones, patrimonio y trazabilidad histórica.
