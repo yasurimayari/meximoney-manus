@@ -141,6 +141,13 @@
       "when": 1787678403650,
       "tag": "0019_bouncy_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1787702557755,
+      "tag": "0020_aberrant_makkari",
+      "breakpoints": true
     }
   ]
 }

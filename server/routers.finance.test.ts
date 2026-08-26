@@ -286,4 +286,40 @@ describe("finance.dashboard", () => {
 
     await expect(caller.finance.debts.paymentSave({ debtId: 44, linkedTransactionId: null, totalPaymentCents: 500_00, principalCents: 600_00, currency: "MXN", paidAt: Date.parse("2026-08-25T12:00:00Z"), nextDueAt: null, notes: null })).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
+
+  it("guarda un renglón PFAE manual con vínculos del espacio privado, sin modificar los registros enlazados", async () => {
+    const inserted = vi.fn();
+    const answers = [
+      [{ accepted: true }],
+      [{ id: 101, userId: 27, currency: "MXN", type: "income" }],
+      [{ id: 202, userId: 27, currency: "MXN" }],
+      [{ id: 8, userId: 27, name: "Cliente" }],
+      [{ id: 303, userId: 27, name: "Factura agosto" }],
+    ];
+    const select = () => ({ from: () => ({ where: () => ({ limit: async () => answers.shift() ?? [] }) }) });
+    mocks.requireDb.mockResolvedValue({ select, insert: () => ({ values: inserted }) });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await caller.finance.workspace.fiscalRecords.save({
+      entityId: null, projectId: null, transactionId: 101, receivableId: 202, contactId: 8, documentId: 303,
+      periodStart: Date.parse("2026-08-01T12:00:00Z"), description: "Factura de servicios agosto", recordType: "income_invoice",
+      fiscalReference: "FOLIO-MANUAL", scope: "business", currency: "MXN", totalCents: 1_160_00, taxableBaseCents: 1_000_00,
+      vatCents: 160_00, invoiceIssuedAt: Date.parse("2026-08-01T12:00:00Z"), collectedAt: null, deductibility: "pending", reviewStatus: "pending_review", notes: "Revisar evidencia",
+    });
+
+    expect(inserted).toHaveBeenCalledWith(expect.objectContaining({ userId: 27, transactionId: 101, receivableId: 202, contactId: 8, documentId: 303, totalCents: 1_160_00, reviewStatus: "pending_review", reviewedByUserId: null }));
+  });
+
+  it("impide que una gestora administre el libro PFAE de la propietaria", async () => {
+    mocks.resolveWorkspaceAccess.mockResolvedValue({ ownerId: 73, role: "manager", canCreateDrafts: true, canReview: false });
+    mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }) });
+    const caller = appRouter.createCaller(createContext(91));
+
+    await expect(caller.finance.workspace.fiscalRecords.save({
+      entityId: null, projectId: null, transactionId: null, receivableId: null, contactId: null, documentId: null,
+      periodStart: Date.parse("2026-08-01T12:00:00Z"), description: "Borrador fiscal", recordType: "other", fiscalReference: null,
+      scope: "business", currency: "MXN", totalCents: 0, taxableBaseCents: 0, vatCents: 0, invoiceIssuedAt: null,
+      collectedAt: null, deductibility: "pending", reviewStatus: "draft", notes: null,
+    })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
 });

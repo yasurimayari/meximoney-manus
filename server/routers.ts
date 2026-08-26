@@ -19,6 +19,7 @@ import {
   financeNotifications,
   financeTasks,
   financialContacts,
+  fiscalRecords,
   financialGoals,
   financialProfiles,
   financialProjects,
@@ -654,6 +655,71 @@ export const appRouter = router({
         remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar cuentas por pagar." });
           const db = await requireDb(); await db.delete(payables).where(and(eq(payables.id, input.id), eq(payables.userId, ctx.workspaceAccess.ownerId))); return { success: true };
+        }),
+      }),
+      fiscalRecords: router({
+        save: workspaceFinanceProcedure.input(z.object({
+          id: z.number().int().positive().optional(),
+          entityId: z.number().int().positive().nullable().optional(),
+          projectId: z.number().int().positive().nullable().optional(),
+          transactionId: z.number().int().positive().nullable().optional(),
+          receivableId: z.number().int().positive().nullable().optional(),
+          contactId: z.number().int().positive().nullable().optional(),
+          documentId: z.number().int().positive().nullable().optional(),
+          periodStart: z.number().int().positive(),
+          description: z.string().trim().min(1).max(220),
+          recordType: z.enum(["income_invoice", "expense_receipt", "payment_complement", "other"]),
+          fiscalReference: z.string().trim().max(160).nullable().optional(),
+          scope: scopeSchema,
+          currency: z.string().trim().length(3),
+          totalCents: moneySchema,
+          taxableBaseCents: moneySchema,
+          vatCents: moneySchema,
+          invoiceIssuedAt: optionalDate,
+          collectedAt: optionalDate,
+          deductibility: z.enum(["pending", "deductible", "non_deductible", "review"]),
+          reviewStatus: z.enum(["draft", "pending_review", "reviewed", "excluded"]),
+          notes: z.string().max(3000).nullable().optional(),
+        })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar el libro fiscal manual." });
+          const db = await requireDb();
+          const { id, periodStart, invoiceIssuedAt, collectedAt, transactionId, receivableId, contactId, documentId, fiscalReference, notes, ...values } = input;
+          const [transactionRows, receivableRows, contactRows, documentRows] = await Promise.all([
+            transactionId ? db.select().from(financialTransactions).where(and(eq(financialTransactions.id, transactionId), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId))).limit(1) : Promise.resolve([]),
+            receivableId ? db.select().from(receivables).where(and(eq(receivables.id, receivableId), eq(receivables.userId, ctx.workspaceAccess.ownerId))).limit(1) : Promise.resolve([]),
+            contactId ? db.select().from(financialContacts).where(and(eq(financialContacts.id, contactId), eq(financialContacts.userId, ctx.workspaceAccess.ownerId))).limit(1) : Promise.resolve([]),
+            documentId ? db.select().from(financeDocuments).where(and(eq(financeDocuments.id, documentId), eq(financeDocuments.userId, ctx.workspaceAccess.ownerId))).limit(1) : Promise.resolve([]),
+          ]);
+          if (transactionId && !transactionRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El movimiento seleccionado no pertenece a tu espacio privado." });
+          if (receivableId && !receivableRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "La cuenta por cobrar seleccionada no pertenece a tu espacio privado." });
+          if (contactId && !contactRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El contacto seleccionado no pertenece a tu espacio privado." });
+          if (documentId && !documentRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El documento seleccionado no pertenece a tu espacio privado." });
+          if (transactionRows[0] && transactionRows[0].currency !== values.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "El movimiento vinculado debe usar la misma moneda que el renglón fiscal." });
+          if (receivableRows[0] && receivableRows[0].currency !== values.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "La cuenta por cobrar vinculada debe usar la misma moneda que el renglón fiscal." });
+          const reviewed = values.reviewStatus === "reviewed";
+          const payload = {
+            ...values,
+            transactionId: transactionId ?? null,
+            receivableId: receivableId ?? null,
+            contactId: contactId ?? null,
+            documentId: documentId ?? null,
+            fiscalReference: fiscalReference || null,
+            notes: notes || null,
+            periodStart: new Date(periodStart),
+            invoiceIssuedAt: asDate(invoiceIssuedAt),
+            collectedAt: asDate(collectedAt),
+            reviewedByUserId: reviewed ? ctx.user.id : null,
+            reviewedAt: reviewed ? new Date() : null,
+          };
+          if (id) await db.update(fiscalRecords).set(payload).where(and(eq(fiscalRecords.id, id), eq(fiscalRecords.userId, ctx.workspaceAccess.ownerId)));
+          else await db.insert(fiscalRecords).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+          return { success: true };
+        }),
+        remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar renglones fiscales." });
+          const db = await requireDb();
+          await db.delete(fiscalRecords).where(and(eq(fiscalRecords.id, input.id), eq(fiscalRecords.userId, ctx.workspaceAccess.ownerId)));
+          return { success: true };
         }),
       }),
       investments: router({

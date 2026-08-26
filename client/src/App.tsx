@@ -20,6 +20,7 @@ import Contacts from "./pages/Contacts";
 import Investments from "./pages/Investments";
 import Patrimony from "./pages/Patrimony";
 import CreditCards from "./pages/CreditCards";
+import Fiscal from "./pages/Fiscal";
 import PasswordReset from "./pages/PasswordReset";
 import DashboardLayout from "./components/DashboardLayout";
 
@@ -44,6 +45,7 @@ function Router() {
       <Route path={"/inversiones"}><DashboardLayout><Investments /></DashboardLayout></Route>
       <Route path={"/patrimonio"}><DashboardLayout><Patrimony /></DashboardLayout></Route>
       <Route path={"/tarjetas"}><DashboardLayout><CreditCards /></DashboardLayout></Route>
+      <Route path={"/fiscal"}><DashboardLayout><Fiscal /></DashboardLayout></Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

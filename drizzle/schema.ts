@@ -297,6 +297,35 @@ export const receivablePayments = mysqlTable("receivablePayments", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const fiscalRecords = mysqlTable("fiscalRecords", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  entityId: int("entityId"),
+  projectId: int("projectId"),
+  transactionId: int("transactionId"),
+  receivableId: int("receivableId"),
+  contactId: int("contactId"),
+  documentId: int("documentId"),
+  periodStart: timestamp("periodStart").notNull(),
+  description: varchar("description", { length: 220 }).notNull(),
+  recordType: mysqlEnum("recordType", ["income_invoice", "expense_receipt", "payment_complement", "other"]).notNull().default("other"),
+  fiscalReference: varchar("fiscalReference", { length: 160 }),
+  scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("business"),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  totalCents: int("totalCents").notNull().default(0),
+  taxableBaseCents: int("taxableBaseCents").notNull().default(0),
+  vatCents: int("vatCents").notNull().default(0),
+  invoiceIssuedAt: timestamp("invoiceIssuedAt"),
+  collectedAt: timestamp("collectedAt"),
+  deductibility: mysqlEnum("deductibility", ["pending", "deductible", "non_deductible", "review"]).notNull().default("pending"),
+  reviewStatus: mysqlEnum("reviewStatus", ["draft", "pending_review", "reviewed", "excluded"]).notNull().default("draft"),
+  reviewedByUserId: int("reviewedByUserId"),
+  reviewedAt: timestamp("reviewedAt"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const recurringTemplates = mysqlTable("recurringTemplates", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

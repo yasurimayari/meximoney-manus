@@ -1,14 +1,15 @@
 # Auditoría de Fases A y B — Meximoney
 
 **Fecha de auditoría:** 25 de agosto de 2026  
-**Versión técnica auditada:** `17ef5f1d`  
+**Versión técnica auditada originalmente:** `17ef5f1d`  
+**Actualización operativa:** 25 de agosto de 2026, tras los cierres de Fase B y el módulo de préstamos por contacto.
 **Método:** revisión del alcance aprobado, esquema y contratos, vistas disponibles, migraciones, pruebas automatizadas y disponibilidad del dominio publicado.
 
 ## Dictamen ejecutivo
 
 > **Fase A está terminada.** Su alcance aprobado está implementado, versionado y cubierto por validaciones técnicas y de interfaz.
 
-> **Fase B no debe declararse terminada todavía.** El flujo de importación con confirmación, detección de posibles duplicados, CxP/CxC y contactos está operativo. Sin embargo, falta verificar una gestión visible y completa de plantillas recurrentes creadas por la usuaria y falta la captura rápida por texto natural con confirmación explícita, que era parte del alcance aprobado.
+> **Fase B está terminada.** Los requisitos auditados originalmente pendientes —gestión visible de plantillas recurrentes y captura rápida por texto con confirmación— fueron implementados y validados después de esta auditoría inicial. El módulo posterior de préstamos por contacto amplía la trazabilidad de CxP sin reabrir el alcance de la Fase B.
 
 ## Fase A — Base de datos preparada para la realidad operativa
 
@@ -33,8 +34,8 @@ La clasificación PFAE de HSBC Air sin entidad específica, sus saldos sobregira
 | Plantilla de importación | Descarga de plantilla y límites de importación visibles | Completo |
 | Detección de posibles duplicados | Previsualización de duplicados; exclusión por defecto y aceptación manual explícita | Completo |
 | Contactos, CxC y CxP | Contactos ligados a trazabilidad financiera, cuentas por cobrar/pagar y abonos parciales | Completo |
-| Plantillas recurrentes creadas por la usuaria | Existe modelo y datos en el snapshot; no se pudo acreditar una gestión visible y completa de alta/edición/uso de plantillas en la interfaz actual | Pendiente de cierre |
-| Captura rápida por texto natural con confirmación | No se encontró un flujo que interprete texto natural y presente una confirmación antes de guardar un movimiento | Pendiente |
+| Plantillas recurrentes creadas por la usuaria | Alta, edición, pausa, eliminación y aplicación manual confirmada desde Registros | Completo |
+| Captura rápida por texto natural con confirmación | Propone un borrador estructurado privado que requiere revisión y confirmación antes de guardar | Completo |
 | Documentos fuente sin OCR | Se mantiene el enfoque de enlace o referencia manual, sin OCR ni automatismos | Completo dentro del alcance manual |
 
 ## Estado técnico y de seguridad
@@ -42,15 +43,15 @@ La clasificación PFAE de HSBC Air sin entidad específica, sus saldos sobregira
 | Control | Resultado |
 |---|---|
 | Compilación estática | `pnpm check` correcto |
-| Regresión automatizada | 26 archivos y 66 pruebas Vitest correctas |
-| Migraciones | Diario presente desde `0000` hasta `0018`; las ampliaciones de deuda, tarjetas, Telegram e idempotencia están versionadas |
+| Regresión automatizada | 27 archivos y 69 pruebas Vitest correctas en la última validación |
+| Migraciones | Diario presente desde `0000` hasta `0019`; incluye la relación opcional contacto-deuda para préstamos trazables |
 | Dominio publicado | `https://mexifinance-stkndi6z.manus.space/` respondió HTTP 200 durante la auditoría |
-| Telegram | Integración adicional ya validada; programación diaria activa a las 08:00 CDMX y envíos apagados hasta que la usuaria active el interruptor |
+| Telegram | Integración adicional validada; programación diaria activa a las 08:00 CDMX y preferencia de envío activada con el alcance de privacidad autorizado |
 | Recuperación de contraseña | Interfaz y tokens seguros implementados; envío real bloqueado hasta que Resend confirme el remitente |
 
 ## Conclusión y prioridad de cierre
 
-La **Fase A puede considerarse cerrada**. La **Fase B está sustancialmente avanzada, pero no cerrada** por dos requisitos explícitos pendientes: una interfaz completa para plantillas recurrentes configurables por la usuaria y la captura rápida de movimientos por texto natural con revisión y confirmación antes de persistir.
+La **Fase A y la Fase B pueden considerarse cerradas**. La siguiente evolución funcional corresponde a una **Fase C de preparación fiscal PFAE manual y revisable**: no automatiza reglas fiscales, no calcula impuestos ni presenta declaraciones; organiza información que la usuaria revisará y confirmará.
 
 La verificación pendiente de Resend es una dependencia externa independiente de las Fases A y B. No debe usarse como motivo para reabrir la Fase A ni para afirmar que existe recuperación real de contraseña; simplemente mantiene bloqueado ese canal hasta que el estado del remitente sea `Verified`.
 
@@ -58,4 +59,4 @@ La verificación pendiente de Resend es una dependencia externa independiente de
 
 El aviso `Amplitude Logger: Failed to fetch remote config` no aparece en el código cliente, el HTML ni los registros de navegador de Meximoney. La traza reportada procede del contenedor técnico de vista previa (`files.manuscdn.com/manus-space-dispatcher/spaceEditor`), no de la aplicación publicada. Por ello no afecta el registro de movimientos, la autenticación ni los cálculos de Meximoney y no existe una corrección que deba aplicarse al código de la aplicación.
 
-La tarea diaria de Telegram está registrada, pero la preferencia `telegramEnabled` permanece desactivada. Eso significa que a las 08:00 de Ciudad de México se ejecutará una comprobación que **no enviará** mensajes hasta que la usuaria active el interruptor visible en Notificaciones.
+Telegram está activado para las 08:00 de Ciudad de México. El resumen incluye sólo los títulos, fechas o días restantes, importes de pago o cuota y saldos autorizados; excluye números de cuenta, credenciales, movimientos completos e instrucciones de pago.

@@ -155,3 +155,7 @@
 - [x] Permitir iniciar un pago parcial de una deuda de contacto desde una cuenta de origen, creando un movimiento financiero trazable y reduciendo solamente el saldo de la obligación correspondiente.
 - [x] Añadir en Contactos un historial de préstamos y pagos, con importes, fechas, cuenta de origen, saldo restante y enlaces al movimiento relacionado.
 - [x] Validar con pruebas Vitest y QA visual que los pagos parciales no dupliquen gastos ni alteren tarjetas, movimientos históricos o saldos fuera de la deuda seleccionada.
+- [x] Diseñar un libro PFAE manual con campos revisables de CFDI, facturado/cobrado, IVA, evidencia, deducibilidad y estado de revisión, sin reglas fiscales automáticas.
+- [x] Vincular los registros fiscales manuales con movimientos, contactos y cuentas por cobrar existentes para conservar trazabilidad de cliente, factura y cobro.
+- [x] Crear una vista predeclaración informativa por periodo que muestre importes registrados, pendientes de revisión y advertencias de calidad, sin calcular impuestos ni presentar declaraciones.
+- [ ] Validar con pruebas y QA publicada el aislamiento, la confirmación humana y la ausencia de automatización fiscal o modificaciones de movimientos históricos.
