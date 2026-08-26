@@ -21,6 +21,7 @@ vi.mock("./db", () => ({
       from: (table: any) => ({
         where: () => ({
           limit: async () => table[Symbol.for("drizzle:Name")] === "localCredentials" ? [] : [{ id: 44, openId: "local_test", name: "Ana", email: "ana@example.com", loginMethod: "email_password", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }],
+          orderBy: () => ({ limit: async () => [] }),
         }),
       }),
     }),
@@ -94,5 +95,17 @@ describe("auth.requestPasswordReset", () => {
       deliveryReady: true,
       message: "Si existe una cuenta con ese correo, enviaremos instrucciones. Si no ves el mensaje en unos minutos, revisa spam o solicita otro enlace.",
     });
+  });
+});
+
+describe("auth.securityStatus", () => {
+  it("muestra el estado técnico y eventos propios sin exponer correos, tokens ni hashes", async () => {
+    const { ctx } = createContext();
+    ctx.user = { id: 44, openId: "local_test", name: "Ana", email: "ana@example.com", loginMethod: "email_password", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() };
+
+    const result = await appRouter.createCaller(ctx).auth.securityStatus();
+
+    expect(result).toMatchObject({ emailRecoveryEnabled: true, channelLabel: "Canal habilitado", senderLabel: "Remitente configurado", events: [] });
+    expect(JSON.stringify(result)).not.toMatch(/ana@example\.com|token|hash/i);
   });
 });

@@ -1,5 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
-import { and, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -30,6 +30,7 @@ import {
   monthlyFinancialStatements,
   notificationPreferences,
   localCredentials,
+  passwordResetEvents,
   passwordResetTokens,
   payablePayments,
   payables,
@@ -189,13 +190,21 @@ export const appRouter = router({
       const genericResponse = passwordResetRequestResponse(deliveryReady);
       if (!deliveryReady) return genericResponse;
       if (!record[0]) return genericResponse;
+      await db.insert(passwordResetEvents).values({ userId: record[0].userId, eventType: "requested" });
       const rawToken = createPasswordResetToken();
       const tokenHash = hashPasswordResetToken(rawToken);
       await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, record[0].userId));
       await db.insert(passwordResetTokens).values({ userId: record[0].userId, tokenHash, expiresAt: new Date(Date.now() + 30 * 60 * 1000) });
       const host = ctx.req.get("host");
       const baseUrl = host === "mexifinance-stkndi6z.manus.space" ? `https://${host}` : "https://mexifinance-stkndi6z.manus.space";
-      try { await sendPasswordResetEmail({ to: record[0].email, resetUrl: `${baseUrl}/restablecer-contrasena?token=${encodeURIComponent(rawToken)}` }); } catch (error) { await db.delete(passwordResetTokens).where(eq(passwordResetTokens.tokenHash, tokenHash)); console.error("[Password reset] Email delivery failed", error); }
+      try {
+        await sendPasswordResetEmail({ to: record[0].email, resetUrl: `${baseUrl}/restablecer-contrasena?token=${encodeURIComponent(rawToken)}` });
+        await db.insert(passwordResetEvents).values({ userId: record[0].userId, eventType: "email_sent" });
+      } catch (error) {
+        await db.delete(passwordResetTokens).where(eq(passwordResetTokens.tokenHash, tokenHash));
+        await db.insert(passwordResetEvents).values({ userId: record[0].userId, eventType: "email_failed" });
+        console.error("[Password reset] Email delivery failed", error);
+      }
       return genericResponse;
     }),
     resetPassword: publicProcedure.input(z.object({ token: z.string().min(30).max(200), password: z.string().min(12, "La contraseña debe tener al menos 12 caracteres.").max(128) })).mutation(async ({ input }) => {
@@ -207,8 +216,24 @@ export const appRouter = router({
         await tx.update(localCredentials).set({ passwordHash: await hashPassword(input.password) }).where(eq(localCredentials.userId, token[0].userId));
         await tx.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, token[0].id));
         await tx.delete(passwordResetTokens).where(and(eq(passwordResetTokens.userId, token[0].userId), isNull(passwordResetTokens.usedAt)));
+        await tx.insert(passwordResetEvents).values({ userId: token[0].userId, eventType: "password_reset" });
       });
       return { success: true };
+    }),
+    securityStatus: protectedProcedure.query(async ({ ctx }) => {
+      const db = await requireDb();
+      const events = await db.select({ eventType: passwordResetEvents.eventType, channel: passwordResetEvents.channel, createdAt: passwordResetEvents.createdAt })
+        .from(passwordResetEvents)
+        .where(eq(passwordResetEvents.userId, ctx.user.id))
+        .orderBy(desc(passwordResetEvents.createdAt))
+        .limit(8);
+      const emailRecoveryEnabled = process.env.PASSWORD_RESET_EMAIL_ENABLED === "true";
+      return {
+        emailRecoveryEnabled,
+        channelLabel: emailRecoveryEnabled ? "Canal habilitado" : "Canal no disponible",
+        senderLabel: emailRecoveryEnabled ? "Remitente configurado" : "Remitente pendiente",
+        events,
+      };
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);

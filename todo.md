@@ -177,3 +177,7 @@
 - [x] Corregir la solicitud de recuperación que queda en espera en producción cuando el envío está habilitado, añadiendo un límite seguro de espera y un diagnóstico sin revelar cuentas.
 - [x] Implementar y validar un mensaje de fallo de envío no enumerativo para recuperación de contraseña cuando Resend rechace o agote el tiempo de espera, sin revelar si la cuenta existe.
 - [x] Verificar en la UI publicada de `/restablecer-contrasena` la respuesta final tras enviar una solicitud: debe dejar de mostrar el aviso de remitente pendiente y reflejar el estado operativo actual del canal.
+- [x] Auditar los eventos actuales de recuperación para registrar únicamente fecha, resultado técnico y origen enmascarado, sin tokens, contraseñas ni direcciones completas.
+- [x] Diseñar el historial privado y el estado técnico del canal de correo con controles de aislamiento y lenguaje no sensible.
+- [x] Implementar una vista de seguridad que muestre el estado del remitente, el canal de recuperación y el historial privado de solicitudes.
+- [ ] Validar con pruebas y QA publicada que el historial no expone secretos, está aislado por usuaria y no cambia credenciales o solicitudes existentes.

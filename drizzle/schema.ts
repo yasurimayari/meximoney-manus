@@ -43,6 +43,15 @@ export const passwordResetTokens = mysqlTable("passwordResetTokens", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const passwordResetEvents = mysqlTable("passwordResetEvents", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  eventType: mysqlEnum("eventType", ["requested", "email_sent", "email_failed", "password_reset"]).notNull(),
+  channel: mysqlEnum("channel", ["email"]).default("email").notNull(),
+  sourceLabel: varchar("sourceLabel", { length: 32 }).default("web").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const financialProfiles = mysqlTable("financialProfiles", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
