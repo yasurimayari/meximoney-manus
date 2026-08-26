@@ -23,4 +23,11 @@ describe("sendPasswordResetEmail", () => {
       signal: expect.any(AbortSignal),
     }));
   });
+
+  it("propaga un rechazo del proveedor para que el flujo elimine el token y conserve una respuesta no enumerativa", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 503 }));
+
+    await expect(sendPasswordResetEmail({ to: "persona@example.com", resetUrl: "https://mexifinance-stkndi6z.manus.space/restablecer-contrasena?token=token-de-prueba" })).rejects.toThrow("(503)");
+  });
 });
