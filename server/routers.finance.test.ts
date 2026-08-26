@@ -341,6 +341,31 @@ describe("finance.dashboard", () => {
     })).rejects.toMatchObject({ code: "BAD_REQUEST", message: "El proyecto seleccionado debe pertenecer a la entidad elegida." });
   });
 
+  it("guarda una rutina PFAE revisada sólo después de confirmar sus tres pasos manuales", async () => {
+    const inserted = vi.fn();
+    const answers = [[{ accepted: true }], []];
+    const select = () => ({ from: () => ({ where: () => ({ limit: async () => answers.shift() ?? [] }) }) });
+    mocks.requireDb.mockResolvedValue({ select, insert: () => ({ values: inserted }) });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await caller.finance.workspace.fiscalPeriodReviews.save({
+      periodStart: Date.parse("2026-08-01T12:00:00Z"), recordsConfirmed: true, evidenceConfirmed: true, collectionsConfirmed: true,
+      notes: "Revisión manual completa", markReviewed: true,
+    });
+
+    expect(inserted).toHaveBeenCalledWith(expect.objectContaining({ userId: 27, status: "reviewed", recordsConfirmed: true, evidenceConfirmed: true, collectionsConfirmed: true, reviewedByUserId: 27 }));
+  });
+
+  it("impide cerrar una rutina PFAE sin confirmar los tres controles manuales", async () => {
+    mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }) });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.workspace.fiscalPeriodReviews.save({
+      periodStart: Date.parse("2026-08-01T12:00:00Z"), recordsConfirmed: true, evidenceConfirmed: false, collectionsConfirmed: true,
+      notes: null, markReviewed: true,
+    })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
   it("vincula una posición con un objetivo propio de la misma moneda sin modificar su valor ni patrimonio", async () => {
     const inserted = vi.fn();
     const answers = [[{ accepted: true }], [{ id: 77, userId: 27, currency: "MXN", status: "active" }]];

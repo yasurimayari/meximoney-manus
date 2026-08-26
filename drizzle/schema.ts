@@ -1,4 +1,4 @@
-import { boolean, index, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -334,6 +334,23 @@ export const fiscalRecords = mysqlTable("fiscalRecords", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+export const fiscalPeriodReviews = mysqlTable("fiscalPeriodReviews", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  periodStart: timestamp("periodStart").notNull(),
+  status: mysqlEnum("status", ["open", "reviewed"]).notNull().default("open"),
+  recordsConfirmed: boolean("recordsConfirmed").notNull().default(false),
+  evidenceConfirmed: boolean("evidenceConfirmed").notNull().default(false),
+  collectionsConfirmed: boolean("collectionsConfirmed").notNull().default(false),
+  notes: text("notes"),
+  reviewedByUserId: int("reviewedByUserId"),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  userPeriodUnique: uniqueIndex("fiscalPeriodReviews_user_period_unique").on(table.userId, table.periodStart),
+}));
 
 export const recurringTemplates = mysqlTable("recurringTemplates", {
   id: int("id").autoincrement().primaryKey(),

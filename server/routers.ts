@@ -19,6 +19,7 @@ import {
   financeNotifications,
   financeTasks,
   financialContacts,
+  fiscalPeriodReviews,
   fiscalRecords,
   financialGoals,
   financialProfiles,
@@ -785,6 +786,37 @@ export const appRouter = router({
           const db = await requireDb();
           await db.delete(fiscalRecords).where(and(eq(fiscalRecords.id, input.id), eq(fiscalRecords.userId, ctx.workspaceAccess.ownerId)));
           return { success: true };
+        }),
+      }),
+      fiscalPeriodReviews: router({
+        save: workspaceFinanceProcedure.input(z.object({
+          periodStart: z.number().int().positive(),
+          recordsConfirmed: z.boolean(),
+          evidenceConfirmed: z.boolean(),
+          collectionsConfirmed: z.boolean(),
+          notes: z.string().max(3000).nullable().optional(),
+          markReviewed: z.boolean(),
+        })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede confirmar la rutina PFAE." });
+          if (input.markReviewed && (!input.recordsConfirmed || !input.evidenceConfirmed || !input.collectionsConfirmed)) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Confirma los tres pasos manuales antes de marcar el periodo como revisado." });
+          }
+          const db = await requireDb();
+          const periodStart = new Date(input.periodStart);
+          const [existing] = await db.select().from(fiscalPeriodReviews).where(and(eq(fiscalPeriodReviews.userId, ctx.workspaceAccess.ownerId), eq(fiscalPeriodReviews.periodStart, periodStart))).limit(1);
+          const status = input.markReviewed ? "reviewed" as const : "open" as const;
+          const payload = {
+            status,
+            recordsConfirmed: input.recordsConfirmed,
+            evidenceConfirmed: input.evidenceConfirmed,
+            collectionsConfirmed: input.collectionsConfirmed,
+            notes: input.notes || null,
+            reviewedByUserId: status === "reviewed" ? ctx.user.id : null,
+            reviewedAt: status === "reviewed" ? new Date() : null,
+          };
+          if (existing) await db.update(fiscalPeriodReviews).set(payload).where(and(eq(fiscalPeriodReviews.id, existing.id), eq(fiscalPeriodReviews.userId, ctx.workspaceAccess.ownerId)));
+          else await db.insert(fiscalPeriodReviews).values({ userId: ctx.workspaceAccess.ownerId, periodStart, ...payload });
+          return { success: true, status };
         }),
       }),
       investments: router({

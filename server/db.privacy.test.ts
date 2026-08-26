@@ -26,5 +26,6 @@ describe("deleteAllFinancialData", () => {
 
     expect(state.deletedTables).toContain("passwordResetEvents");
     expect(state.deletedTables).toContain("passwordResetTokens");
+    expect(state.deletedTables).toContain("fiscalPeriodReviews");
   });
 });

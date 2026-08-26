@@ -13,6 +13,7 @@ import {
   decisionRecords,
   exchangeRates,
   financialContacts,
+  fiscalPeriodReviews,
   fiscalRecords,
   financeDocuments,
   financeTasks,
@@ -160,7 +161,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, creditCardRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, qualityAcknowledgementRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, creditCardRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, qualityAcknowledgementRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
@@ -185,6 +186,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(receivables).where(eq(receivables.userId, ownerId)),
     db.select().from(receivablePayments).where(eq(receivablePayments.userId, ownerId)),
     db.select().from(fiscalRecords).where(eq(fiscalRecords.userId, ownerId)),
+    db.select().from(fiscalPeriodReviews).where(eq(fiscalPeriodReviews.userId, ownerId)),
     db.select().from(recurringTemplates).where(eq(recurringTemplates.userId, ownerId)),
     db.select().from(payables).where(eq(payables.userId, ownerId)),
     db.select().from(payablePayments).where(eq(payablePayments.userId, ownerId)),
@@ -272,6 +274,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     receivables: receivableRows,
     receivablePayments: receivablePaymentRows,
     fiscalRecords: fiscalRecordRows,
+    fiscalPeriodReviews: fiscalPeriodReviewRows,
     recurringTemplates: templateRows,
     payables: payableRows,
     payablePayments: payablePaymentRows,
@@ -294,6 +297,7 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(debtPayments).where(eq(debtPayments.userId, userId));
     await tx.delete(receivablePayments).where(eq(receivablePayments.userId, userId));
     await tx.delete(receivables).where(eq(receivables.userId, userId));
+    await tx.delete(fiscalPeriodReviews).where(eq(fiscalPeriodReviews.userId, userId));
     await tx.delete(fiscalRecords).where(eq(fiscalRecords.userId, userId));
     await tx.delete(payablePayments).where(eq(payablePayments.userId, userId));
     await tx.delete(payables).where(eq(payables.userId, userId));
