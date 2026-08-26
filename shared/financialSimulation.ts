@@ -18,6 +18,7 @@ export type DebtSimulation = {
   remainingBalanceCents: number;
   firstPriorityDebtId: string | null;
   invalidDebtNames: string[];
+  nonAmortizingDebtNames: string[];
   cappedAtMaximum: boolean;
 };
 
@@ -55,7 +56,12 @@ function sortDebts(debts: SimulationDebt[], strategy: DebtStrategy) {
 
 export function simulateDebtPayoff(debts: SimulationDebt[], strategy: DebtStrategy, extraPaymentCents: number, maxMonths = 600): DebtSimulation {
   const invalidDebtNames = debts.filter(debt => debt.balanceCents > 0 && (debt.interestRateBps === null || debt.minimumPaymentCents < 0)).map(debt => debt.name);
-  const eligible = debts.filter(debt => debt.balanceCents > 0 && debt.interestRateBps !== null && debt.minimumPaymentCents >= 0).map(debt => ({ ...debt, balanceCents: debt.balanceCents }));
+  const nonAmortizingDebtNames = debts.filter(debt => {
+    if (debt.balanceCents <= 0 || debt.interestRateBps === null || debt.minimumPaymentCents < 0) return false;
+    const firstMonthInterest = Math.max(0, Math.round((debt.balanceCents * debt.interestRateBps) / 120000));
+    return debt.minimumPaymentCents <= firstMonthInterest;
+  }).map(debt => debt.name);
+  const eligible = debts.filter(debt => debt.balanceCents > 0 && debt.interestRateBps !== null && debt.minimumPaymentCents >= 0 && !nonAmortizingDebtNames.includes(debt.name)).map(debt => ({ ...debt, balanceCents: debt.balanceCents }));
   const priority = sortDebts(eligible, strategy);
   let totalInterestCents = 0;
   let months = 0;
@@ -80,7 +86,7 @@ export function simulateDebtPayoff(debts: SimulationDebt[], strategy: DebtStrate
     }
   }
   const remainingBalanceCents = eligible.reduce((total, debt) => total + debt.balanceCents, 0);
-  return { strategy, months, totalInterestCents, remainingBalanceCents, firstPriorityDebtId: priority[0]?.id ?? null, invalidDebtNames, cappedAtMaximum: remainingBalanceCents > 0 && months === maxMonths };
+  return { strategy, months, totalInterestCents, remainingBalanceCents, firstPriorityDebtId: priority[0]?.id ?? null, invalidDebtNames, nonAmortizingDebtNames, cappedAtMaximum: remainingBalanceCents > 0 && months === maxMonths };
 }
 
 export function buildCashFlowBaseline(snapshot: any, period: Date, reportCurrency: string) {

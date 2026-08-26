@@ -15,6 +15,13 @@ describe("financialSimulation", () => {
     expect(debts[0]?.balanceCents).toBe(5000);
   });
 
+  it("no proyecta saldos exponenciales si el pago mínimo no cubre el interés", () => {
+    const result = simulateDebtPayoff([{ id: "insufficient", name: "Pago insuficiente", source: "credit_card", balanceCents: 100000, interestRateBps: 120000, minimumPaymentCents: 5000 }], "avalanche", 0);
+    expect(result.nonAmortizingDebtNames).toEqual(["Pago insuficiente"]);
+    expect(result.months).toBe(0);
+    expect(result.totalInterestCents).toBe(0);
+  });
+
   it("expone conversiones excluidas y aplica hipótesis de flujo explícitas", () => {
     const baseline = buildCashFlowBaseline({ transactions: [
       { type: "income", reviewStatus: "approved", occurredAt: new Date("2026-08-03T12:00:00Z"), currency: "MXN", amountCents: 10000 },
