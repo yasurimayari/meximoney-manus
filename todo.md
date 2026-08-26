@@ -171,3 +171,6 @@
 - [x] Definir un estado manual visible de facturado, cobrado, cobrado parcialmente o pendiente de conciliación para cada registro PFAE vinculado a CxC.
 - [x] Mostrar en Libro PFAE la conciliación de una CxC vinculada, sus abonos reales y el saldo pendiente, sin crear ingresos ni cálculos tributarios automáticos.
 - [x] Validar con pruebas y QA publicada que los importes de cobro sólo se informan desde vínculos existentes y no modifican movimientos, CxC, patrimonio ni declaraciones.
+- [ ] Habilitar el envío real de recuperación de contraseña únicamente con el remitente de Resend verificado y conservar la respuesta genérica que evita enumerar cuentas.
+- [ ] Validar una solicitud controlada de recuperación, la recepción del correo y el enlace de un solo uso sin exponer información de cuentas ni modificar contraseñas durante la prueba.
+- [ ] Publicar una instancia nueva que cargue `PASSWORD_RESET_EMAIL_ENABLED=true` y confirmar que la ruta publicada deja de mostrar el aviso de remitente pendiente antes de repetir el envío controlado.

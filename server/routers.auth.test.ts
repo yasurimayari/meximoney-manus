@@ -83,3 +83,16 @@ describe("auth.register", () => {
     expect(mocks.insertedCredentials).toHaveLength(0);
   });
 });
+
+describe("auth.requestPasswordReset", () => {
+  it("expone la ruta de recuperación como habilitada sin revelar ni enviar correo para una cuenta inexistente", async () => {
+    const { ctx } = createContext();
+    const result = await appRouter.createCaller(ctx).auth.requestPasswordReset({ email: "prueba-controlada-sin-cuenta@example.invalid" });
+
+    expect(result).toMatchObject({
+      success: true,
+      deliveryReady: true,
+      message: "Si existe una cuenta con ese correo, recibirás instrucciones para restablecer tu contraseña.",
+    });
+  });
+});
