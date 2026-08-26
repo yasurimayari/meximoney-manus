@@ -27,6 +27,7 @@ import {
   financialTransactions,
   investments,
   investmentOperations,
+  monthlyReviewControls,
   monthlyReviews,
   monthlyFinancialStatements,
   notificationPreferences,
@@ -1270,6 +1271,52 @@ export const appRouter = router({
         const db = await requireDb(); const { id, periodStart, ...values } = input; const payload = { ...values, periodStart: new Date(periodStart) };
         if (id) await db.update(monthlyReviews).set(payload).where(and(eq(monthlyReviews.id, id), eq(monthlyReviews.userId, ctx.user.id)));
         else await db.insert(monthlyReviews).values({ userId: ctx.user.id, ...payload }); return { success: true };
+      }),
+    }),
+    monthlyControl: router({
+      save: privateFinanceProcedure.input(z.object({
+        periodStart: z.number().int().positive(),
+        status: z.enum(["draft", "reviewed", "closed"]),
+        observations: z.string().max(5000).nullable().optional(),
+        nextActions: z.string().max(5000).nullable().optional(),
+        checks: z.object({
+          transactionsConfirmed: z.boolean(),
+          qualityConfirmed: z.boolean(),
+          calendarConfirmed: z.boolean(),
+          obligationsConfirmed: z.boolean(),
+          fiscalConfirmed: z.boolean(),
+          patrimonyConfirmed: z.boolean(),
+        }),
+      })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const access = await resolveWorkspaceAccess(ctx.user.id);
+        if (access.role !== "owner" && !access.canReview) throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para cerrar la revisión mensual." });
+        const ownerId = access.ownerId;
+        const { start } = monthBounds(new Date(input.periodStart));
+        const snapshot = await getFinanceSnapshot(ctx.user.id, start);
+        const existing = await db.select({ id: monthlyReviews.id }).from(monthlyReviews).where(and(eq(monthlyReviews.userId, ownerId), eq(monthlyReviews.periodStart, start))).orderBy(desc(monthlyReviews.updatedAt)).limit(1);
+        const reviewPayload = {
+          periodStart: start,
+          status: input.status,
+          incomeCents: snapshot.dashboard.cashFlow.incomeCents,
+          expenseCents: snapshot.dashboard.cashFlow.expenseCents,
+          netCashFlowCents: snapshot.dashboard.cashFlow.netCashFlowCents,
+          observations: input.observations ?? null,
+          nextActions: input.nextActions ?? null,
+        };
+        let monthlyReviewId = existing[0]?.id;
+        if (monthlyReviewId) await db.update(monthlyReviews).set(reviewPayload).where(and(eq(monthlyReviews.id, monthlyReviewId), eq(monthlyReviews.userId, ownerId)));
+        else {
+          await db.insert(monthlyReviews).values({ userId: ownerId, ...reviewPayload });
+          const inserted = await db.select({ id: monthlyReviews.id }).from(monthlyReviews).where(and(eq(monthlyReviews.userId, ownerId), eq(monthlyReviews.periodStart, start))).orderBy(desc(monthlyReviews.id)).limit(1);
+          monthlyReviewId = inserted[0]?.id;
+        }
+        if (!monthlyReviewId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No se pudo guardar la revisión mensual." });
+        const controlPayload = { userId: ownerId, monthlyReviewId, ...input.checks };
+        const currentControl = await db.select({ id: monthlyReviewControls.id }).from(monthlyReviewControls).where(and(eq(monthlyReviewControls.userId, ownerId), eq(monthlyReviewControls.monthlyReviewId, monthlyReviewId))).limit(1);
+        if (currentControl[0]) await db.update(monthlyReviewControls).set(input.checks).where(and(eq(monthlyReviewControls.id, currentControl[0].id), eq(monthlyReviewControls.userId, ownerId)));
+        else await db.insert(monthlyReviewControls).values(controlPayload);
+        return { success: true, monthlyReviewId };
       }),
     }),
     statements: router({

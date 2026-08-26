@@ -220,3 +220,9 @@
 - [x] Mover Exportar y Revisión desde la navegación principal al menú inferior de Yasuri, conservando sus rutas y accesibilidad.
 - [x] Auditar y corregir el flujo actual del asistente Mexi para integrar de forma segura la API de Claude con una clave privada.
 - [x] Validar con pruebas y QA publicada la navegación inferior y el asistente Mexi sin exponer la clave ni información financiera fuera del alcance autorizado.
+- [x] Auditar y documentar el alcance exacto, entregables parciales y límites de la Fase D antes de abrir nuevos cambios.
+- [x] Definir el primer bloque priorizado de la Fase D con criterios de aceptación, trazabilidad y límites manuales explícitos.
+- [x] Auditar y mapear pendientes, revisiones, vencimientos y cierres existentes que alimentarán el control mensual transversal.
+- [x] Diseñar una rutina mensual transversal con checklist manual, estado por periodo y enlaces de solo lectura a las fuentes existentes.
+- [x] Implementar una vista de cierre y control mensual que concentre pendientes de movimientos, calendario, tarjetas, deudas, PFAE y patrimonio sin calcular ni modificar datos automáticamente.
+- [ ] Validar y publicar la Fase D con pruebas y QA sin crear, cerrar o alterar registros financieros reales.

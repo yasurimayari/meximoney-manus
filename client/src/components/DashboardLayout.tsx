@@ -45,6 +45,7 @@ const primaryMenuItems = [
   { icon: CalendarDays, label: "Calendario", path: "/calendario" },
   { icon: ReceiptText, label: "Libro PFAE", path: "/fiscal" },
   { icon: BookOpenCheck, label: "Estados", path: "/estados" },
+  { icon: CircleCheckBig, label: "Control mensual", path: "/control-mensual" },
   { icon: BotMessageSquare, label: "Asistente", path: "/asistente" },
 ];
 

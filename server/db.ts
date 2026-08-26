@@ -24,6 +24,7 @@ import {
   investments,
   investmentOperations,
   InsertUser,
+  monthlyReviewControls,
   monthlyReviews,
   monthlyFinancialStatements,
   payablePayments,
@@ -161,7 +162,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, creditCardRows, goalRows, taskRows, reviewRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, qualityAcknowledgementRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, creditCardRows, goalRows, taskRows, reviewRows, monthlyControlRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, qualityAcknowledgementRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
@@ -173,6 +174,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(financialGoals).where(eq(financialGoals.userId, ownerId)),
     db.select().from(financeTasks).where(eq(financeTasks.userId, ownerId)),
     db.select().from(monthlyReviews).where(eq(monthlyReviews.userId, ownerId)),
+    db.select().from(monthlyReviewControls).where(eq(monthlyReviewControls.userId, ownerId)),
     db.select().from(monthlyFinancialStatements).where(eq(monthlyFinancialStatements.userId, ownerId)),
     db.select().from(calendarColorPreferences).where(eq(calendarColorPreferences.userId, ownerId)),
     db.select().from(calendarEvents).where(eq(calendarEvents.userId, ownerId)),
@@ -267,6 +269,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     goals: goalRows,
     tasks: taskRows,
     reviews: reviewRows,
+    monthlyReviewControls: monthlyControlRows,
     statements: statementRows,
     calendarColors: calendarColorRows,
     calendarEvents: calendarEventRows,
@@ -310,6 +313,7 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(calendarEvents).where(eq(calendarEvents.userId, userId));
     await tx.delete(financeDocuments).where(eq(financeDocuments.userId, userId));
     await tx.delete(financeTasks).where(eq(financeTasks.userId, userId));
+    await tx.delete(monthlyReviewControls).where(eq(monthlyReviewControls.userId, userId));
     await tx.delete(monthlyReviews).where(eq(monthlyReviews.userId, userId));
     await tx.delete(monthlyFinancialStatements).where(eq(monthlyFinancialStatements.userId, userId));
     await tx.delete(decisionRecords).where(eq(decisionRecords.userId, userId));

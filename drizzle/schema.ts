@@ -635,6 +635,20 @@ export const monthlyReviews = mysqlTable("monthlyReviews", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const monthlyReviewControls = mysqlTable("monthlyReviewControls", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  monthlyReviewId: int("monthlyReviewId").notNull().unique(),
+  transactionsConfirmed: boolean("transactionsConfirmed").notNull().default(false),
+  qualityConfirmed: boolean("qualityConfirmed").notNull().default(false),
+  calendarConfirmed: boolean("calendarConfirmed").notNull().default(false),
+  obligationsConfirmed: boolean("obligationsConfirmed").notNull().default(false),
+  fiscalConfirmed: boolean("fiscalConfirmed").notNull().default(false),
+  patrimonyConfirmed: boolean("patrimonyConfirmed").notNull().default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const decisionRecords = mysqlTable("decisionRecords", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
