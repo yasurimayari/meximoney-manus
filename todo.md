@@ -211,3 +211,9 @@
 - [x] Diseñar una tarjeta PFAE del Panel con IVA manual registrado, calidad de revisión y fechas explícitas de pago/obligación, sin estimar impuestos ni asumir vencimientos.
 - [x] Implementar la tarjeta PFAE con vínculo al Libro, estado vacío seguro y aislamiento por usuaria, reutilizando sólo renglones, rutina y eventos ya registrados.
 - [x] Validar en pruebas y QA publicada la tarjeta PFAE del Panel sin modificar renglones fiscales, fechas ni movimientos reales.
+- [x] Auditar los datos actuales de calendario fiscal, la evidencia PFAE pendiente y los modelos de compras financiadas, tarjetas y deudas para confirmar cobertura real.
+- [x] Añadir al Calendario una vista informativa de próximos vencimientos fiscales manuales por mes, sin crear fechas ni obligaciones automáticamente.
+- [x] Permitir vincular una evidencia existente al renglón PFAE pendiente desde el Libro, sin cargar ni modificar archivos externos.
+- [x] Diseñar y completar el soporte manual de tarjetas departamentales, incluyendo Coppel, con saldo, corte, pago, límite opcional y ámbito.
+- [x] Diseñar y completar el soporte manual de préstamos automotriz, hipotecario y personal con saldo, pago periódico, vencimientos, tasa opcional y pagos trazables desde cuenta.
+- [ ] Validar con pruebas y QA publicada los vencimientos, tarjeta departamental y préstamos bancarios sin registrar o alterar obligaciones reales sin autorización.

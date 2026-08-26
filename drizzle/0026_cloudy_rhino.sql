@@ -1,0 +1,2 @@
+ALTER TABLE `creditCards` ADD `cardKind` enum('bank_credit','departmental') DEFAULT 'bank_credit' NOT NULL;--> statement-breakpoint
+ALTER TABLE `debts` ADD `loanKind` enum('not_specified','personal','automotive','mortgage') DEFAULT 'not_specified' NOT NULL;

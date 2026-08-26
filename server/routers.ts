@@ -46,6 +46,7 @@ import {
 import { createPasswordResetToken, hashPassword, hashPasswordResetToken, verifyPassword } from "./credentials";
 import { sendPasswordResetEmail } from "./passwordResetEmail";
 import { passwordResetRequestResponse } from "./passwordResetResponse";
+import { normalizeLoanKind } from "../shared/manualObligations";
 import { deleteAllFinancialData, deleteOwnedRow, getFinanceSnapshot, getProfile, requireDb, resolveWorkspaceAccess } from "./db";
 import { storagePut } from "./storage";
 import { requiresPersonalProfileConsent } from "./profilePrivacy";
@@ -481,7 +482,7 @@ export const appRouter = router({
         return { success: true };
       }),
       creditCards: router({
-        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(140), issuer: z.string().trim().max(140).nullable().optional(), scope: creditCardScopeSchema, currency: z.string().length(3), creditLimitCents: moneySchema, balanceCents: moneySchema, interestRateBps: z.number().int().min(0).nullable().optional(), minimumPaymentCents: moneySchema, statementClosingDay: z.number().int().min(1).max(31).nullable().optional(), paymentDueDay: z.number().int().min(1).max(31).nullable().optional(), status: z.enum(["active", "paused", "closed"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(140), issuer: z.string().trim().max(140).nullable().optional(), cardKind: z.enum(["bank_credit", "departmental"]).default("bank_credit"), scope: creditCardScopeSchema, currency: z.string().length(3), creditLimitCents: moneySchema, balanceCents: moneySchema, interestRateBps: z.number().int().min(0).nullable().optional(), minimumPaymentCents: moneySchema, statementClosingDay: z.number().int().min(1).max(31).nullable().optional(), paymentDueDay: z.number().int().min(1).max(31).nullable().optional(), status: z.enum(["active", "paused", "closed"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar tarjetas de crédito." });
           const db = await requireDb(); const { id, ...values } = input;
           if (id) await db.update(creditCards).set(values).where(and(eq(creditCards.id, id), eq(creditCards.userId, ctx.workspaceAccess.ownerId)));
@@ -1181,15 +1182,15 @@ export const appRouter = router({
       remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(budgets, input.id, ctx.user.id)),
     }),
     debts: router({
-      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(140), creditor: z.string().trim().max(140).nullable().optional(), type: z.enum(["credit_card", "loan", "financed_purchase", "mortgage", "tax", "business", "family", "other"]), scope: scopeSchema, balanceCents: moneySchema, originalAmountCents: moneySchema.nullable().optional(), installmentCents: moneySchema.nullable().optional(), installmentCount: z.number().int().positive().max(600).nullable().optional(), financedItem: z.string().trim().max(180).nullable().optional(), purchasedAt: optionalDate, currency: z.string().length(3), interestRateBps: z.number().int().min(0).nullable().optional(), minimumPaymentCents: moneySchema, nextDueAt: optionalDate, endDate: optionalDate, priority: z.enum(["critical", "high", "medium", "low"]), status: z.enum(["active", "paid", "review"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(140), creditor: z.string().trim().max(140).nullable().optional(), type: z.enum(["credit_card", "loan", "financed_purchase", "mortgage", "tax", "business", "family", "other"]), loanKind: z.enum(["not_specified", "personal", "automotive", "mortgage"]).default("not_specified"), scope: scopeSchema, balanceCents: moneySchema, originalAmountCents: moneySchema.nullable().optional(), installmentCents: moneySchema.nullable().optional(), installmentCount: z.number().int().positive().max(600).nullable().optional(), financedItem: z.string().trim().max(180).nullable().optional(), purchasedAt: optionalDate, currency: z.string().length(3), interestRateBps: z.number().int().min(0).nullable().optional(), minimumPaymentCents: moneySchema, nextDueAt: optionalDate, endDate: optionalDate, priority: z.enum(["critical", "high", "medium", "low"]), status: z.enum(["active", "paid", "review"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
         if (input.type === "financed_purchase" && input.originalAmountCents !== null && input.originalAmountCents !== undefined && input.originalAmountCents < input.balanceCents) throw new TRPCError({ code: "BAD_REQUEST", message: "El importe original no puede ser menor que el saldo pendiente registrado." });
         if (input.type === "financed_purchase" && input.installmentCents && !input.installmentCount) throw new TRPCError({ code: "BAD_REQUEST", message: "Indica cuántas mensualidades tiene la compra financiada." });
-        const { id, nextDueAt, endDate, purchasedAt, type, originalAmountCents, installmentCents, installmentCount, financedItem, ...values } = input;
+        const { id, nextDueAt, endDate, purchasedAt, type, loanKind, originalAmountCents, installmentCents, installmentCount, financedItem, ...values } = input;
         const financing = type === "financed_purchase"
           ? { originalAmountCents: originalAmountCents ?? null, installmentCents: installmentCents ?? null, installmentCount: installmentCount ?? null, financedItem: financedItem || null, purchasedAt: asDate(purchasedAt) }
           : { originalAmountCents: null, installmentCents: null, installmentCount: null, financedItem: null, purchasedAt: null };
-        const payload = { ...values, type, ...financing, nextDueAt: asDate(nextDueAt), endDate: asDate(endDate) };
+        const payload = { ...values, type, loanKind: normalizeLoanKind(type, loanKind), ...financing, nextDueAt: asDate(nextDueAt), endDate: asDate(endDate) };
         if (id) await db.update(debts).set(payload).where(and(eq(debts.id, id), eq(debts.userId, ctx.user.id)));
         else await db.insert(debts).values({ userId: ctx.user.id, ...payload });
         return { success: true };
@@ -1207,7 +1208,7 @@ export const appRouter = router({
           if (input.principalCents > debt.balanceCents + (previous?.principalCents ?? 0)) throw new TRPCError({ code: "BAD_REQUEST", message: "La reducción de principal supera el saldo pendiente de la deuda." });
           if (input.linkedTransactionId) {
             const [expense] = await tx.select().from(financialTransactions).where(and(eq(financialTransactions.id, input.linkedTransactionId), eq(financialTransactions.userId, ctx.user.id))).limit(1);
-            if (!expense || expense.type !== "expense" || expense.currency !== input.currency || expense.reviewStatus !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Selecciona un gasto aprobado, de la misma moneda y de tu espacio privado." });
+            if (!expense || !expense.accountId || expense.type !== "expense" || expense.currency !== input.currency || expense.reviewStatus !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Selecciona un gasto aprobado, desde una cuenta y de la misma moneda en tu espacio privado." });
             const linkedPayments = await tx.select().from(debtPayments).where(and(eq(debtPayments.userId, ctx.user.id), eq(debtPayments.linkedTransactionId, expense.id)));
             const usedFromExpense = linkedPayments.filter(item => item.id !== input.id).reduce((sum, item) => sum + item.totalPaymentCents, 0);
             if (usedFromExpense + input.totalPaymentCents > expense.amountCents) throw new TRPCError({ code: "BAD_REQUEST", message: "El importe vinculado supera el gasto real seleccionado." });
