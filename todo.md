@@ -172,8 +172,8 @@
 - [x] Mostrar en Libro PFAE la conciliación de una CxC vinculada, sus abonos reales y el saldo pendiente, sin crear ingresos ni cálculos tributarios automáticos.
 - [x] Validar con pruebas y QA publicada que los importes de cobro sólo se informan desde vínculos existentes y no modifican movimientos, CxC, patrimonio ni declaraciones.
 - [x] Habilitar el envío real de recuperación de contraseña únicamente con el remitente de Resend verificado y conservar la respuesta genérica que evita enumerar cuentas.
-- [ ] Validar una solicitud controlada de recuperación, la recepción del correo y el enlace de un solo uso sin exponer información de cuentas ni modificar contraseñas durante la prueba.
+- [x] Validar una solicitud controlada de recuperación, la recepción del correo y el enlace de un solo uso sin exponer información de cuentas ni modificar contraseñas durante la prueba.
 - [x] Publicar una instancia nueva que cargue `PASSWORD_RESET_EMAIL_ENABLED=true` y confirmar que la ruta publicada deja de mostrar el aviso de remitente pendiente antes de repetir el envío controlado.
 - [x] Corregir la solicitud de recuperación que queda en espera en producción cuando el envío está habilitado, añadiendo un límite seguro de espera y un diagnóstico sin revelar cuentas.
-- [ ] Implementar y validar un mensaje de fallo de envío no enumerativo para recuperación de contraseña cuando Resend rechace o agote el tiempo de espera, sin revelar si la cuenta existe.
-- [ ] Verificar en la UI publicada de `/restablecer-contrasena` la respuesta final tras enviar una solicitud: debe dejar de mostrar el aviso de remitente pendiente y reflejar el estado operativo actual del canal.
+- [x] Implementar y validar un mensaje de fallo de envío no enumerativo para recuperación de contraseña cuando Resend rechace o agote el tiempo de espera, sin revelar si la cuenta existe.
+- [x] Verificar en la UI publicada de `/restablecer-contrasena` la respuesta final tras enviar una solicitud: debe dejar de mostrar el aviso de remitente pendiente y reflejar el estado operativo actual del canal.
