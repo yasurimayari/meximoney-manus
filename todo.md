@@ -196,4 +196,4 @@
 - [x] Validar en servidor que entidad y proyecto vinculados a un renglón PFAE pertenecen al espacio privado y mantienen una relación coherente, con prueba de regresión.
 - [x] Diseñar una rutina mensual PFAE manual con pasos verificables, criterios de revisión y estado por periodo, sin automatizar decisiones fiscales.
 - [x] Implementar una exportación fiscal informativa por periodo con renglones manuales, vínculos y alertas de calidad, sin cálculos tributarios ni datos sensibles ajenos.
-- [ ] Validar con pruebas y QA publicada la rutina y exportación PFAE sin crear renglones fiscales de prueba ni modificar registros existentes.
+- [x] Validar con pruebas y QA publicada la rutina y exportación PFAE sin crear renglones fiscales de prueba ni modificar registros existentes.
