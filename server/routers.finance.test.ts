@@ -351,4 +351,21 @@ describe("finance.dashboard", () => {
       exchangeRateDate: null, valuationDate: null, includeInNetWorth: true, status: "active", notes: null,
     })).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
+
+  it("archiva un objetivo sin borrar su saldo manual ni tocar inversiones vinculadas", async () => {
+    const set = vi.fn(() => ({ where: vi.fn() }));
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
+      update: () => ({ set }),
+    });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await caller.finance.goals.save({
+      id: 77, entityId: null, projectId: null, name: "Fondo de emergencia", type: "emergency", scope: "personal", targetCents: 45_000_00,
+      currentCents: 2_000_00, monthlyContributionCents: 2_000_00, currency: "MXN", targetDate: Date.parse("2027-01-01T12:00:00Z"),
+      priority: "medium", status: "cancelled", notes: "Archivado para conservar historial",
+    });
+
+    expect(set).toHaveBeenCalledWith(expect.objectContaining({ status: "cancelled", currentCents: 2_000_00, targetCents: 45_000_00 }));
+  });
 });

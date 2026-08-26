@@ -163,3 +163,7 @@
 - [x] Definir la regla manual para vincular una posición de ahorro o inversión con uno o más objetivos, incluyendo el tratamiento de posiciones compartidas.
 - [x] Permitir relacionar posiciones de ahorro e inversión con objetivos desde ambas vistas y mostrar el valor asignado, aportaciones vinculadas y avance sin alterar la valuación de la posición.
 - [ ] Validar con pruebas y QA publicada que el vínculo de objetivos no cambia el saldo de inversiones, movimientos, patrimonio ni el avance de otros objetivos.
+- [x] Auditar el flujo actual de Objetivos para sustituir la eliminación por edición y archivado no destructivo.
+- [x] Permitir editar todos los campos manuales de un objetivo sin alterar sus posiciones vinculadas ni saldos de inversión.
+- [x] Permitir archivar y restaurar objetivos, ocultándolos de vistas activas y de nuevas vinculaciones sin borrar su historial ni sus posiciones relacionadas.
+- [ ] Validar con pruebas y QA publicada que editar o archivar un objetivo conserva inversiones, aportaciones, patrimonio y trazabilidad histórica.
