@@ -33,7 +33,7 @@ import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import Onboarding from "@/pages/Onboarding";
 import { Button } from "./ui/button";
 
-const menuItems = [
+const primaryMenuItems = [
   { icon: LayoutDashboard, label: "Panel", path: "/" },
   { icon: ArrowLeftRight, label: "Registros", path: "/movimientos" },
   { icon: CreditCard, label: "Tarjetas", path: "/tarjetas" },
@@ -46,6 +46,9 @@ const menuItems = [
   { icon: ReceiptText, label: "Libro PFAE", path: "/fiscal" },
   { icon: BookOpenCheck, label: "Estados", path: "/estados" },
   { icon: BotMessageSquare, label: "Asistente", path: "/asistente" },
+];
+
+const accountMenuItems = [
   { icon: FileDown, label: "Exportar", path: "/exportar" },
   { icon: ClipboardCheck, label: "Revisión", path: "/revision" },
 ];
@@ -183,7 +186,7 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location) ?? [{ path: "/calidad", label: "Perfil y privacidad" }, { path: "/seguridad/cambiar-contrasena", label: "Cambiar contraseña" }, { path: "/notificaciones", label: "Notificaciones" }, { path: "/espacio", label: "Espacio" }].find(item => item.path === location);
+  const activeMenuItem = [...primaryMenuItems, ...accountMenuItems].find(item => item.path === location) ?? [{ path: "/calidad", label: "Perfil y privacidad" }, { path: "/seguridad/cambiar-contrasena", label: "Cambiar contraseña" }, { path: "/notificaciones", label: "Notificaciones" }, { path: "/espacio", label: "Espacio" }].find(item => item.path === location);
   const isMobile = useIsMobile();
   const { data: notificationData } = trpc.finance.notifications.get.useQuery(undefined, { enabled: Boolean(user) });
   const unreadNotifications = notificationData ? unreadNotificationCount(notificationData.notifications) : 0;
@@ -251,7 +254,7 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
+              {primaryMenuItems.map(item => {
                 const isActive = location === item.path;
                 const isNotificationsItem = item.path === "/notificaciones";
                 const notificationLabel = unreadNotifications ? `${unreadNotifications} notificaciones sin leer` : "Sin notificaciones sin leer";
@@ -313,6 +316,12 @@ function DashboardLayoutContent({
                   <Settings2 className="mr-2 h-4 w-4" />
                   <span>Espacio</span>
                 </DropdownMenuItem>
+                {accountMenuItems.map(item => (
+                  <DropdownMenuItem key={item.path} onClick={() => setLocation(item.path)} className="cursor-pointer">
+                    <item.icon className="mr-2 h-4 w-4" />
+                    <span>{item.label}</span>
+                  </DropdownMenuItem>
+                ))}
                 <DropdownMenuItem
                   onClick={logout}
                   className="cursor-pointer text-destructive focus:text-destructive"

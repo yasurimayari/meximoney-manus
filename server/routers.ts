@@ -57,8 +57,8 @@ import { findPossibleDuplicates } from "./imports";
 import { getOpenFiscalReviewReminder } from "../shared/fiscalReview";
 import { creditCardAlertCandidates } from "./creditCardAlerts";
 import { extractQuickCaptureDraft } from "./quickCapture";
+import { askClaudeForMexi } from "./claude";
 import { getSessionCookieOptions } from "./_core/cookies";
-import { invokeLLM } from "./_core/llm";
 import { sdk } from "./_core/sdk";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
@@ -1317,23 +1317,14 @@ export const appRouter = router({
       chat: privateFinanceProcedure.input(z.object({ message: z.string().min(1).max(1600) })).mutation(async ({ ctx, input }) => {
         const snapshot = await getFinanceSnapshot(ctx.user.id);
         try {
-          const response = await invokeLLM({
-            model: "gpt-5-mini",
-            reasoning: { effort: "low" },
-            maxTokens: 1_200,
-            requestTimeoutMs: 45_000,
-            maxRetries: 0,
-            messages: [
-              { role: "system", content: `Eres Mexi, el asistente privado y explicable de Meximoney. ${manualOnlyNotice} Usa exclusivamente el JSON de registros manuales suministrado en este mensaje y la pregunta de la usuaria. No uses búsqueda web, conocimientos externos, precios de mercado, normas fiscales actuales ni herramientas. No inventes datos. Si falta información, dilo de forma explícita y propone qué registro manual se debe crear o actualizar. No des instrucciones para transferir, pagar, comprar, vender, contratar ni cancelar productos financieros. Ofrece análisis educativo, explica cálculos y distingue entre datos, supuestos, riesgos y próximos pasos. Responde siempre en español y usa importes en centavos solo si explicas el formato. Cierra con la frase: "Sin conexiones bancarias ni acciones financieras ejecutadas."` },
-              { role: "user", content: `REGISTROS MANUALES DE MEXIMONEY:\n${createManualSnapshotText(snapshot)}\n\nPREGUNTA DE LA USUARIA:\n${input.message}` },
-            ],
+          const content = await askClaudeForMexi({
+            system: `Eres Mexi, el asistente privado y explicable de Meximoney. ${manualOnlyNotice} Usa exclusivamente el JSON de registros manuales suministrado en este mensaje y la pregunta de la usuaria. No uses búsqueda web, conocimientos externos, precios de mercado, normas fiscales actuales ni herramientas. No inventes datos. Si falta información, dilo de forma explícita y propone qué registro manual se debe crear o actualizar. No des instrucciones para transferir, pagar, comprar, vender, contratar ni cancelar productos financieros. Ofrece análisis educativo, explica cálculos y distingue entre datos, supuestos, riesgos y próximos pasos. Responde siempre en español y usa importes en centavos solo si explicas el formato. Cierra con la frase: "Sin conexiones bancarias ni acciones financieras ejecutadas."`,
+            prompt: `REGISTROS MANUALES DE MEXIMONEY:\n${createManualSnapshotText(snapshot)}\n\nPREGUNTA DE LA USUARIA:\n${input.message}`,
           });
-          const content = response.choices[0]?.message?.content;
-          const normalizedContent = typeof content === "string" ? content.trim() : "";
-          return { content: normalizedContent || "Mexi recibió tus registros manuales, pero el modelo no devolvió texto utilizable. Reintenta la consulta; tus datos no se han modificado.", notice: manualOnlyNotice };
+          return { content, notice: manualOnlyNotice };
         } catch (error) {
-          console.error("[Mexi] Analysis unavailable:", error);
-          return { content: "Mexi no pudo obtener una respuesta del servicio de IA en este momento. Tus datos no se han modificado. Puedes volver a intentarlo más tarde o revisar el panel, los controles de calidad y el cierre mensual manual.", notice: manualOnlyNotice };
+          console.error("[Mexi] Claude unavailable:", error instanceof Error ? error.message : "Error no identificable");
+          return { content: "Mexi no pudo obtener una respuesta de Claude en este momento. Tus datos no se han modificado. Puedes reintentar la consulta; si el problema continúa, revisa que la clave privada de Claude siga activa.", notice: manualOnlyNotice };
         }
       }),
     }),

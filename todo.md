@@ -217,3 +217,6 @@
 - [x] Diseñar y completar el soporte manual de tarjetas departamentales, incluyendo Coppel, con saldo, corte, pago, límite opcional y ámbito.
 - [x] Diseñar y completar el soporte manual de préstamos automotriz, hipotecario y personal con saldo, pago periódico, vencimientos, tasa opcional y pagos trazables desde cuenta.
 - [x] Validar con pruebas y QA publicada los vencimientos, tarjeta departamental y préstamos bancarios sin registrar o alterar obligaciones reales sin autorización.
+- [x] Mover Exportar y Revisión desde la navegación principal al menú inferior de Yasuri, conservando sus rutas y accesibilidad.
+- [x] Auditar y corregir el flujo actual del asistente Mexi para integrar de forma segura la API de Claude con una clave privada.
+- [ ] Validar con pruebas y QA publicada la navegación inferior y el asistente Mexi sin exponer la clave ni información financiera fuera del alcance autorizado.
