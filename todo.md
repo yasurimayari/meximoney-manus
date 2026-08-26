@@ -174,3 +174,4 @@
 - [ ] Habilitar el envío real de recuperación de contraseña únicamente con el remitente de Resend verificado y conservar la respuesta genérica que evita enumerar cuentas.
 - [ ] Validar una solicitud controlada de recuperación, la recepción del correo y el enlace de un solo uso sin exponer información de cuentas ni modificar contraseñas durante la prueba.
 - [ ] Publicar una instancia nueva que cargue `PASSWORD_RESET_EMAIL_ENABLED=true` y confirmar que la ruta publicada deja de mostrar el aviso de remitente pendiente antes de repetir el envío controlado.
+- [ ] Corregir la solicitud de recuperación que queda en espera en producción cuando el envío está habilitado, añadiendo un límite seguro de espera y un diagnóstico sin revelar cuentas.

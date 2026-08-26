@@ -6,6 +6,7 @@ export async function sendPasswordResetEmail({ to, resetUrl }: PasswordResetEmai
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(15_000),
     body: JSON.stringify({
       from: "Meximoney <hola@mexi.richeon.app>",
       to: [to],
