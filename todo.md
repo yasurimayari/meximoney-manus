@@ -208,3 +208,6 @@
 - [x] Definir filtros manuales por entidad y proyecto para el Libro PFAE, comparación y exportación, conservando la rutina mensual como constancia consolidada y sin inferir clasificación fiscal de renglones sin vínculo.
 - [x] Implementar los filtros PFAE coherentes en revisión, comparación y CSV, conservando el conjunto consolidado como valor inicial y sin modificar registros.
 - [ ] Validar por pruebas y QA publicada los filtros PFAE, el estado vacío y la exportación filtrada sin crear ni editar datos financieros reales.
+- [x] Diseñar una tarjeta PFAE del Panel con IVA manual registrado, calidad de revisión y fechas explícitas de pago/obligación, sin estimar impuestos ni asumir vencimientos.
+- [x] Implementar la tarjeta PFAE con vínculo al Libro, estado vacío seguro y aislamiento por usuaria, reutilizando sólo renglones, rutina y eventos ya registrados.
+- [ ] Validar en pruebas y QA publicada la tarjeta PFAE del Panel sin modificar renglones fiscales, fechas ni movimientos reales.

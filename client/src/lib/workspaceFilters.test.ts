@@ -17,6 +17,7 @@ describe("filterWorkspaceSnapshot", () => {
       receivables: [{ id: 1, entityId: 10, projectId: 20, currency: "MXN" }, { id: 2, entityId: 10, projectId: 21, currency: "MXN" }, { id: 3, entityId: 11, projectId: 20, currency: "MXN" }, { id: 4, entityId: 10, projectId: 20, currency: "USD" }],
       budgets: [{ id: 1, entityId: 10, projectId: 20 }, { id: 2, entityId: 11, projectId: 20 }],
       goals: [], documents: [{ id: 1, entityId: 10, projectId: 20 }, { id: 2, entityId: 10, projectId: 21 }, { id: 3, entityId: 11, projectId: 20 }], calendarEvents: [], statements: [],
+      fiscalRecords: [{ id: 1, entityId: 10, projectId: 20, currency: "MXN" }, { id: 2, entityId: 10, projectId: 21, currency: "MXN" }, { id: 3, entityId: 11, projectId: 20, currency: "MXN" }, { id: 4, entityId: 10, projectId: 20, currency: "USD" }],
     };
 
     const filtered = filterWorkspaceSnapshot(snapshot, { entityId: "10", projectId: "20", currency: "MXN", reviewStatus: "approved" });
@@ -28,6 +29,7 @@ describe("filterWorkspaceSnapshot", () => {
     expect(filtered.receivables.map((item: any) => item.id)).toEqual([1]);
     expect(filtered.budgets.map((item: any) => item.id)).toEqual([1]);
     expect(filtered.documents.map((item: any) => item.id)).toEqual([1]);
+    expect(filtered.fiscalRecords.map((item: any) => item.id)).toEqual([1]);
   });
 
   it("conserva una tarjeta PFAE sin entidad ni proyecto bajo moneda y la excluye de filtros específicos", () => {
