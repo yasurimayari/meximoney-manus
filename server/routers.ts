@@ -741,13 +741,18 @@ export const appRouter = router({
         })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar el libro fiscal manual." });
           const db = await requireDb();
-          const { id, periodStart, invoiceIssuedAt, collectedAt, transactionId, receivableId, contactId, documentId, fiscalReference, notes, ...values } = input;
-          const [transactionRows, receivableRows, contactRows, documentRows] = await Promise.all([
+          const { id, entityId, projectId, periodStart, invoiceIssuedAt, collectedAt, transactionId, receivableId, contactId, documentId, fiscalReference, notes, ...values } = input;
+          const [entityRows, projectRows, transactionRows, receivableRows, contactRows, documentRows] = await Promise.all([
+            entityId ? db.select().from(workspaceEntities).where(and(eq(workspaceEntities.id, entityId), eq(workspaceEntities.ownerId, ctx.workspaceAccess.ownerId))).limit(1) : Promise.resolve([]),
+            projectId ? db.select().from(financialProjects).where(and(eq(financialProjects.id, projectId), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId))).limit(1) : Promise.resolve([]),
             transactionId ? db.select().from(financialTransactions).where(and(eq(financialTransactions.id, transactionId), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId))).limit(1) : Promise.resolve([]),
             receivableId ? db.select().from(receivables).where(and(eq(receivables.id, receivableId), eq(receivables.userId, ctx.workspaceAccess.ownerId))).limit(1) : Promise.resolve([]),
             contactId ? db.select().from(financialContacts).where(and(eq(financialContacts.id, contactId), eq(financialContacts.userId, ctx.workspaceAccess.ownerId))).limit(1) : Promise.resolve([]),
             documentId ? db.select().from(financeDocuments).where(and(eq(financeDocuments.id, documentId), eq(financeDocuments.userId, ctx.workspaceAccess.ownerId))).limit(1) : Promise.resolve([]),
           ]);
+          if (entityId && !entityRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "La entidad seleccionada no pertenece a tu espacio privado." });
+          if (projectId && !projectRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El proyecto seleccionado no pertenece a tu espacio privado." });
+          if (entityId && projectRows[0] && projectRows[0].entityId !== entityId) throw new TRPCError({ code: "BAD_REQUEST", message: "El proyecto seleccionado debe pertenecer a la entidad elegida." });
           if (transactionId && !transactionRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El movimiento seleccionado no pertenece a tu espacio privado." });
           if (receivableId && !receivableRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "La cuenta por cobrar seleccionada no pertenece a tu espacio privado." });
           if (contactId && !contactRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El contacto seleccionado no pertenece a tu espacio privado." });
@@ -757,6 +762,8 @@ export const appRouter = router({
           const reviewed = values.reviewStatus === "reviewed";
           const payload = {
             ...values,
+            entityId: entityId ?? projectRows[0]?.entityId ?? null,
+            projectId: projectId ?? null,
             transactionId: transactionId ?? null,
             receivableId: receivableId ?? null,
             contactId: contactId ?? null,

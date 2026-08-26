@@ -323,6 +323,24 @@ describe("finance.dashboard", () => {
     })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
+  it("bloquea un renglón PFAE cuando el proyecto no pertenece a la entidad seleccionada", async () => {
+    const answers = [
+      [{ accepted: true }],
+      [{ id: 10, ownerId: 27 }],
+      [{ id: 20, ownerId: 27, entityId: 11 }],
+    ];
+    const select = () => ({ from: () => ({ where: () => ({ limit: async () => answers.shift() ?? [] }) }) });
+    mocks.requireDb.mockResolvedValue({ select, insert: () => ({ values: vi.fn() }) });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.workspace.fiscalRecords.save({
+      entityId: 10, projectId: 20, transactionId: null, receivableId: null, contactId: null, documentId: null,
+      periodStart: Date.parse("2026-08-01T12:00:00Z"), description: "Vínculo incoherente", recordType: "other", fiscalReference: null,
+      scope: "business", currency: "MXN", totalCents: 0, taxableBaseCents: 0, vatCents: 0, invoiceIssuedAt: null,
+      collectedAt: null, deductibility: "pending", reviewStatus: "draft", notes: null,
+    })).rejects.toMatchObject({ code: "BAD_REQUEST", message: "El proyecto seleccionado debe pertenecer a la entidad elegida." });
+  });
+
   it("vincula una posición con un objetivo propio de la misma moneda sin modificar su valor ni patrimonio", async () => {
     const inserted = vi.fn();
     const answers = [[{ accepted: true }], [{ id: 77, userId: 27, currency: "MXN", status: "active" }]];
