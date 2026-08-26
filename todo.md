@@ -180,4 +180,4 @@
 - [x] Auditar los eventos actuales de recuperación para registrar únicamente fecha, resultado técnico y origen enmascarado, sin tokens, contraseñas ni direcciones completas.
 - [x] Diseñar el historial privado y el estado técnico del canal de correo con controles de aislamiento y lenguaje no sensible.
 - [x] Implementar una vista de seguridad que muestre el estado del remitente, el canal de recuperación y el historial privado de solicitudes.
-- [ ] Validar con pruebas y QA publicada que el historial no expone secretos, está aislado por usuaria y no cambia credenciales o solicitudes existentes.
+- [x] Validar con pruebas y QA publicada que el historial no expone secretos, está aislado por usuaria y no cambia credenciales o solicitudes existentes.
