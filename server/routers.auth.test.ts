@@ -123,6 +123,12 @@ describe("auth.securityStatus", () => {
 describe("auth.changePassword", () => {
   const authenticatedUser = { id: 44, openId: "local_test", name: "Ana", email: "ana@example.com", loginMethod: "email_password", role: "user" as const, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() };
 
+  it("rechaza el cambio cuando no existe una sesión autenticada", async () => {
+    const { ctx } = createContext();
+
+    await expect(appRouter.createCaller(ctx).auth.changePassword({ currentPassword: "ContraseñaAnterior#2026", newPassword: "ContraseñaNueva#2026" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
   it("exige la contraseña actual y no altera credenciales cuando no coincide", async () => {
     const { ctx } = createContext();
     ctx.user = authenticatedUser;

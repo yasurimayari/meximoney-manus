@@ -1,5 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
-import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -76,6 +76,9 @@ const authenticatedPasswordChangeInput = z.object({
   currentPassword: z.string().min(1).max(128),
   newPassword: z.string().min(12, "La nueva contraseña debe tener al menos 12 caracteres.").max(128),
 });
+const securityHistoryInput = z.object({
+  periodDays: z.union([z.literal(30), z.literal(90), z.literal(180)]).default(90),
+}).default({ periodDays: 90 });
 
 async function setLocalSession(ctx: { req: any; res: any }, user: { openId: string; name: string | null }) {
   const token = await sdk.createSessionToken(user.openId, { name: user.name || "Usuario Meximoney" });
@@ -248,18 +251,19 @@ export const appRouter = router({
       });
       return { success: true };
     }),
-    securityStatus: protectedProcedure.query(async ({ ctx }) => {
+    securityStatus: protectedProcedure.input(securityHistoryInput).query(async ({ ctx, input }) => {
       const db = await requireDb();
       const events = await db.select({ eventType: passwordResetEvents.eventType, channel: passwordResetEvents.channel, createdAt: passwordResetEvents.createdAt })
         .from(passwordResetEvents)
-        .where(eq(passwordResetEvents.userId, ctx.user.id))
+        .where(and(eq(passwordResetEvents.userId, ctx.user.id), gte(passwordResetEvents.createdAt, new Date(Date.now() - input.periodDays * 24 * 60 * 60 * 1000))))
         .orderBy(desc(passwordResetEvents.createdAt))
-        .limit(8);
+        .limit(50);
       const emailRecoveryEnabled = process.env.PASSWORD_RESET_EMAIL_ENABLED === "true";
       return {
         emailRecoveryEnabled,
         channelLabel: emailRecoveryEnabled ? "Canal habilitado" : "Canal no disponible",
         senderLabel: emailRecoveryEnabled ? "Remitente configurado" : "Remitente pendiente",
+        periodDays: input.periodDays,
         events,
       };
     }),
