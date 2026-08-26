@@ -8,6 +8,10 @@ Las verificaciones `pnpm check`, `pnpm test` y `pnpm build` finalizaron correcta
 
 La comprobación HTTP de `/calendario` respondió correctamente. La captura aislada del entorno de vista previa no recibe la sesión autenticada, por lo que se muestra en blanco tras la redirección de sesión de la vista previa; el navegador conectado agotó tiempo de respuesta antes de poder inspeccionar la sesión real. No se enviaron formularios ni se crearon, modificaron o vincularon tarjetas, préstamos, fechas, documentos o renglones PFAE durante la validación.
 
-## QA publicada pendiente
+## QA publicada
 
-Tras publicar, debe verificarse en sesión autenticada que el Calendario muestra la agenda fiscal mensual, que el acceso de evidencia abre el renglón correcto sin guardarlo, que Tarjetas permite elegir “departamental” y que Planificación presenta las tres clases de préstamo. Esta prueba no debe guardar datos reales salvo autorización explícita de la usuaria.
+La QA autenticada se realizó en el dominio publicado sin enviar formularios. En Calendario, la agenda fiscal mensual mostró su estado vacío correcto y el botón “Añadir fecha fiscal” abrió un evento nuevo con el tipo “Fiscal” preseleccionado. No se guardó ningún evento.
+
+En Tarjetas, la vista conservó las cuatro tarjetas existentes y sus saldos, ámbitos, fechas y sobregiros visibles. El formulario “Nueva tarjeta” mostró la clase “Tarjeta departamental (ej. Coppel)” sin crear un registro. En Planificación, Deudas mostró su estado vacío preexistente y el formulario ofreció “Préstamo bancario”, “Préstamo hipotecario” y las clases “Personal”, “Automotriz”, “Hipotecario” y “Sin especificar”. No se creó deuda ni pago.
+
+En el Libro PFAE, el renglón existente “Factura de gasolina” continuó mostrando los valores registrados y el estado de evidencia pendiente. El acceso “Vincular evidencia existente” abrió exactamente el formulario de ese renglón, con sus valores conservados. No se eligió documento ni se guardó el formulario; por tanto, el renglón y sus vínculos permanecieron intactos.

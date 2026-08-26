@@ -216,4 +216,4 @@
 - [x] Permitir vincular una evidencia existente al renglón PFAE pendiente desde el Libro, sin cargar ni modificar archivos externos.
 - [x] Diseñar y completar el soporte manual de tarjetas departamentales, incluyendo Coppel, con saldo, corte, pago, límite opcional y ámbito.
 - [x] Diseñar y completar el soporte manual de préstamos automotriz, hipotecario y personal con saldo, pago periódico, vencimientos, tasa opcional y pagos trazables desde cuenta.
-- [ ] Validar con pruebas y QA publicada los vencimientos, tarjeta departamental y préstamos bancarios sin registrar o alterar obligaciones reales sin autorización.
+- [x] Validar con pruebas y QA publicada los vencimientos, tarjeta departamental y préstamos bancarios sin registrar o alterar obligaciones reales sin autorización.
