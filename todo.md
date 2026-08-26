@@ -231,3 +231,4 @@
 - [x] Implementar comparadores de avalancha/bola de nieve y pagos extra sin modificar deudas, tarjetas ni transacciones reales.
 - [x] Implementar escenarios manuales de flujo, presupuesto adaptativo y política de asignación de excedentes sin ejecutar operaciones.
 - [ ] Validar fórmulas, supuestos, privacidad y experiencia publicada de Fase D sin crear datos financieros de prueba.
+- [x] Incluir una opción explícita de Personal en el filtro de entidad de Simulaciones, preservando el alcance de deudas personales.

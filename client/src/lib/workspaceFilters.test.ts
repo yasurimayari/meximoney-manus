@@ -44,6 +44,7 @@ describe("filterWorkspaceSnapshot", () => {
     expect(filterWorkspaceSnapshot(snapshot, { entityId: "", projectId: "", currency: "MXN", reviewStatus: "" }).creditCards.map((item: any) => item.id)).toEqual([1, 2]);
     expect(filterWorkspaceSnapshot(snapshot, { entityId: "10", projectId: "", currency: "MXN", reviewStatus: "" }).creditCards.map((item: any) => item.id)).toEqual([2]);
     expect(filterWorkspaceSnapshot(snapshot, { entityId: "", projectId: "20", currency: "MXN", reviewStatus: "" }).creditCards.map((item: any) => item.id)).toEqual([2]);
+    expect(filterWorkspaceSnapshot(snapshot, { entityId: "__personal__", projectId: "", currency: "MXN", reviewStatus: "" }).creditCards.map((item: any) => item.id)).toEqual([2]);
   });
 
   it("serializa en CSV únicamente los movimientos presentes en el conjunto filtrado", () => {
