@@ -170,4 +170,4 @@
 - [x] Auditar los vínculos actuales entre cuentas por cobrar, ingresos aprobados y registros fiscales para evitar duplicar cobros o importes facturados.
 - [x] Definir un estado manual visible de facturado, cobrado, cobrado parcialmente o pendiente de conciliación para cada registro PFAE vinculado a CxC.
 - [x] Mostrar en Libro PFAE la conciliación de una CxC vinculada, sus abonos reales y el saldo pendiente, sin crear ingresos ni cálculos tributarios automáticos.
-- [ ] Validar con pruebas y QA publicada que los importes de cobro sólo se informan desde vínculos existentes y no modifican movimientos, CxC, patrimonio ni declaraciones.
+- [x] Validar con pruebas y QA publicada que los importes de cobro sólo se informan desde vínculos existentes y no modifican movimientos, CxC, patrimonio ni declaraciones.
