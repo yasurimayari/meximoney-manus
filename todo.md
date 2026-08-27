@@ -244,4 +244,5 @@
 - [x] Representar el inicio mensual a mediodía UTC en los resúmenes para que el formato local no retroceda al mes anterior.
 - [ ] Corregir la recalculación de horizonte, interés y saldo en Simulaciones cuando cambian los supuestos de deuda, manteniendo límites transparentes para casos no amortizables.
 - [ ] Rediseñar la exploración de movimientos en Cuentas para escalar con historiales extensos sin habilitar modificaciones en esta vista consolidada.
+- [ ] Corregir el error React #310 de Cuentas causado por el nuevo historial consolidado antes de completar su QA.
 - [ ] Validar y publicar la corrección de Simulaciones y la experiencia mejorada de Cuentas sin alterar datos financieros existentes.

@@ -29,25 +29,30 @@ export default function Accounts() {
   const { data, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const [selectedResource, setSelectedResource] = useState("all");
   const [historyPage, setHistoryPage] = useState(1);
-
-  if (isLoading || !data) return <div className="page-loading">Organizando tus cuentas y obligaciones manuales…</div>;
-
-  const accounts = data.accounts.filter((account: any) => account.status === "active");
-  const cards = data.creditCards.filter((card: any) => card.status !== "closed");
-  const loans = data.debts.filter((debt: any) => debt.status === "active" || debt.status === "review");
-  const balanceByCurrency = (items: any[], key: string) => items.reduce((totals: Record<string, number>, item) => ({ ...totals, [item.currency]: (totals[item.currency] ?? 0) + (item[key] ?? 0) }), {});
-  const assetTotals = balanceByCurrency(accounts, "currentValueCents");
-  const liabilityTotals = balanceByCurrency([...cards, ...loans], "balanceCents");
+  const allAccounts = data?.accounts ?? [];
+  const allCards = data?.creditCards ?? [];
+  const allDebts = data?.debts ?? [];
+  const allTransactions = data?.transactions ?? [];
+  const allDebtPayments = data?.debtPayments ?? [];
 
   const historyResources = useMemo<AccountHistoryResource[]>(() => [
-    ...data.accounts.map((account: any) => ({ id: account.id, name: account.name, type: "account" as const })),
-    ...data.creditCards.map((card: any) => ({ id: card.id, name: card.name, type: "creditCard" as const })),
-    ...data.debts.map((debt: any) => ({ id: debt.id, name: debt.name, type: "debt" as const })),
-  ], [data.accounts, data.creditCards, data.debts]);
-  const fullHistory = useMemo(() => buildAccountHistory(data.transactions, historyResources, data.debtPayments), [data.debtPayments, data.transactions, historyResources]);
+    ...allAccounts.map((account: any) => ({ id: account.id, name: account.name, type: "account" as const })),
+    ...allCards.map((card: any) => ({ id: card.id, name: card.name, type: "creditCard" as const })),
+    ...allDebts.map((debt: any) => ({ id: debt.id, name: debt.name, type: "debt" as const })),
+  ], [allAccounts, allCards, allDebts]);
+  const fullHistory = useMemo(() => buildAccountHistory(allTransactions, historyResources, allDebtPayments), [allDebtPayments, allTransactions, historyResources]);
   const filteredHistory = useMemo(() => selectedResource === "all" ? fullHistory : fullHistory.filter(row => row.resources.some(resource => `${resource.type}-${resource.id}` === selectedResource)), [fullHistory, selectedResource]);
   const history = paginateAccountHistory(filteredHistory, historyPage, 10);
   const selectHistory = (key: string) => { setSelectedResource(key); setHistoryPage(1); window.requestAnimationFrame(() => document.getElementById("historial-cuentas")?.scrollIntoView({ behavior: "smooth", block: "start" })); };
+
+  if (isLoading || !data) return <div className="page-loading">Organizando tus cuentas y obligaciones manuales…</div>;
+
+  const accounts = allAccounts.filter((account: any) => account.status === "active");
+  const cards = allCards.filter((card: any) => card.status !== "closed");
+  const loans = allDebts.filter((debt: any) => debt.status === "active" || debt.status === "review");
+  const balanceByCurrency = (items: any[], key: string) => items.reduce((totals: Record<string, number>, item) => ({ ...totals, [item.currency]: (totals[item.currency] ?? 0) + (item[key] ?? 0) }), {});
+  const assetTotals = balanceByCurrency(accounts, "currentValueCents");
+  const liabilityTotals = balanceByCurrency([...cards, ...loans], "balanceCents");
 
   return <div className="space-y-7"><header className="page-heading"><div><p className="eyebrow">Consulta consolidada</p><h1>Cuentas y obligaciones</h1><p>Consulta saldos manuales y vínculos de movimientos. El historial centralizado evita repetir listas largas y esta vista no transfiere dinero, registra pagos ni recalcula saldos.</p></div><Link href="/movimientos"><Button variant="outline"><ArrowLeftRight className="size-4" /> Ver registros</Button></Link></header>
     <section className="grid gap-4 md:grid-cols-2"><article className="content-card"><p className="eyebrow">Activos en cuentas</p><div className="mt-3 space-y-1">{Object.entries(assetTotals).map(([currency, total]) => <strong className="block text-2xl" key={currency}>{formatMoney(total as number, currency)}</strong>)}{!Object.keys(assetTotals).length ? <strong className="text-2xl">Sin cuentas activas</strong> : null}</div><p className="mt-2 text-sm text-muted-foreground">{accounts.length} {accounts.length === 1 ? "cuenta o activo" : "cuentas y activos"} activos.</p></article><article className="content-card"><p className="eyebrow">Obligaciones registradas</p><div className="mt-3 space-y-1">{Object.entries(liabilityTotals).map(([currency, total]) => <strong className="block text-2xl" key={currency}>{formatMoney(total as number, currency)}</strong>)}{!Object.keys(liabilityTotals).length ? <strong className="text-2xl">Sin obligaciones activas</strong> : null}</div><p className="mt-2 text-sm text-muted-foreground">{cards.length} tarjetas y {loans.length} préstamos o deudas activos.</p></article></section>
