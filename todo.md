@@ -317,3 +317,7 @@
 - [x] Permitir asociar opcionalmente un proyecto a un objetivo financiero existente, sin actualizar el objetivo desde Proyectos.
 - [x] Añadir una vista de portafolio escalable para localizar y comparar diez o más proyectos sin saturar Lista, Kanban o Calendario.
 - [x] Validar relaciones, búsqueda, indicadores y respuesta móvil sin crear ni modificar datos reales durante QA.
+- [x] Eliminar «En tu radar» y el acceso «Abrir borrador» del módulo Proyectos.
+- [x] Unificar Proyectos y Portafolio en una vista principal funcional, sin duplicación de navegación o contenido.
+- [x] Reubicar Proyectos, Flujo y Calendario en una navegación horizontal responsive para ampliar el área de trabajo.
+- [x] Validar el diseño simplificado en escritorio y móvil sin modificar datos reales.
