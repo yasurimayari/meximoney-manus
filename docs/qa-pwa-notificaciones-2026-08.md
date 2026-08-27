@@ -1,7 +1,7 @@
 # QA — PWA personal y notificaciones
 
 **Fecha:** 27 de agosto de 2026  
-**Alcance:** PWA personal con bóveda cifrada y ciclo explícito de avisos.  
+**Alcance:** PWA personal con bóveda cifrada, instalación móvil y ciclo explícito de avisos.  
 **Método:** revisión publicada de solo lectura, pruebas automatizadas y revisión de los recursos del PWA. No se creó una copia offline con datos reales, no se pulsó «Actualizar avisos» y no se cambió ninguna preferencia, movimiento, saldo, calendario ni configuración de Telegram.
 
 | Área | Comprobación | Resultado |
@@ -18,6 +18,12 @@
 ## Validación técnica
 
 La versión publicada `bac95181` pasó `pnpm check`, **127 pruebas correctas** y `pnpm build`. La ruta offline publicada se comprobó visualmente y no expone contenido financiero hasta el desbloqueo local. El navegador confirmó el registro activo del worker bajo el dominio de Meximoney y un caché sin entradas de API ni recursos privados.
+
+## Instalación móvil y contenedor externo
+
+Se confirmó la revisión visual autenticada del Presupuesto adaptativo por parte de la usuaria, sin cambios de datos. La guía visible en la pantalla de acceso ahora indica instalar la PWA desde el dominio publicado de Meximoney en Safari (iPhone) o Chrome (Android), y el manifiesto inicia una instalación nueva en la página principal en línea; la pantalla offline sólo aparece como respaldo sin red o acceso deliberado a la copia cifrada.
+
+El aviso «Amplitude Logger: Failed to fetch remote config» no está incluido en el código fuente, dependencias ni recursos de Meximoney. La captura lo muestra en el contenedor de vista previa de Manus; por ello no puede corregirse desde la aplicación. La instalación desde Safari o Chrome evita depender de dicho contenedor técnico. Si el aviso persiste dentro de la vista de Manus, debe reportarse en https://help.manus.im.
 
 ## Comprobación pendiente de la propietaria
 

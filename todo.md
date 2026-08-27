@@ -247,7 +247,11 @@
 - [x] Corregir el error React #310 de Cuentas causado por el nuevo historial consolidado antes de completar su QA.
 - [x] Validar y publicar la corrección de Simulaciones y la experiencia mejorada de Cuentas sin alterar datos financieros existentes.
 - [x] Corregir el estado vacío de Presupuesto adaptativo para que ayude a explorar y comparar las partidas existentes sin crear ni modificar presupuestos.
-- [ ] Validar y publicar la corrección de Presupuesto adaptativo sin alterar partidas ni movimientos financieros existentes.
+- [x] Validar y publicar la corrección de Presupuesto adaptativo sin alterar partidas ni movimientos financieros existentes.
+- [x] Cerrar la QA publicada de Presupuesto adaptativo tras la confirmación de la usuaria, sin modificar datos financieros.
+- [x] Verificar que la app publicada no incorpora ni genera el aviso Amplitude mostrado por el contenedor móvil externo.
+- [x] Mejorar la guía de instalación de la PWA personal en iPhone sin alterar la bóveda offline ni los datos financieros.
+- [x] Corregir el inicio de una nueva instalación PWA para que abra Meximoney en línea y no solicite un código offline antes de configurar la bóveda.
 - [x] Auditar y definir un alcance conservador de PWA que no conserve datos financieros offline ni habilite acceso sin autenticación.
 - [x] Revisar la política actual de notificaciones, canales, consentimiento y datos mínimos expuestos sin alterar su programación activa.
 - [x] Priorizar y documentar el siguiente bloque funcional de la Fase E, manteniendo pendientes las decisiones de implementación.
