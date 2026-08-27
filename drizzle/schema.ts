@@ -468,6 +468,11 @@ export const financeDocuments = mysqlTable("financeDocuments", {
   jurisdiction: varchar("jurisdiction", { length: 120 }),
   referenceUrl: text("referenceUrl"),
   referenceProvider: mysqlEnum("referenceProvider", ["google_drive", "url", "other"]).notNull().default("url"),
+  fileKey: varchar("fileKey", { length: 500 }),
+  fileUrl: text("fileUrl"),
+  fileName: varchar("fileName", { length: 240 }),
+  fileMimeType: varchar("fileMimeType", { length: 120 }),
+  fileSizeBytes: int("fileSizeBytes"),
   issuedAt: timestamp("issuedAt"),
   expiresAt: timestamp("expiresAt"),
   reminderAt: timestamp("reminderAt"),
@@ -580,12 +585,28 @@ export const debtPayments = mysqlTable("debtPayments", {
   linkedTransactionId: int("linkedTransactionId"),
   totalPaymentCents: int("totalPaymentCents").notNull(),
   principalCents: int("principalCents").notNull(),
+  interestCents: int("interestCents").notNull().default(0),
+  lateInterestCents: int("lateInterestCents").notNull().default(0),
+  feeCents: int("feeCents").notNull().default(0),
   currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
   paidAt: timestamp("paidAt").notNull(),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+export const debtBalanceAdjustments = mysqlTable("debtBalanceAdjustments", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  debtId: int("debtId").notNull(),
+  type: mysqlEnum("type", ["late_interest", "finance_charge", "other_charge", "correction"]).notNull(),
+  amountCents: int("amountCents").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  occurredAt: timestamp("occurredAt").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [index("debtBalanceAdjustments_user_debt_idx").on(table.userId, table.debtId)]);
 
 export const financedAssetPurchases = mysqlTable("financedAssetPurchases", {
   id: int("id").autoincrement().primaryKey(),

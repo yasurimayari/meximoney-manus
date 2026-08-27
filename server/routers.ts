@@ -13,6 +13,7 @@ import {
   creditCards,
   creditScoreRecords,
   debts,
+  debtBalanceAdjustments,
   debtPayments,
   decisionRecords,
   exchangeRates,
@@ -66,6 +67,8 @@ import { extractQuickCaptureDraft } from "./quickCapture";
 import { askClaudeForMexi } from "./claude";
 import { mexicoCityReferenceMonth } from "./monthReference";
 import { calculatePersonalScore } from "./personalScore";
+import { buildManualAmortizationSchedule, debtPaymentBreakdownIsValid } from "./debtAmortization";
+import { decodePdfUpload } from "./documentUpload";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { sdk } from "./_core/sdk";
 import { systemRouter } from "./_core/systemRouter";
@@ -1365,8 +1368,15 @@ export const appRouter = router({
       }),
     }),
     documents: router({
-      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().min(1).max(180), type: z.enum(["statement", "invoice", "contract", "policy", "tax", "receipt", "other"]), documentClass: z.enum(["general", "identity_residency", "tax_residency", "tax_filing", "insurance", "will_estate", "property", "investment_instrument", "loan_credit", "legal_contract"]).default("general"), scope: scopeSchema, relatedEntityType: z.enum(["none", "asset", "debt", "insurance", "tax", "estate"]).default("none"), relatedEntityId: z.number().int().positive().nullable().optional(), jurisdiction: z.string().max(120).nullable().optional(), referenceUrl: z.string().url().nullable().optional(), referenceProvider: z.enum(["google_drive", "url", "other"]).default("url"), issuedAt: optionalDate, expiresAt: optionalDate, reminderAt: optionalDate, verified: z.boolean(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
-        const db = await requireDb(); const { id, issuedAt, expiresAt, reminderAt, ...values } = input; const payload = { ...values, issuedAt: asDate(issuedAt), expiresAt: asDate(expiresAt), reminderAt: asDate(reminderAt) };
+      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().min(1).max(180), type: z.enum(["statement", "invoice", "contract", "policy", "tax", "receipt", "other"]), documentClass: z.enum(["general", "identity_residency", "tax_residency", "tax_filing", "insurance", "will_estate", "property", "investment_instrument", "loan_credit", "legal_contract"]).default("general"), scope: scopeSchema, relatedEntityType: z.enum(["none", "asset", "debt", "insurance", "tax", "estate"]).default("none"), relatedEntityId: z.number().int().positive().nullable().optional(), jurisdiction: z.string().max(120).nullable().optional(), referenceUrl: z.string().url().nullable().optional(), referenceProvider: z.enum(["google_drive", "url", "other"]).default("url"), fileUpload: z.object({ fileName: z.string().min(1).max(240), mimeType: z.string().max(120), base64: z.string().min(8).max(14_000_000) }).nullable().optional(), removeStoredFile: z.boolean().optional(), issuedAt: optionalDate, expiresAt: optionalDate, reminderAt: optionalDate, verified: z.boolean(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb(); const { id, issuedAt, expiresAt, reminderAt, fileUpload, removeStoredFile, ...values } = input;
+        let filePayload: Record<string, string | number | null> = {};
+        if (fileUpload) {
+          const { bytes, safeFileName } = decodePdfUpload(fileUpload);
+          const { key, url } = await storagePut(`documents/${ctx.user.id}/${randomUUID()}-${safeFileName}`, bytes, "application/pdf");
+          filePayload = { fileKey: key, fileUrl: url, fileName: safeFileName, fileMimeType: "application/pdf", fileSizeBytes: bytes.byteLength };
+        } else if (removeStoredFile) filePayload = { fileKey: null, fileUrl: null, fileName: null, fileMimeType: null, fileSizeBytes: null };
+        const payload = { ...values, ...filePayload, issuedAt: asDate(issuedAt), expiresAt: asDate(expiresAt), reminderAt: asDate(reminderAt) };
         if (id) await db.update(financeDocuments).set(payload).where(and(eq(financeDocuments.id, id), eq(financeDocuments.userId, ctx.user.id)));
         else await db.insert(financeDocuments).values({ userId: ctx.user.id, ...payload }); return { success: true };
       }),
@@ -1422,8 +1432,9 @@ export const appRouter = router({
         else await db.insert(debts).values({ userId: ctx.user.id, ...payload });
         return { success: true };
       }),
-      paymentSave: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), debtId: z.number().int().positive(), linkedTransactionId: z.number().int().positive().nullable().optional(), totalPaymentCents: z.number().int().positive(), principalCents: z.number().int().positive(), currency: z.string().length(3), paidAt: z.number().int().positive(), nextDueAt: optionalDate, notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
-        if (input.principalCents > input.totalPaymentCents) throw new TRPCError({ code: "BAD_REQUEST", message: "La reducción de principal no puede superar el pago total." });
+      paymentSave: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), debtId: z.number().int().positive(), linkedTransactionId: z.number().int().positive().nullable().optional(), totalPaymentCents: z.number().int().positive(), principalCents: moneySchema, interestCents: moneySchema.optional(), lateInterestCents: moneySchema.optional(), feeCents: moneySchema.optional(), currency: z.string().length(3), paidAt: z.number().int().positive(), nextDueAt: optionalDate, notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        const breakdown = { totalPaymentCents: input.totalPaymentCents, principalCents: input.principalCents, interestCents: input.interestCents ?? Math.max(0, input.totalPaymentCents - input.principalCents), lateInterestCents: input.lateInterestCents ?? 0, feeCents: input.feeCents ?? 0 };
+        if (!debtPaymentBreakdownIsValid(breakdown)) throw new TRPCError({ code: "BAD_REQUEST", message: "El pago total debe coincidir con capital, interés ordinario, interés vencido y cargos." });
         const db = await requireDb();
         await db.transaction(async tx => {
           const [debt] = await tx.select().from(debts).where(and(eq(debts.id, input.debtId), eq(debts.userId, ctx.user.id))).limit(1);
@@ -1441,7 +1452,7 @@ export const appRouter = router({
             if (usedFromExpense + input.totalPaymentCents > expense.amountCents) throw new TRPCError({ code: "BAD_REQUEST", message: "El importe vinculado supera el gasto real seleccionado." });
             await tx.update(financialTransactions).set({ debtId: debt.id }).where(and(eq(financialTransactions.id, expense.id), eq(financialTransactions.userId, ctx.user.id)));
           }
-          const payload = { debtId: debt.id, linkedTransactionId: input.linkedTransactionId ?? null, totalPaymentCents: input.totalPaymentCents, principalCents: input.principalCents, currency: input.currency, paidAt: new Date(input.paidAt), notes: input.notes ?? null };
+          const payload = { debtId: debt.id, linkedTransactionId: input.linkedTransactionId ?? null, totalPaymentCents: breakdown.totalPaymentCents, principalCents: breakdown.principalCents, interestCents: breakdown.interestCents, lateInterestCents: breakdown.lateInterestCents, feeCents: breakdown.feeCents, currency: input.currency, paidAt: new Date(input.paidAt), notes: input.notes ?? null };
           if (input.id) await tx.update(debtPayments).set(payload).where(and(eq(debtPayments.id, input.id), eq(debtPayments.userId, ctx.user.id)));
           else await tx.insert(debtPayments).values({ userId: ctx.user.id, ...payload });
           const nextBalance = debt.balanceCents + (previous?.principalCents ?? 0) - input.principalCents;
@@ -1462,6 +1473,49 @@ export const appRouter = router({
             if (!otherLinks[0]) await tx.update(financialTransactions).set({ debtId: null }).where(and(eq(financialTransactions.id, payment.linkedTransactionId), eq(financialTransactions.userId, ctx.user.id), eq(financialTransactions.debtId, debt.id)));
           }
           await tx.update(debts).set({ balanceCents: debt.balanceCents + payment.principalCents, status: "active" }).where(and(eq(debts.id, debt.id), eq(debts.userId, ctx.user.id)));
+        });
+        return { success: true };
+      }),
+      amortization: workspaceFinanceProcedure.input(z.object({ debtId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const [debt] = await db.select().from(debts).where(and(eq(debts.id, input.debtId), eq(debts.userId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (!debt) throw new TRPCError({ code: "NOT_FOUND", message: "La deuda no pertenece a tu espacio privado." });
+        const [payments, adjustments] = await Promise.all([
+          db.select().from(debtPayments).where(and(eq(debtPayments.debtId, debt.id), eq(debtPayments.userId, ctx.workspaceAccess.ownerId))),
+          db.select().from(debtBalanceAdjustments).where(and(eq(debtBalanceAdjustments.debtId, debt.id), eq(debtBalanceAdjustments.userId, ctx.workspaceAccess.ownerId))),
+        ]);
+        return { debt, payments: payments.sort((left, right) => left.paidAt.getTime() - right.paidAt.getTime()), adjustments: adjustments.sort((left, right) => left.occurredAt.getTime() - right.occurredAt.getTime()), projection: buildManualAmortizationSchedule({ balanceCents: debt.balanceCents, annualRateBps: debt.interestRateBps, paymentCents: debt.installmentCents ?? debt.minimumPaymentCents, maxMonths: debt.installmentCount ?? 120 }) };
+      }),
+      adjustmentSave: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), debtId: z.number().int().positive(), type: z.enum(["late_interest", "finance_charge", "other_charge", "correction"]), amountCents: z.number().int().refine(value => value !== 0, "El importe no puede ser cero."), currency: z.string().length(3), occurredAt: z.number().int().positive(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        if (input.type !== "correction" && input.amountCents < 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Los intereses y cargos se registran como importes positivos; usa corrección para un ajuste negativo confirmado." });
+        const db = await requireDb();
+        await db.transaction(async tx => {
+          const [debt] = await tx.select().from(debts).where(and(eq(debts.id, input.debtId), eq(debts.userId, ctx.user.id))).limit(1);
+          if (!debt) throw new TRPCError({ code: "NOT_FOUND", message: "La deuda no pertenece a tu espacio privado." });
+          if (debt.currency !== input.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "El cargo debe usar la misma moneda que la deuda." });
+          const [previous] = input.id ? await tx.select().from(debtBalanceAdjustments).where(and(eq(debtBalanceAdjustments.id, input.id), eq(debtBalanceAdjustments.userId, ctx.user.id))).limit(1) : [];
+          if (input.id && !previous) throw new TRPCError({ code: "NOT_FOUND", message: "El cargo no pertenece a tu espacio privado." });
+          if (previous && previous.debtId !== debt.id) throw new TRPCError({ code: "BAD_REQUEST", message: "No puedes mover un cargo entre deudas." });
+          const nextBalance = debt.balanceCents - (previous?.amountCents ?? 0) + input.amountCents;
+          if (nextBalance < 0) throw new TRPCError({ code: "BAD_REQUEST", message: "La corrección dejaría el saldo pendiente por debajo de cero." });
+          const payload = { debtId: debt.id, type: input.type, amountCents: input.amountCents, currency: input.currency, occurredAt: new Date(input.occurredAt), notes: input.notes ?? null };
+          if (input.id) await tx.update(debtBalanceAdjustments).set(payload).where(and(eq(debtBalanceAdjustments.id, input.id), eq(debtBalanceAdjustments.userId, ctx.user.id)));
+          else await tx.insert(debtBalanceAdjustments).values({ userId: ctx.user.id, ...payload });
+          await tx.update(debts).set({ balanceCents: nextBalance, status: nextBalance === 0 ? "paid" : "active" }).where(and(eq(debts.id, debt.id), eq(debts.userId, ctx.user.id)));
+        });
+        return { success: true };
+      }),
+      adjustmentRemove: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        await db.transaction(async tx => {
+          const [adjustment] = await tx.select().from(debtBalanceAdjustments).where(and(eq(debtBalanceAdjustments.id, input.id), eq(debtBalanceAdjustments.userId, ctx.user.id))).limit(1);
+          if (!adjustment) return;
+          const [debt] = await tx.select().from(debts).where(and(eq(debts.id, adjustment.debtId), eq(debts.userId, ctx.user.id))).limit(1);
+          if (!debt) throw new TRPCError({ code: "NOT_FOUND", message: "La deuda vinculada ya no existe." });
+          const nextBalance = debt.balanceCents - adjustment.amountCents;
+          if (nextBalance < 0) throw new TRPCError({ code: "BAD_REQUEST", message: "No puedes eliminar este ajuste porque el saldo actual ya incorporó pagos posteriores." });
+          await tx.delete(debtBalanceAdjustments).where(and(eq(debtBalanceAdjustments.id, adjustment.id), eq(debtBalanceAdjustments.userId, ctx.user.id)));
+          await tx.update(debts).set({ balanceCents: nextBalance, status: nextBalance === 0 ? "paid" : "active" }).where(and(eq(debts.id, debt.id), eq(debts.userId, ctx.user.id)));
         });
         return { success: true };
       }),

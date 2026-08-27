@@ -273,3 +273,14 @@
 - [x] Vincular tareas de proyectos financieros con el Calendario, manteniendo edición y trazabilidad desde ambas vistas sin crear eventos automáticos no confirmados.
 - [x] Integrar de forma revisable el plan financiero Jul–Dic 2026 autorizado desde Notion, sin crear tareas, eventos o movimientos reales hasta la confirmación explícita de la usuaria.
 - [x] Validar y publicar patrimonio financiado, Score y Proyectos con pruebas y QA sin alterar datos financieros existentes ni enviar notificaciones.
+- [x] Auditar el registro actual de activos financiados, operaciones, deudas y pagos para añadir amortización e intereses vencidos sin modificar datos existentes.
+- [x] Implementar una tabla de amortización manual para activos financiados con desglose de capital, interés regular, interés vencido y saldo proyectado.
+- [x] Permitir registrar atrasos, intereses moratorios y cargos de financiación de forma manual y trazable para un activo financiado, sin ejecutar pagos ni recalcular deuda histórica de forma automática.
+- [x] Incorporar en Score un gráfico histórico de progreso financiero y score crediticio manual, con rangos visuales basados en la fuente oficial autorizada.
+- [x] Auditar y corregir la sincronización entre las vistas Lista, Kanban y Calendario de Proyectos para que reflejen el mismo proyecto y sus partes.
+- [x] Añadir una barra de progreso de proyectos basada en las tareas activas completadas o archivadas, con una regla visible y consistente.
+- [x] Aplicar el color configurable del proyecto a sus hitos y tareas en Lista, Kanban y Calendario, sin cambiar automáticamente los colores de eventos financieros no asociados.
+- [x] Permitir adjuntar voluntariamente PDFs en Documentos mediante almacenamiento privado, conservando sólo metadatos y referencia segura en la base de datos.
+- [x] Reorganizar el menú en grupos y submenús de navegación para reducir desorden y mantener las rutas existentes accesibles.
+- [x] Optimizar la jerarquía superior y los botones de acciones secundarias, usando iconos accesibles donde el contexto sea inequívoco y manteniendo texto en acciones críticas.
+- [x] Validar y publicar las mejoras de amortización, Score, Proyectos, documentos y navegación sin insertar datos financieros de prueba, enviar notificaciones ni alterar Telegram.

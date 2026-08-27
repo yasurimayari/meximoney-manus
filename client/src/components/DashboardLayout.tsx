@@ -25,7 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
 import { notificationBadgeLabel, unreadNotificationCount } from "@/lib/notificationBadge";
-import { ArrowLeftRight, Award, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, CloudDownload, ContactRound, CreditCard, EyeOff, FileDown, FolderKanban, KeyRound, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck, ReceiptText, Calculator } from "lucide-react";
+import { ArrowLeftRight, Award, BarChart3, BellRing, BotMessageSquare, CalendarDays, ChevronDown, ChevronRight, CircleCheckBig, CloudDownload, ContactRound, CreditCard, EyeOff, FileDown, FolderKanban, KeyRound, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck, ReceiptText, Calculator } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -33,25 +33,14 @@ import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import Onboarding from "@/pages/Onboarding";
 import { Button } from "./ui/button";
 
-const primaryMenuItems = [
-  { icon: LayoutDashboard, label: "Panel", path: "/" },
-  { icon: ArrowLeftRight, label: "Registros", path: "/movimientos" },
-  { icon: Landmark, label: "Cuentas", path: "/cuentas" },
-  { icon: CreditCard, label: "Tarjetas", path: "/tarjetas" },
-  { icon: Target, label: "Planificación", path: "/planificacion" },
-  { icon: FolderKanban, label: "Proyectos", path: "/proyectos" },
-  { icon: Award, label: "Score", path: "/score" },
-  { icon: ContactRound, label: "Contactos", path: "/contactos" },
-  { icon: PiggyBank, label: "Ahorro e inversiones", path: "/inversiones" },
-  { icon: Landmark, label: "Patrimonio", path: "/patrimonio" },
-  { icon: BarChart3, label: "Analítica", path: "/analitica" },
-  { icon: Calculator, label: "Simulaciones", path: "/simulaciones" },
-  { icon: CalendarDays, label: "Calendario", path: "/calendario" },
-  { icon: ReceiptText, label: "Libro PFAE", path: "/fiscal" },
-  { icon: BookOpenCheck, label: "Estados", path: "/estados" },
-  { icon: CircleCheckBig, label: "Control mensual", path: "/control-mensual" },
-  { icon: BotMessageSquare, label: "Asistente", path: "/asistente" },
+const primaryMenuGroups = [
+  { label: "Resumen", items: [{ icon: LayoutDashboard, label: "Panel", path: "/" }, { icon: BarChart3, label: "Analítica", path: "/analitica" }, { icon: BookOpenCheck, label: "Estados", path: "/estados" }, { icon: Award, label: "Score", path: "/score" }, { icon: Calculator, label: "Simulaciones", path: "/simulaciones" }] },
+  { label: "Registro", items: [{ icon: ArrowLeftRight, label: "Registros", path: "/movimientos" }, { icon: Landmark, label: "Cuentas", path: "/cuentas" }, { icon: CreditCard, label: "Tarjetas", path: "/tarjetas" }, { icon: ContactRound, label: "Contactos", path: "/contactos" }] },
+  { label: "Dinero", items: [{ icon: PiggyBank, label: "Ahorro e inversiones", path: "/inversiones" }, { icon: Landmark, label: "Patrimonio", path: "/patrimonio" }] },
+  { label: "Planificación", items: [{ icon: Target, label: "Planificación", path: "/planificacion" }, { icon: FolderKanban, label: "Proyectos", path: "/proyectos" }, { icon: CalendarDays, label: "Calendario", path: "/calendario" }, { icon: CircleCheckBig, label: "Control mensual", path: "/control-mensual" }] },
+  { label: "Gestión", items: [{ icon: ReceiptText, label: "Libro PFAE", path: "/fiscal" }, { icon: BotMessageSquare, label: "Asistente", path: "/asistente" }] },
 ];
+const primaryMenuItems = primaryMenuGroups.flatMap(group => group.items);
 
 const accountMenuItems = [
   { icon: FileDown, label: "Exportar", path: "/exportar" },
@@ -191,6 +180,7 @@ function DashboardLayoutContent({
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
+  const [openNavigationGroups, setOpenNavigationGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(primaryMenuGroups.map(group => [group.label, true])));
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = [...primaryMenuItems, ...accountMenuItems].find(item => item.path === location) ?? [{ path: "/calidad", label: "Perfil y privacidad" }, { path: "/seguridad/cambiar-contrasena", label: "Cambiar contraseña" }, { path: "/notificaciones", label: "Notificaciones" }, { path: "/datos-offline", label: "Datos offline" }, { path: "/espacio", label: "Espacio" }].find(item => item.path === location);
   const isMobile = useIsMobile();
@@ -258,9 +248,13 @@ function DashboardLayoutContent({
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0">
-            <SidebarMenu className="px-2 py-1">
-              {primaryMenuItems.map(item => {
+          <SidebarContent className="gap-0 px-2 py-2">
+            {primaryMenuGroups.map(group => {
+              const isGroupOpen = openNavigationGroups[group.label];
+              return <div className="mb-2" key={group.label}>
+                {!isCollapsed ? <button type="button" className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground hover:bg-accent/50" onClick={() => setOpenNavigationGroups(current => ({ ...current, [group.label]: !current[group.label] }))} aria-expanded={isGroupOpen}><span>{group.label}</span>{isGroupOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}</button> : null}
+                {(isCollapsed || isGroupOpen) ? <SidebarMenu className="py-0.5">
+              {group.items.map(item => {
                 const isActive = location === item.path;
                 const isNotificationsItem = item.path === "/notificaciones";
                 const notificationLabel = unreadNotifications ? `${unreadNotifications} notificaciones sin leer` : "Sin notificaciones sin leer";
@@ -282,7 +276,9 @@ function DashboardLayoutContent({
                   </SidebarMenuItem>
                 );
               })}
-            </SidebarMenu>
+                </SidebarMenu> : null}
+              </div>;
+            })}
           </SidebarContent>
 
           <SidebarFooter className="p-3">
