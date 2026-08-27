@@ -2,6 +2,7 @@ const OFFLINE_DATABASE = "meximoney-offline-vault";
 const OFFLINE_STORE = "vault";
 const OFFLINE_RECORD_ID = "personal-finance-snapshot";
 const ITERATIONS = 250_000;
+const PWA_ICON_PATH = "/manus-storage/meximoney-pwa-icon_d935fd19.png";
 
 type EncryptedOfflineRecord = {
   id: string;
@@ -181,6 +182,6 @@ export function cachePersonalAppShell() {
   if (!("serviceWorker" in navigator)) return;
   navigator.serviceWorker.ready.then(registration => {
     const resources = performance.getEntriesByType("resource").map(entry => entry.name).filter(url => url.startsWith(window.location.origin) && !url.includes("/api/") && !url.includes("/manus-storage/"));
-    registration.active?.postMessage({ type: "CACHE_PERSONAL_SHELL", urls: Array.from(new Set(["/offline", "/manifest.webmanifest", ...resources])) });
+    registration.active?.postMessage({ type: "CACHE_PERSONAL_SHELL", urls: Array.from(new Set(["/offline", "/manifest.webmanifest", PWA_ICON_PATH, ...resources])) });
   }).catch(() => undefined);
 }
