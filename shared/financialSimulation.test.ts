@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocateSurplus, applyCashFlowScenario, buildCashFlowBaseline, simulateDebtPayoff } from "./financialSimulation";
+import { allocateSurplus, applyCashFlowScenario, buildCashFlowBaseline, debtSimulationSummaryState, simulateDebtPayoff } from "./financialSimulation";
 
 describe("financialSimulation", () => {
   const debts = [
@@ -20,6 +20,19 @@ describe("financialSimulation", () => {
     expect(result.nonAmortizingDebtNames).toEqual(["Pago insuficiente"]);
     expect(result.months).toBe(0);
     expect(result.totalInterestCents).toBe(0);
+    expect(debtSimulationSummaryState(result)).toBe("incomplete");
+  });
+
+  it("conserva el resultado de obligaciones amortizables y lo marca parcial si otra requiere un supuesto", () => {
+    const result = simulateDebtPayoff([
+      { id: "modelable", name: "Modelable", source: "credit_card", balanceCents: 10000, interestRateBps: 1200, minimumPaymentCents: 2500 },
+      { id: "pending", name: "Pendiente", source: "credit_card", balanceCents: 100000, interestRateBps: 120000, minimumPaymentCents: 5000 },
+    ], "avalanche", 0);
+
+    expect(result.months).toBeGreaterThan(0);
+    expect(result.totalInterestCents).toBeGreaterThan(0);
+    expect(result.nonAmortizingDebtNames).toEqual(["Pendiente"]);
+    expect(debtSimulationSummaryState(result)).toBe("partial");
   });
 
   it("expone conversiones excluidas y aplica hipótesis de flujo explícitas", () => {

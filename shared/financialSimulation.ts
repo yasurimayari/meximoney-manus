@@ -22,6 +22,8 @@ export type DebtSimulation = {
   cappedAtMaximum: boolean;
 };
 
+export type DebtSimulationSummaryState = "ready" | "partial" | "incomplete";
+
 function sameMonth(value: Date | string, period: Date) {
   const date = new Date(value);
   return date.getFullYear() === period.getFullYear() && date.getMonth() === period.getMonth();
@@ -87,6 +89,12 @@ export function simulateDebtPayoff(debts: SimulationDebt[], strategy: DebtStrate
   }
   const remainingBalanceCents = eligible.reduce((total, debt) => total + debt.balanceCents, 0);
   return { strategy, months, totalInterestCents, remainingBalanceCents, firstPriorityDebtId: priority[0]?.id ?? null, invalidDebtNames, nonAmortizingDebtNames, cappedAtMaximum: remainingBalanceCents > 0 && months === maxMonths };
+}
+
+export function debtSimulationSummaryState(result: DebtSimulation): DebtSimulationSummaryState {
+  const hasGaps = result.invalidDebtNames.length > 0 || result.nonAmortizingDebtNames.length > 0;
+  if (!hasGaps) return "ready";
+  return result.months > 0 ? "partial" : "incomplete";
 }
 
 export function buildCashFlowBaseline(snapshot: any, period: Date, reportCurrency: string) {
