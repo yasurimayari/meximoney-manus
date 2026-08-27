@@ -305,3 +305,7 @@
 - [x] Validar tipos, pruebas, respuesta móvil y compilación del rediseño sin modificar proyectos o tareas reales.
 - [x] Rehacer la experiencia operativa de Proyectos con foco, jerarquía y navegación clara, tomando como inspiración principios de la referencia autorizada.
 - [x] Validar el rediseño de Proyectos en escritorio y móvil sin crear, editar, archivar o eliminar proyectos y tareas reales.
+- [x] Optimizar la navegación y los controles móviles del módulo de Proyectos para una interacción fluida y accesible.
+- [x] Añadir filtros y ordenamiento a «En tu radar» para priorizar tareas urgentes sin modificar tareas por defecto.
+- [x] Implementar arrastrar y soltar en Kanban con animaciones, confirmación explícita y alternativa accesible para actualizar estados de tareas.
+- [x] Validar pruebas de priorización, actualización de estado y experiencia responsive sin crear ni modificar tareas reales durante QA.
