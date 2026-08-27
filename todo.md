@@ -290,3 +290,4 @@
 - [x] Añadir un gráfico de proporción entre capital e intereses pagados, diferenciando interés ordinario, vencido y cargos cuando existan.
 - [x] Permitir exportar la tabla de amortización en Excel y PDF con histórico conciliado, proyección y resumen, sin incluir datos ajenos al activo elegido.
 - [x] Validar y publicar las mejoras visuales y exportables de amortización sin crear pagos, cargos ni movimientos de prueba.
+- [x] Corregir el diálogo de amortización que muestra la tabla antigua pero omite el resumen, gráfico y botones de exportación publicados.
