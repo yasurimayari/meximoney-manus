@@ -8,7 +8,8 @@
 |---|---|---|
 | Ruta offline pública | Se abrió `/offline` sin una sesión financiera ni una copia guardada. | Correcto: aparece únicamente la pantalla de desbloqueo, sin cifras, movimientos ni datos de perfil. |
 | Manifiesto de instalación | Se comprobó el manifiesto publicado. | Correcto: apunta a `/offline`, declara el icono de Meximoney y usa modo de aplicación independiente. |
-| Worker de servicio | Se inspeccionó el recurso publicado. | Correcto: permite conservar el shell de interfaz y omite expresamente las solicitudes `/api/`. |
+| Worker de servicio | Se inspeccionó el recurso publicado y su registro en navegador. | Correcto: está activo en el dominio de Meximoney, conserva el shell de interfaz y omite expresamente las solicitudes `/api/`. |
+| Caché del worker | Se listaron las entradas del caché de la sesión de QA. | Correcto: no contiene rutas de API ni recursos privados de almacenamiento; sólo se admite el icono estático de instalación. |
 | Bóveda local | Prueba unitaria de construcción del snapshot. | Correcto: conserva información financiera autorizada y omite fecha de nacimiento, correo, foto, URLs y notas de documentos. |
 | Notificaciones | Pruebas del generador de candidatos y revisión del procedimiento. | Correcto: abrir la bandeja sólo lee los avisos existentes; la detección/persistencia exige la acción explícita `refreshInbox`. |
 | Telegram | Revisión de alcance. | Sin cambios de cron, destinatario ni contenido autorizado; no se envió ningún mensaje. |
@@ -16,7 +17,7 @@
 
 ## Validación técnica
 
-La versión publicada `5e27109e` pasó `pnpm check`, **127 pruebas correctas** y `pnpm build`. La ruta offline publicada se comprobó visualmente y no expone contenido financiero hasta el desbloqueo local.
+La versión publicada `bac95181` pasó `pnpm check`, **127 pruebas correctas** y `pnpm build`. La ruta offline publicada se comprobó visualmente y no expone contenido financiero hasta el desbloqueo local. El navegador confirmó el registro activo del worker bajo el dominio de Meximoney y un caché sin entradas de API ni recursos privados.
 
 ## Comprobación pendiente de la propietaria
 
