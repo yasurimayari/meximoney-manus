@@ -25,7 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
 import { notificationBadgeLabel, unreadNotificationCount } from "@/lib/notificationBadge";
-import { ArrowLeftRight, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, CloudDownload, ContactRound, CreditCard, EyeOff, FileDown, KeyRound, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck, ReceiptText, Calculator } from "lucide-react";
+import { ArrowLeftRight, Award, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, CloudDownload, ContactRound, CreditCard, EyeOff, FileDown, FolderKanban, KeyRound, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck, ReceiptText, Calculator } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -39,6 +39,8 @@ const primaryMenuItems = [
   { icon: Landmark, label: "Cuentas", path: "/cuentas" },
   { icon: CreditCard, label: "Tarjetas", path: "/tarjetas" },
   { icon: Target, label: "Planificación", path: "/planificacion" },
+  { icon: FolderKanban, label: "Proyectos", path: "/proyectos" },
+  { icon: Award, label: "Score", path: "/score" },
   { icon: ContactRound, label: "Contactos", path: "/contactos" },
   { icon: PiggyBank, label: "Ahorro e inversiones", path: "/inversiones" },
   { icon: Landmark, label: "Patrimonio", path: "/patrimonio" },

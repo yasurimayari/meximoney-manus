@@ -28,6 +28,8 @@ import Simulations from "./pages/Simulations";
 import Accounts from "./pages/Accounts";
 import Offline from "./pages/Offline";
 import OfflineData from "./pages/OfflineData";
+import Projects from "./pages/Projects";
+import Score from "./pages/Score";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
@@ -42,6 +44,8 @@ function Router() {
       <Route path={"/movimientos"}><DashboardLayout><Records /></DashboardLayout></Route>
       <Route path={"/cuentas"}><DashboardLayout><Accounts /></DashboardLayout></Route>
       <Route path={"/planificacion"}><DashboardLayout><Planning /></DashboardLayout></Route>
+      <Route path={"/proyectos"}><DashboardLayout><Projects /></DashboardLayout></Route>
+      <Route path={"/score"}><DashboardLayout><Score /></DashboardLayout></Route>
       <Route path={"/calidad"}><DashboardLayout><Quality /></DashboardLayout></Route>
       <Route path={"/asistente"}><DashboardLayout><Assistant /></DashboardLayout></Route>
       <Route path={"/analitica"}><DashboardLayout><Analytics /></DashboardLayout></Route>

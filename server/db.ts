@@ -8,6 +8,7 @@ import {
   categories,
   collaborationInvites,
   creditCards,
+  creditScoreRecords,
   debts,
   debtPayments,
   decisionRecords,
@@ -18,6 +19,7 @@ import {
   financeDocuments,
   financeNotifications,
   financeTasks,
+  financedAssetPurchases,
   financialGoals,
   financialProfiles,
   financialProjects,
@@ -34,6 +36,8 @@ import {
   passwordResetEvents,
   passwordResetTokens,
   privacyConsents,
+  personalScoreSnapshots,
+  projectMilestones,
   qualityIssueAcknowledgements,
   receivables,
   receivablePayments,
@@ -166,7 +170,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, creditCardRows, goalRows, taskRows, reviewRows, monthlyControlRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, qualityAcknowledgementRows, surplusPolicyRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, creditCardRows, goalRows, taskRows, reviewRows, monthlyControlRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, financedAssetRows, milestoneRows, creditScoreRows, personalScoreRows, qualityAcknowledgementRows, surplusPolicyRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
@@ -198,6 +202,10 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(payablePayments).where(eq(payablePayments.userId, ownerId)),
     db.select().from(investments).where(eq(investments.userId, ownerId)),
     db.select().from(investmentOperations).where(eq(investmentOperations.userId, ownerId)),
+    db.select().from(financedAssetPurchases).where(eq(financedAssetPurchases.userId, ownerId)),
+    db.select().from(projectMilestones).where(eq(projectMilestones.userId, ownerId)),
+    db.select().from(creditScoreRecords).where(eq(creditScoreRecords.userId, ownerId)),
+    db.select().from(personalScoreSnapshots).where(eq(personalScoreSnapshots.userId, ownerId)),
     db.select().from(qualityIssueAcknowledgements).where(eq(qualityIssueAcknowledgements.userId, ownerId)),
     db.select().from(surplusAllocationPolicies).where(eq(surplusAllocationPolicies.userId, ownerId)).limit(1),
   ]);
@@ -288,6 +296,10 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     payablePayments: payablePaymentRows,
     investments: investmentRows,
     investmentOperations: investmentOperationRows,
+    financedAssetPurchases: financedAssetRows,
+    projectMilestones: milestoneRows,
+    creditScoreRecords: creditScoreRows,
+    personalScoreSnapshots: personalScoreRows,
     surplusAllocationPolicy: surplusPolicyRows[0] ?? null,
     decisions: decisionRows,
     dashboard: { periodStart: displayPeriodStart(referenceDate), reportCurrency, cashFlow, netWorth, liquidity, essentialExpensesCents, qualityIssues },
@@ -310,7 +322,10 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(fiscalRecords).where(eq(fiscalRecords.userId, userId));
     await tx.delete(payablePayments).where(eq(payablePayments.userId, userId));
     await tx.delete(payables).where(eq(payables.userId, userId));
+    await tx.delete(personalScoreSnapshots).where(eq(personalScoreSnapshots.userId, userId));
+    await tx.delete(creditScoreRecords).where(eq(creditScoreRecords.userId, userId));
     await tx.delete(investmentOperations).where(eq(investmentOperations.userId, userId));
+    await tx.delete(financedAssetPurchases).where(eq(financedAssetPurchases.userId, userId));
     await tx.delete(investments).where(eq(investments.userId, userId));
     await tx.delete(recurringTemplates).where(eq(recurringTemplates.userId, userId));
     await tx.delete(financialContacts).where(eq(financialContacts.userId, userId));
@@ -319,6 +334,7 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(calendarEvents).where(eq(calendarEvents.userId, userId));
     await tx.delete(financeDocuments).where(eq(financeDocuments.userId, userId));
     await tx.delete(financeTasks).where(eq(financeTasks.userId, userId));
+    await tx.delete(projectMilestones).where(eq(projectMilestones.userId, userId));
     await tx.delete(monthlyReviewControls).where(eq(monthlyReviewControls.userId, userId));
     await tx.delete(monthlyReviews).where(eq(monthlyReviews.userId, userId));
     await tx.delete(surplusAllocationPolicies).where(eq(surplusAllocationPolicies.userId, userId));

@@ -1,4 +1,4 @@
-export type InvestmentOperationType = "contribution" | "withdrawal" | "yield" | "valuation_adjustment";
+export type InvestmentOperationType = "contribution" | "withdrawal" | "yield" | "valuation_adjustment" | "depreciation";
 
 export type InvestmentValueDelta = { costBasisCents: number; currentValueCents: number };
 
@@ -6,6 +6,7 @@ export function investmentOperationDelta(type: InvestmentOperationType, amountCe
   if (type === "contribution") return { costBasisCents: amountCents, currentValueCents: amountCents };
   if (type === "withdrawal") return { costBasisCents: -amountCents, currentValueCents: -amountCents };
   if (type === "yield" || type === "valuation_adjustment") return { costBasisCents: 0, currentValueCents: amountCents };
+  if (type === "depreciation") return { costBasisCents: 0, currentValueCents: -amountCents };
   return { costBasisCents: 0, currentValueCents: 0 };
 }
 

@@ -11,6 +11,7 @@ import {
   categories,
   collaborationInvites,
   creditCards,
+  creditScoreRecords,
   debts,
   debtPayments,
   decisionRecords,
@@ -18,6 +19,7 @@ import {
   financeDocuments,
   financeNotifications,
   financeTasks,
+  financedAssetPurchases,
   financialContacts,
   fiscalPeriodReviews,
   fiscalRecords,
@@ -31,12 +33,14 @@ import {
   monthlyReviews,
   monthlyFinancialStatements,
   notificationPreferences,
+  personalScoreSnapshots,
   localCredentials,
   passwordResetEvents,
   passwordResetTokens,
   payablePayments,
   payables,
   privacyConsents,
+  projectMilestones,
   qualityIssueAcknowledgements,
   receivables,
   receivablePayments,
@@ -61,6 +65,7 @@ import { creditCardAlertCandidates } from "./creditCardAlerts";
 import { extractQuickCaptureDraft } from "./quickCapture";
 import { askClaudeForMexi } from "./claude";
 import { mexicoCityReferenceMonth } from "./monthReference";
+import { calculatePersonalScore } from "./personalScore";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { sdk } from "./_core/sdk";
 import { systemRouter } from "./_core/systemRouter";
@@ -86,6 +91,28 @@ const authenticatedPasswordChangeInput = z.object({
 const securityHistoryInput = z.object({
   periodDays: z.union([z.literal(30), z.literal(90), z.literal(180)]).default(90),
 }).default({ periodDays: 90 });
+
+function scoreFromSnapshot(snapshot: any, referenceDate: Date) {
+  const reportCurrency = snapshot.dashboard.reportCurrency;
+  const creditCards = snapshot.creditCards.filter((card: any) => card.status !== "closed" && card.currency === reportCurrency);
+  const debts = snapshot.debts.filter((debt: any) => (debt.status === "active" || debt.status === "review") && debt.currency === reportCurrency);
+  const creditScore = snapshot.creditScoreRecords.filter((record: any) => new Date(record.reportedAt) <= referenceDate).sort((a: any, b: any) => new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime())[0] ?? null;
+  const emergencyFundCents = snapshot.goals.filter((goal: any) => goal.type === "emergency" && goal.status === "active" && goal.currency === reportCurrency).reduce((sum: number, goal: any) => sum + goal.currentCents, 0);
+  const recentTransactionCount = snapshot.transactions.filter((transaction: any) => transaction.occurredAt >= new Date(referenceDate.getTime() - 7 * 24 * 60 * 60 * 1000) && transaction.occurredAt <= referenceDate).length;
+  const principalPaidLast30DaysCents = snapshot.debtPayments.filter((payment: any) => payment.currency === reportCurrency && payment.paidAt >= new Date(referenceDate.getTime() - 30 * 24 * 60 * 60 * 1000) && payment.paidAt <= referenceDate).reduce((sum: number, payment: any) => sum + payment.principalCents, 0);
+  return calculatePersonalScore({
+    netWorthCents: snapshot.dashboard.netWorth.netWorthCents,
+    creditCardBalanceCents: creditCards.reduce((sum: number, card: any) => sum + card.balanceCents, 0),
+    creditLimitCents: creditCards.reduce((sum: number, card: any) => sum + card.creditLimitCents, 0),
+    creditScore: creditScore?.score ?? null,
+    emergencyFundCents,
+    incomeCents: snapshot.dashboard.cashFlow.incomeCents,
+    expenseCents: snapshot.dashboard.cashFlow.expenseCents,
+    recentTransactionCount,
+    principalPaidLast30DaysCents,
+    outstandingDebtCents: debts.reduce((sum: number, debt: any) => sum + debt.balanceCents, 0),
+  });
+}
 
 async function setLocalSession(ctx: { req: any; res: any }, user: { openId: string; name: string | null }) {
   const token = await sdk.createSessionToken(user.openId, { name: user.name || "Usuario Meximoney" });
@@ -355,11 +382,23 @@ export const appRouter = router({
         else await db.insert(workspaceEntities).values({ ownerId: ctx.workspaceAccess.ownerId, ...values });
         return { success: true };
       }),
-      projectSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive(), name: z.string().trim().min(2).max(160), status: z.enum(["active", "paused", "closed", "planned"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      projectSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(2).max(160), status: z.enum(["active", "paused", "closed", "planned", "archived"]), color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#0f766e"), startsAt: optionalDate, targetAt: optionalDate, notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar proyectos." });
-        const db = await requireDb(); const { id, ...values } = input;
-        if (id) await db.update(financialProjects).set(values).where(and(eq(financialProjects.id, id), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId)));
-        else await db.insert(financialProjects).values({ ownerId: ctx.workspaceAccess.ownerId, ...values });
+        const db = await requireDb(); const { id, startsAt, targetAt, status, ...values } = input;
+        if (values.entityId) { const [entity] = await db.select({ id: workspaceEntities.id }).from(workspaceEntities).where(and(eq(workspaceEntities.id, values.entityId), eq(workspaceEntities.ownerId, ctx.workspaceAccess.ownerId))).limit(1); if (!entity) throw new TRPCError({ code: "BAD_REQUEST", message: "La entidad seleccionada no pertenece a tu espacio." }); }
+        const payload = { ...values, status, startsAt: asDate(startsAt), targetAt: asDate(targetAt), archivedAt: status === "archived" ? new Date() : null };
+        if (id) await db.update(financialProjects).set(payload).where(and(eq(financialProjects.id, id), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId)));
+        else await db.insert(financialProjects).values({ ownerId: ctx.workspaceAccess.ownerId, ...payload });
+        return { success: true };
+      }),
+      projectRemove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar proyectos." });
+        const db = await requireDb();
+        const [dependencies] = await Promise.all([
+          db.select({ id: financeTasks.id }).from(financeTasks).where(and(eq(financeTasks.userId, ctx.workspaceAccess.ownerId), eq(financeTasks.projectId, input.id))).limit(1),
+        ]);
+        if (dependencies[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Este proyecto contiene tareas. Archívalo o elimina/desvincula primero sus elementos para conservar la trazabilidad." });
+        await db.delete(financialProjects).where(and(eq(financialProjects.id, input.id), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId)));
         return { success: true };
       }),
       contactSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(2).max(180), type: z.enum(["client", "supplier", "partner", "friend", "family", "employee", "other"]), email: z.string().trim().email().max(320).nullable().optional(), phone: z.string().trim().max(64).nullable().optional(), defaultCurrency: z.string().trim().length(3).nullable().optional(), status: z.enum(["active", "paused", "archived"]), notes: z.string().trim().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
@@ -867,7 +906,7 @@ export const appRouter = router({
         }),
       }),
       investments: router({
-        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(180), type: z.enum(["savings", "fixed_income", "fund_etf", "stock", "crypto", "land", "property", "business_equity", "retirement", "other"]), institution: z.string().trim().max(180).nullable().optional(), scope: scopeSchema, currency: z.string().length(3), costBasisCents: moneySchema, currentValueCents: moneySchema, reportCurrency: z.string().length(3).nullable().optional(), reportValueCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, valuationDate: optionalDate, includeInNetWorth: z.boolean(), status: z.enum(["active", "paused", "closed"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(180), type: z.enum(["savings", "fixed_income", "fund_etf", "stock", "crypto", "land", "property", "vehicle", "business_equity", "retirement", "other"]), institution: z.string().trim().max(180).nullable().optional(), scope: scopeSchema, currency: z.string().length(3), costBasisCents: moneySchema, currentValueCents: moneySchema, reportCurrency: z.string().length(3).nullable().optional(), reportValueCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, valuationDate: optionalDate, includeInNetWorth: z.boolean(), status: z.enum(["active", "paused", "closed"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar ahorro e inversiones." });
           const db = await requireDb(); const { id, exchangeRateDate, valuationDate, goalId, ...values } = input;
           if (goalId) {
@@ -889,7 +928,7 @@ export const appRouter = router({
           });
           return { success: true };
         }),
-        operationSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), investmentId: z.number().int().positive(), linkedTransactionId: z.number().int().positive().nullable().optional(), type: z.enum(["contribution", "withdrawal", "yield", "valuation_adjustment"]), amountCents: z.number().int().positive(), currency: z.string().length(3), occurredAt: z.number().int().positive(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        operationSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), investmentId: z.number().int().positive(), linkedTransactionId: z.number().int().positive().nullable().optional(), type: z.enum(["contribution", "withdrawal", "yield", "valuation_adjustment", "depreciation"]), amountCents: z.number().int().positive(), currency: z.string().length(3), occurredAt: z.number().int().positive(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede registrar operaciones de inversión." });
           const db = await requireDb();
           const [investment] = await db.select().from(investments).where(and(eq(investments.id, input.investmentId), eq(investments.userId, ctx.workspaceAccess.ownerId))).limit(1);
@@ -945,6 +984,106 @@ export const appRouter = router({
             const nextValues = applyInvestmentDelta(investment, { costBasisCents: -delta.costBasisCents, currentValueCents: -delta.currentValueCents });
             await tx.delete(investmentOperations).where(eq(investmentOperations.id, operation.id));
             await tx.update(investments).set(nextValues).where(and(eq(investments.id, investment.id), eq(investments.userId, ctx.workspaceAccess.ownerId)));
+          });
+          return { success: true };
+        }),
+      }),
+      financedAssets: router({
+        list: workspaceFinanceProcedure.query(async ({ ctx }) => {
+          const db = await requireDb();
+          const [purchases, assetRows, debtRows] = await Promise.all([
+            db.select().from(financedAssetPurchases).where(eq(financedAssetPurchases.userId, ctx.workspaceAccess.ownerId)),
+            db.select().from(investments).where(eq(investments.userId, ctx.workspaceAccess.ownerId)),
+            db.select().from(debts).where(eq(debts.userId, ctx.workspaceAccess.ownerId)),
+          ]);
+          return purchases.map(purchase => ({
+            ...purchase,
+            asset: assetRows.find(asset => asset.id === purchase.investmentId) ?? null,
+            debt: purchase.debtId ? debtRows.find(debt => debt.id === purchase.debtId) ?? null : null,
+          }));
+        }),
+        create: workspaceFinanceProcedure.input(z.object({
+          entityId: z.number().int().positive().nullable().optional(),
+          projectId: z.number().int().positive().nullable().optional(),
+          sourceAccountId: z.number().int().positive().nullable().optional(),
+          name: z.string().trim().min(2).max(180),
+          assetType: z.enum(["vehicle", "property", "land", "other"]),
+          institution: z.string().trim().max(180).nullable().optional(),
+          scope: scopeSchema,
+          currency: z.string().length(3),
+          purchaseValueCents: z.number().int().positive(),
+          cashContributionCents: moneySchema,
+          acquiredAt: z.number().int().positive(),
+          valuationPolicy: z.enum(["depreciating", "appreciating", "manual"]),
+          creditor: z.string().trim().max(140).nullable().optional(),
+          installmentCents: moneySchema,
+          installmentCount: z.number().int().positive().max(600).nullable().optional(),
+          interestRateBps: z.number().int().min(0).nullable().optional(),
+          nextDueAt: optionalDate,
+          endDate: optionalDate,
+          notes: z.string().max(3000).nullable().optional(),
+        })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede registrar activos financiados." });
+          if (input.cashContributionCents >= input.purchaseValueCents) throw new TRPCError({ code: "BAD_REQUEST", message: "Para este flujo financiado, el anticipo debe ser menor que el valor de adquisición." });
+          if (input.cashContributionCents > 0 && !input.sourceAccountId) throw new TRPCError({ code: "BAD_REQUEST", message: "Indica la cuenta desde la que pagaste el anticipo." });
+          if (input.installmentCents > 0 && !input.installmentCount) throw new TRPCError({ code: "BAD_REQUEST", message: "Indica el número de mensualidades de la financiación." });
+          const db = await requireDb();
+          const financedAmountCents = input.purchaseValueCents - input.cashContributionCents;
+          const source = input.sourceAccountId
+            ? (await db.select().from(accounts).where(and(eq(accounts.id, input.sourceAccountId), eq(accounts.userId, ctx.workspaceAccess.ownerId))).limit(1))[0]
+            : null;
+          if (input.sourceAccountId && (!source || source.status !== "active" || source.currency !== input.currency)) throw new TRPCError({ code: "BAD_REQUEST", message: "La cuenta del anticipo debe estar activa, pertenecer a tu espacio y usar la misma moneda." });
+          const loanKind = input.assetType === "vehicle" ? "automotive" : input.assetType === "property" ? "mortgage" : "not_specified";
+          const debtType = input.assetType === "property" ? "mortgage" : "financed_purchase";
+          const acquiredAt = new Date(input.acquiredAt);
+          const downPaymentTransferGroupId = input.cashContributionCents > 0 ? randomUUID() : null;
+          await db.transaction(async tx => {
+            const assetResult = await tx.insert(investments).values({
+              userId: ctx.workspaceAccess.ownerId, entityId: input.entityId ?? null, projectId: input.projectId ?? null, goalId: null,
+              name: input.name, type: input.assetType, institution: input.institution ?? null, scope: input.scope,
+              currency: input.currency, costBasisCents: input.purchaseValueCents, currentValueCents: input.purchaseValueCents,
+              reportCurrency: null, reportValueCents: null, exchangeRateMicros: null, exchangeRateDate: null,
+              valuationDate: acquiredAt, includeInNetWorth: true, status: "active", notes: input.notes ?? null,
+            });
+            const assetId = Number((Array.isArray(assetResult) ? assetResult[0] : assetResult as unknown as { insertId?: number }).insertId);
+            if (!Number.isInteger(assetId) || assetId <= 0) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No se pudo vincular el activo recién creado." });
+            const debtResult = await tx.insert(debts).values({
+              userId: ctx.workspaceAccess.ownerId, entityId: input.entityId ?? null, projectId: input.projectId ?? null, contactId: null,
+              name: `Financiación · ${input.name}`, creditor: input.creditor ?? null, type: debtType, loanKind, scope: input.scope,
+              balanceCents: financedAmountCents, originalAmountCents: financedAmountCents, installmentCents: input.installmentCents || null,
+              installmentCount: input.installmentCount ?? null, financedItem: input.name, purchasedAt: acquiredAt, currency: input.currency,
+              interestRateBps: input.interestRateBps ?? null, minimumPaymentCents: input.installmentCents, nextDueAt: asDate(input.nextDueAt),
+              endDate: asDate(input.endDate), priority: "medium", status: "active", notes: input.notes ?? null,
+            });
+            const debtId = Number((Array.isArray(debtResult) ? debtResult[0] : debtResult as unknown as { insertId?: number }).insertId);
+            if (!Number.isInteger(debtId) || debtId <= 0) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No se pudo vincular la financiación recién creada." });
+            if (input.cashContributionCents > 0 && source && downPaymentTransferGroupId) {
+              await tx.insert(financialTransactions).values([
+                {
+                  userId: ctx.workspaceAccess.ownerId, entityId: source.entityId, projectId: input.projectId ?? source.projectId,
+                  accountId: source.id, categoryId: null, goalId: null, investmentId: null, debtId: null, creditCardId: null, contactId: null,
+                  type: "transfer_out", scope: source.scope, amountCents: input.cashContributionCents, currency: input.currency,
+                  reportCurrency: input.currency, reportAmountCents: input.cashContributionCents, exchangeRateMicros: null, exchangeRateDate: null,
+                  incomeNature: "other", occurredAt: acquiredAt, isEssential: false, transferGroupId: downPaymentTransferGroupId,
+                  status: "confirmed", reviewStatus: "approved", createdByUserId: ctx.user.id, reviewedByUserId: ctx.user.id, reviewedAt: new Date(),
+                  notes: `Anticipo de ${input.name}`,
+                },
+                {
+                  userId: ctx.workspaceAccess.ownerId, entityId: input.entityId ?? null, projectId: input.projectId ?? null,
+                  accountId: null, categoryId: null, goalId: null, investmentId: assetId, debtId: null, creditCardId: null, contactId: null,
+                  type: "transfer_in", scope: input.scope, amountCents: input.cashContributionCents, currency: input.currency,
+                  reportCurrency: input.currency, reportAmountCents: input.cashContributionCents, exchangeRateMicros: null, exchangeRateDate: null,
+                  incomeNature: "other", occurredAt: acquiredAt, isEssential: false, transferGroupId: downPaymentTransferGroupId,
+                  status: "confirmed", reviewStatus: "approved", createdByUserId: ctx.user.id, reviewedByUserId: ctx.user.id, reviewedAt: new Date(),
+                  notes: `Anticipo recibido en activo · ${input.name}`,
+                },
+              ]);
+            }
+            await tx.insert(financedAssetPurchases).values({
+              userId: ctx.workspaceAccess.ownerId, investmentId: assetId, debtId, sourceAccountId: input.sourceAccountId ?? null, downPaymentTransferGroupId,
+              purchaseValueCents: input.purchaseValueCents, cashContributionCents: input.cashContributionCents, financedAmountCents,
+              acquiredAt, valuationPolicy: input.valuationPolicy, notes: input.notes ?? null,
+            });
           });
           return { success: true };
         }),
@@ -1173,6 +1312,32 @@ export const appRouter = router({
       }),
       remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(categories, input.id, ctx.user.id)),
     }),
+    score: router({
+      overview: workspaceFinanceProcedure.input(dashboardPeriodInput).query(async ({ ctx, input }) => {
+        const referenceDate = input?.referenceDate ? new Date(`${input.referenceDate}T12:00:00.000Z`) : new Date();
+        const snapshot = await getFinanceSnapshot(ctx.user.id, referenceDate);
+        return { ...scoreFromSnapshot(snapshot, referenceDate), reportCurrency: snapshot.dashboard.reportCurrency, referenceDate, creditRecords: snapshot.creditScoreRecords, snapshots: snapshot.personalScoreSnapshots };
+      }),
+      saveCreditRecord: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), score: z.number().int().min(0).max(1000), source: z.string().trim().max(120).nullable().optional(), reportedAt: z.number().int().positive(), notes: z.string().trim().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede guardar el score crediticio manual." });
+        const db = await requireDb(); const { id, reportedAt, ...values } = input; const payload = { ...values, reportedAt: new Date(reportedAt) };
+        if (id) await db.update(creditScoreRecords).set(payload).where(and(eq(creditScoreRecords.id, id), eq(creditScoreRecords.userId, ctx.workspaceAccess.ownerId)));
+        else await db.insert(creditScoreRecords).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+        return { success: true };
+      }),
+      removeCreditRecord: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar el score crediticio manual." });
+        const db = await requireDb(); await db.delete(creditScoreRecords).where(and(eq(creditScoreRecords.id, input.id), eq(creditScoreRecords.userId, ctx.workspaceAccess.ownerId))); return { success: true };
+      }),
+      saveSnapshot: workspaceFinanceProcedure.input(z.object({ referenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), notes: z.string().trim().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede guardar un corte de score." });
+        const referenceDate = input.referenceDate ? new Date(`${input.referenceDate}T12:00:00.000Z`) : new Date();
+        const snapshot = await getFinanceSnapshot(ctx.user.id, referenceDate); const score = scoreFromSnapshot(snapshot, referenceDate); const { start } = monthBounds(referenceDate);
+        const db = await requireDb();
+        await db.insert(personalScoreSnapshots).values({ userId: ctx.workspaceAccess.ownerId, calculatedAt: referenceDate, periodStart: start, totalScore: score.totalScore, level: score.level, ...score.factors, notes: input.notes ?? null });
+        return { success: true, ...score };
+      }),
+    }),
     transactions: router({
       save: privateFinanceProcedure.input(z.object({
         id: z.number().int().positive().optional(), accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(),
@@ -1319,13 +1484,35 @@ export const appRouter = router({
       }),
       remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(financialGoals, input.id, ctx.user.id)),
     }),
-    tasks: router({
-      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), title: z.string().min(1).max(180), area: z.enum(["budget", "debt", "savings", "investment", "tax", "documents", "business", "review", "other"]), scope: scopeSchema, priority: z.enum(["critical", "high", "medium", "low"]), status: z.enum(["pending", "in_progress", "waiting", "completed", "cancelled"]), dueAt: optionalDate, goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(), requiresConfirmation: z.boolean(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
-        const db = await requireDb(); const { id, dueAt, ...values } = input; const payload = { ...values, dueAt: asDate(dueAt) };
-        if (id) await db.update(financeTasks).set(payload).where(and(eq(financeTasks.id, id), eq(financeTasks.userId, ctx.user.id)));
-        else await db.insert(financeTasks).values({ userId: ctx.user.id, ...payload }); return { success: true };
+    projectMilestones: router({
+      save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), projectId: z.number().int().positive(), title: z.string().trim().min(1).max(180), description: z.string().trim().max(3000).nullable().optional(), status: z.enum(["planned", "in_progress", "completed", "archived"]), startsAt: optionalDate, targetAt: optionalDate })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar hitos de proyecto." });
+        const db = await requireDb(); const [project] = await db.select({ id: financialProjects.id }).from(financialProjects).where(and(eq(financialProjects.id, input.projectId), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (!project) throw new TRPCError({ code: "BAD_REQUEST", message: "El proyecto seleccionado no pertenece a tu espacio." });
+        const { id, startsAt, targetAt, status, ...values } = input; const payload = { ...values, status, startsAt: asDate(startsAt), targetAt: asDate(targetAt), archivedAt: status === "archived" ? new Date() : null };
+        if (id) await db.update(projectMilestones).set(payload).where(and(eq(projectMilestones.id, id), eq(projectMilestones.userId, ctx.workspaceAccess.ownerId)));
+        else await db.insert(projectMilestones).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+        return { success: true };
       }),
-      remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(financeTasks, input.id, ctx.user.id)),
+      remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar hitos de proyecto." });
+        const db = await requireDb(); const [task] = await db.select({ id: financeTasks.id }).from(financeTasks).where(and(eq(financeTasks.userId, ctx.workspaceAccess.ownerId), eq(financeTasks.milestoneId, input.id))).limit(1);
+        if (task) throw new TRPCError({ code: "BAD_REQUEST", message: "Este hito tiene tareas vinculadas. Archívalo o desvincula las tareas antes de eliminarlo." });
+        await db.delete(projectMilestones).where(and(eq(projectMilestones.id, input.id), eq(projectMilestones.userId, ctx.workspaceAccess.ownerId))); return { success: true };
+      }),
+    }),
+    tasks: router({
+      save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), projectId: z.number().int().positive().nullable().optional(), milestoneId: z.number().int().positive().nullable().optional(), title: z.string().min(1).max(180), area: z.enum(["budget", "debt", "savings", "investment", "tax", "documents", "business", "review", "other"]), scope: scopeSchema, priority: z.enum(["critical", "high", "medium", "low"]), status: z.enum(["pending", "in_progress", "waiting", "completed", "cancelled"]), dueAt: optionalDate, goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(), requiresConfirmation: z.boolean(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar tareas." });
+        const db = await requireDb(); const { id, dueAt, milestoneId, projectId, ...values } = input;
+        if (projectId) { const [project] = await db.select({ id: financialProjects.id }).from(financialProjects).where(and(eq(financialProjects.id, projectId), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId))).limit(1); if (!project) throw new TRPCError({ code: "BAD_REQUEST", message: "El proyecto seleccionado no pertenece a tu espacio." }); }
+        if (milestoneId) { const [milestone] = await db.select().from(projectMilestones).where(and(eq(projectMilestones.id, milestoneId), eq(projectMilestones.userId, ctx.workspaceAccess.ownerId))).limit(1); if (!milestone || (projectId && milestone.projectId !== projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "El hito no pertenece al proyecto seleccionado." }); }
+        const payload = { ...values, projectId: projectId ?? null, milestoneId: milestoneId ?? null, dueAt: asDate(dueAt), archivedAt: null };
+        if (id) await db.update(financeTasks).set(payload).where(and(eq(financeTasks.id, id), eq(financeTasks.userId, ctx.workspaceAccess.ownerId)));
+        else await db.insert(financeTasks).values({ userId: ctx.workspaceAccess.ownerId, ...payload }); return { success: true };
+      }),
+      archive: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive(), archived: z.boolean() })).mutation(async ({ ctx, input }) => { if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede archivar tareas." }); const db = await requireDb(); await db.update(financeTasks).set({ archivedAt: input.archived ? new Date() : null }).where(and(eq(financeTasks.id, input.id), eq(financeTasks.userId, ctx.workspaceAccess.ownerId))); return { success: true }; }),
+      remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar tareas." }); const db = await requireDb(); await db.transaction(async tx => { await tx.update(calendarEvents).set({ linkedTaskId: null }).where(and(eq(calendarEvents.userId, ctx.workspaceAccess.ownerId), eq(calendarEvents.linkedTaskId, input.id))); await tx.delete(financeTasks).where(and(eq(financeTasks.id, input.id), eq(financeTasks.userId, ctx.workspaceAccess.ownerId))); }); return { success: true }; }),
     }),
     reviews: router({
       save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), periodStart: z.number().int().positive(), status: z.enum(["draft", "reviewed", "closed"]), incomeCents: moneySchema, expenseCents: moneySchema, netCashFlowCents: z.number().int(), observations: z.string().max(5000).nullable().optional(), nextActions: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {

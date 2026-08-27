@@ -139,9 +139,13 @@ export const workspaceEntities = mysqlTable("workspaceEntities", {
 export const financialProjects = mysqlTable("financialProjects", {
   id: int("id").autoincrement().primaryKey(),
   ownerId: int("ownerId").notNull(),
-  entityId: int("entityId").notNull(),
+  entityId: int("entityId"),
   name: varchar("name", { length: 160 }).notNull(),
-  status: mysqlEnum("status", ["active", "paused", "closed", "planned"]).notNull().default("active"),
+  status: mysqlEnum("status", ["active", "paused", "closed", "planned", "archived"]).notNull().default("active"),
+  color: varchar("color", { length: 16 }).notNull().default("#0f766e"),
+  startsAt: timestamp("startsAt"),
+  targetAt: timestamp("targetAt"),
+  archivedAt: timestamp("archivedAt"),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -249,6 +253,7 @@ export const financialTransactions = mysqlTable("financialTransactions", {
   accountId: int("accountId"),
   categoryId: int("categoryId"),
   goalId: int("goalId"),
+  investmentId: int("investmentId"),
   debtId: int("debtId"),
   creditCardId: int("creditCardId"),
   contactId: int("contactId"),
@@ -417,7 +422,7 @@ export const investments = mysqlTable("investments", {
   projectId: int("projectId"),
   goalId: int("goalId"),
   name: varchar("name", { length: 180 }).notNull(),
-  type: mysqlEnum("type", ["savings", "fixed_income", "fund_etf", "stock", "crypto", "land", "property", "business_equity", "retirement", "other"]).notNull().default("savings"),
+  type: mysqlEnum("type", ["savings", "fixed_income", "fund_etf", "stock", "crypto", "land", "property", "vehicle", "business_equity", "retirement", "other"]).notNull().default("savings"),
   institution: varchar("institution", { length: 180 }),
   scope: mysqlEnum("scope", ["personal", "business", "mixed"]).notNull().default("personal"),
   currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
@@ -440,7 +445,7 @@ export const investmentOperations = mysqlTable("investmentOperations", {
   userId: int("userId").notNull(),
   investmentId: int("investmentId").notNull(),
   linkedTransactionId: int("linkedTransactionId"),
-  type: mysqlEnum("type", ["contribution", "withdrawal", "yield", "valuation_adjustment"]).notNull(),
+  type: mysqlEnum("type", ["contribution", "withdrawal", "yield", "valuation_adjustment", "depreciation"]).notNull(),
   amountCents: int("amountCents").notNull(),
   currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
   occurredAt: timestamp("occurredAt").notNull(),
@@ -582,6 +587,23 @@ export const debtPayments = mysqlTable("debtPayments", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const financedAssetPurchases = mysqlTable("financedAssetPurchases", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  investmentId: int("investmentId").notNull(),
+  debtId: int("debtId"),
+  sourceAccountId: int("sourceAccountId"),
+  downPaymentTransferGroupId: varchar("downPaymentTransferGroupId", { length: 64 }),
+  purchaseValueCents: int("purchaseValueCents").notNull(),
+  cashContributionCents: int("cashContributionCents").notNull().default(0),
+  financedAmountCents: int("financedAmountCents").notNull().default(0),
+  acquiredAt: timestamp("acquiredAt").notNull(),
+  valuationPolicy: mysqlEnum("valuationPolicy", ["depreciating", "appreciating", "manual"]).notNull().default("manual"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const financialGoals = mysqlTable("financialGoals", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
@@ -615,10 +637,55 @@ export const financeTasks = mysqlTable("financeTasks", {
   dueAt: timestamp("dueAt"),
   goalId: int("goalId"),
   debtId: int("debtId"),
+  milestoneId: int("milestoneId"),
+  archivedAt: timestamp("archivedAt"),
   requiresConfirmation: boolean("requiresConfirmation").notNull().default(false),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const projectMilestones = mysqlTable("projectMilestones", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  projectId: int("projectId").notNull(),
+  title: varchar("title", { length: 180 }).notNull(),
+  description: text("description"),
+  status: mysqlEnum("status", ["planned", "in_progress", "completed", "archived"]).notNull().default("planned"),
+  startsAt: timestamp("startsAt"),
+  targetAt: timestamp("targetAt"),
+  archivedAt: timestamp("archivedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const creditScoreRecords = mysqlTable("creditScoreRecords", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  score: int("score").notNull(),
+  source: varchar("source", { length: 120 }),
+  reportedAt: timestamp("reportedAt").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const personalScoreSnapshots = mysqlTable("personalScoreSnapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  calculatedAt: timestamp("calculatedAt").notNull(),
+  periodStart: timestamp("periodStart").notNull(),
+  totalScore: int("totalScore").notNull(),
+  level: varchar("level", { length: 32 }).notNull(),
+  netWorthPoints: int("netWorthPoints").notNull(),
+  creditUtilizationPoints: int("creditUtilizationPoints").notNull(),
+  creditScorePoints: int("creditScorePoints").notNull(),
+  emergencyFundPoints: int("emergencyFundPoints").notNull(),
+  cashFlowPoints: int("cashFlowPoints").notNull(),
+  habitPoints: int("habitPoints").notNull(),
+  debtPaymentPoints: int("debtPaymentPoints").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 export const monthlyReviews = mysqlTable("monthlyReviews", {

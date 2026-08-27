@@ -263,3 +263,13 @@
 - [x] Implementar notificaciones PWA personales con permiso explícito del navegador y datos mínimos visibles en el aviso.
 - [x] Vincular la creación de avisos PWA a una revisión manual explícita, sin cron adicional, sin modificar Telegram y sin ejecutar acciones financieras.
 - [x] Validar y publicar las notificaciones PWA sin crear registros financieros ni enviar notificaciones de prueba al dispositivo de la usuaria.
+- [x] Auditar los modelos actuales de activos, deudas, operaciones, objetivos, tareas y calendario para registrar adquisiciones financiadas sin duplicar patrimonio ni movimientos.
+- [x] Diseñar e implementar una compra manual de activo con anticipo desde cuenta y deuda financiada vinculada, con valuación y depreciación o apreciación registrables.
+- [x] Mostrar en Patrimonio el valor actualizado del activo y el saldo pendiente de su financiación como componentes separados y trazables.
+- [x] Auditar el SPF Score histórico de Notion y definir un score personal transparente, editable y sin inferencias financieras no verificables.
+- [x] Crear una sesión de Score que conserve un score crediticio manual y el SPF personal con metodología, factores y evolución visibles.
+- [x] Crear una sesión de Proyectos financieros con vistas de lista, tablero Kanban y calendario, con proyectos, partes y tareas editables, archivables o eliminables.
+- [x] Permitir proyectos personales sin vincularlos de forma artificial a una entidad empresarial existente.
+- [x] Vincular tareas de proyectos financieros con el Calendario, manteniendo edición y trazabilidad desde ambas vistas sin crear eventos automáticos no confirmados.
+- [x] Integrar de forma revisable el plan financiero Jul–Dic 2026 autorizado desde Notion, sin crear tareas, eventos o movimientos reales hasta la confirmación explícita de la usuaria.
+- [ ] Validar y publicar patrimonio financiado, Score y Proyectos con pruebas y QA sin alterar datos financieros existentes ni enviar notificaciones.
