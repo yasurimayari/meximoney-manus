@@ -289,7 +289,12 @@ export const appRouter = router({
       return referenceDate ? getFinanceSnapshot(ctx.user.id, mexicoCityReferenceMonth(referenceDate)) : getFinanceSnapshot(ctx.user.id);
     }),
     workspace: router({
-      get: protectedProcedure.query(({ ctx }) => getFinanceSnapshot(ctx.user.id)),
+      get: protectedProcedure.query(({ ctx }) => {
+        const request = ctx.req as typeof ctx.req & { get?: (name: string) => string | undefined };
+        const referenceHeader = request.get?.("x-meximoney-reference-date") ?? request.headers?.["x-meximoney-reference-date"];
+        const referenceDate = Array.isArray(referenceHeader) ? referenceHeader[0] : referenceHeader;
+        return referenceDate ? getFinanceSnapshot(ctx.user.id, mexicoCityReferenceMonth(referenceDate)) : getFinanceSnapshot(ctx.user.id);
+      }),
       quickCapture: workspaceFinanceProcedure.input(z.object({ text: z.string().trim().min(4).max(800), defaultCurrency: z.string().trim().length(3) })).mutation(async ({ input }) => {
         return extractQuickCaptureDraft(input.text, input.defaultCurrency);
       }),

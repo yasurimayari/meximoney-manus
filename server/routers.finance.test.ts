@@ -24,7 +24,7 @@ vi.mock("./claude", () => ({
 
 import { appRouter } from "./routers";
 
-function createContext(userId: number): TrpcContext {
+function createContext(userId: number, referenceDate?: string): TrpcContext {
   return {
     user: {
       id: userId,
@@ -37,7 +37,7 @@ function createContext(userId: number): TrpcContext {
       updatedAt: new Date(),
       lastSignedIn: new Date(),
     },
-    req: { protocol: "https", headers: {} } as TrpcContext["req"],
+    req: { protocol: "https", headers: referenceDate ? { "x-meximoney-reference-date": referenceDate } : {} } as TrpcContext["req"],
     res: { clearCookie: vi.fn() } as unknown as TrpcContext["res"],
   };
 }
@@ -61,6 +61,13 @@ describe("finance.dashboard", () => {
 
     expect(mocks.getFinanceSnapshot).toHaveBeenCalledTimes(1);
     expect(mocks.getFinanceSnapshot).toHaveBeenCalledWith(27);
+  });
+
+  it("usa la fecha local de Ciudad de México en el resumen que consume el Panel", async () => {
+    const caller = appRouter.createCaller(createContext(27, "2026-08-26"));
+    await caller.finance.workspace.get();
+
+    expect(mocks.getFinanceSnapshot).toHaveBeenCalledWith(27, new Date("2026-08-26T12:00:00.000Z"));
   });
 
   it("bloquea el asistente si no existe consentimiento de almacenamiento manual", async () => {
