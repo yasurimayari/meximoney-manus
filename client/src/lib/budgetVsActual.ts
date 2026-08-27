@@ -79,6 +79,14 @@ export function calculateBudgetVsActual(snapshot: any, reportCurrency: string): 
   });
 }
 
+export function latestBudgetPeriodValue(budgets: Array<{ periodStart: Date | string | null | undefined }>) {
+  const datedBudgets = budgets.filter(budget => budget.periodStart && Number.isFinite(new Date(budget.periodStart).getTime()));
+  if (!datedBudgets.length) return null;
+  const latest = datedBudgets.reduce((current, candidate) => new Date(candidate.periodStart as Date | string).getTime() > new Date(current.periodStart as Date | string).getTime() ? candidate : current);
+  const date = new Date(latest.periodStart as Date | string);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export function budgetTypeLabel(type: BudgetType) {
   return { income: "Ingreso", expense: "Gasto", savings: "Ahorro", investment: "Inversión" }[type];
 }

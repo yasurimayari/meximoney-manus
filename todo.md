@@ -246,3 +246,5 @@
 - [x] Rediseñar la exploración de movimientos en Cuentas para escalar con historiales extensos sin habilitar modificaciones en esta vista consolidada.
 - [x] Corregir el error React #310 de Cuentas causado por el nuevo historial consolidado antes de completar su QA.
 - [x] Validar y publicar la corrección de Simulaciones y la experiencia mejorada de Cuentas sin alterar datos financieros existentes.
+- [ ] Corregir el estado vacío de Presupuesto adaptativo para que ayude a explorar y comparar las partidas existentes sin crear ni modificar presupuestos.
+- [ ] Validar y publicar la corrección de Presupuesto adaptativo sin alterar partidas ni movimientos financieros existentes.

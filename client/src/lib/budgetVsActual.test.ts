@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { budgetStatusLabel, calculateBudgetVsActual } from "./budgetVsActual";
+import { budgetStatusLabel, calculateBudgetVsActual, latestBudgetPeriodValue } from "./budgetVsActual";
 
 const period = "2026-08-01T12:00:00.000Z";
 
@@ -44,5 +44,14 @@ describe("Presupuesto versus Real", () => {
     expect(results[0]).toMatchObject({ actualCents: 4500, status: "within_plan", actualSource: "contributions" });
     expect(results[1]).toMatchObject({ actualCents: 8000, status: "over_plan", excludedForCurrencyCount: 1 });
     expect(budgetStatusLabel(results[1]!)).toBe("Por encima de lo previsto");
+  });
+
+  it("elige el último periodo presupuestado disponible cuando el mes vigente no tiene partidas", () => {
+    expect(latestBudgetPeriodValue([
+      { periodStart: "2026-06-01T12:00:00.000Z" },
+      { periodStart: "2026-09-01T18:00:00.000Z" },
+      { periodStart: "2026-08-01T12:00:00.000Z" },
+    ])).toBe("2026-09");
+    expect(latestBudgetPeriodValue([])).toBeNull();
   });
 });
