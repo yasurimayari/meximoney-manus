@@ -293,3 +293,5 @@
 - [x] Corregir el diálogo de amortización que muestra la tabla antigua pero omite el resumen, gráfico y botones de exportación publicados.
 - [x] Añadir un control de ampliar y optimizar el diálogo de amortización para web, móvil y PWA, evitando que tablas, tarjetas y acciones queden cortadas.
 - [x] Rediseñar la cabecera del diálogo de amortización para evitar textos duplicados, mejorar jerarquía, contraste y espaciado en web, móvil y PWA.
+- [x] Aplicar al diálogo de amortización de Planificación la jerarquía y los controles responsive ya aprobados para Activos financiados.
+- [x] Fijar los encabezados de las tablas de amortización durante el desplazamiento vertical, preservando el desplazamiento horizontal en móvil.
