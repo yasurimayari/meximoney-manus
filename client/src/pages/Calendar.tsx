@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { calendarColorCategories, calendarColors, defaultCalendarColors, type CalendarColorCategory, type CalendarColorKey } from "@/lib/calendarColors";
 import { formatDate, formatMoney, scopeLabel, toCents } from "@/lib/finance";
 import { trpc } from "@/lib/trpc";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { buildManualFiscalAgenda } from "../../../shared/manualFiscalAgenda";
 import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, CircleDollarSign, FileClock, Landmark, Palette, Pencil, Plus, ReceiptText, RotateCcw, XCircle } from "lucide-react";
@@ -61,7 +62,7 @@ function buildCalendarItems(data: any, start: Date, endExclusive: Date, currency
 
 export default function Calendar() {
   const utils = trpc.useUtils();
-  const { data, isLoading } = trpc.finance.dashboard.useQuery();
+  const { data, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const [view, setView] = useState<CalendarView>("month");
   const [anchorDate, setAnchorDate] = useState(() => atStartOfDay(new Date()));
   const [selectedDate, setSelectedDate] = useState(() => atStartOfDay(new Date()));

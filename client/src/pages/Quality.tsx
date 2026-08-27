@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { fromCents, formatDate, toCents } from "@/lib/finance";
 import { exportSecurityActivityCsv, securityEventLabel } from "@/lib/securityActivityExport";
 import { trpc } from "@/lib/trpc";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { AlertTriangle, CheckCircle2, CircleAlert, Eraser, FileCheck2, FileDown, ImagePlus, LockKeyhole, ShieldCheck, Trash2, UserRoundCheck } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -14,7 +15,7 @@ import { Link } from "wouter";
 const policyVersion = "2026-08-01";
 
 export default function Quality() {
-  const { data, isLoading } = trpc.finance.dashboard.useQuery();
+  const { data, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const consents = trpc.finance.privacy.listConsents.useQuery();
   const [securityPeriodDays, setSecurityPeriodDays] = useState<30 | 90 | 180>(90);
   const security = trpc.auth.securityStatus.useQuery({ periodDays: securityPeriodDays });

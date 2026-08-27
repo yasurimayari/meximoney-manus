@@ -240,3 +240,4 @@
 - [x] Permitir editar fechas fiscales configuradas manualmente sin inferir vencimientos ni consultar el SAT.
 - [x] Vincular manualmente un evento de Calendario de corte o pago de tarjeta a la TDC correspondiente, sin crear pagos ni alterar la tarjeta.
 - [ ] Validar y publicar las mejoras de periodos, Telegram, registros, cuentas, analítica y calendario sin modificar datos financieros existentes.
+- [ ] Corregir la consulta publicada del Panel que durante la QA aún muestra julio pese a la fecha local de agosto y añadir una regresión de extremo a extremo del contrato tRPC.

@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { startLogin } from "./const";
+import { mexicoCityReferenceDate } from "./lib/dashboardPeriod";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -43,9 +44,7 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       headers() {
-        const mexicoCityParts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
-        const readPart = (type: Intl.DateTimeFormatPartTypes) => mexicoCityParts.find(part => part.type === type)?.value ?? "";
-        const localReferenceDate = `${readPart("year")}-${readPart("month")}-${readPart("day")}`;
+        const localReferenceDate = mexicoCityReferenceDate();
         // A local email/password login keeps this signed token only for the
         // current tab. It prevents the preview runtime's Manus token from
         // taking precedence over the user's own Meximoney session.

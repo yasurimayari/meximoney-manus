@@ -70,6 +70,13 @@ describe("finance.dashboard", () => {
     expect(mocks.getFinanceSnapshot).toHaveBeenCalledWith(27, new Date("2026-08-26T12:00:00.000Z"));
   });
 
+  it("prioriza el periodo explícito del Panel sobre una cabecera distinta", async () => {
+    const caller = appRouter.createCaller(createContext(27, "2026-07-31"));
+    await caller.finance.dashboard({ referenceDate: "2026-08-26" });
+
+    expect(mocks.getFinanceSnapshot).toHaveBeenCalledWith(27, new Date("2026-08-26T12:00:00.000Z"));
+  });
+
   it("bloquea el asistente si no existe consentimiento de almacenamiento manual", async () => {
     mocks.requireDb.mockResolvedValue({
       select: () => ({

@@ -70,6 +70,7 @@ const scopeSchema = z.enum(["personal", "business", "mixed"]);
 const creditCardScopeSchema = z.enum(["personal", "pfae", "business", "mixed"]);
 const moneySchema = z.number().int().min(0);
 const optionalDate = z.number().int().positive().nullable().optional();
+const dashboardPeriodInput = z.object({ referenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).optional();
 const calendarColorCategorySchema = z.enum(["tax", "credit_card_cutoff", "credit_card_payment", "loan_payment", "document_expiry", "insurance_renewal", "review", "other", "debt_due", "document_due", "task_due", "fiscal_reserve"]);
 const calendarColorKeySchema = z.enum(["teal", "emerald", "sky", "indigo", "violet", "amber", "orange", "rose", "slate"]);
 const importRowSchema = z.object({ accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), type: z.enum(["income", "expense"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), reportCurrency: z.string().length(3).nullable().optional(), reportAmountCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), occurredAt: z.number().int().positive(), isEssential: z.boolean().default(false), status: z.enum(["confirmed", "estimated", "needs_review"]).default("confirmed"), notes: z.string().max(3000).nullable().optional(), allowPossibleDuplicate: z.boolean().default(false) });
@@ -282,10 +283,10 @@ export const appRouter = router({
     }),
   }),
   finance: router({
-    dashboard: protectedProcedure.query(({ ctx }) => {
+    dashboard: protectedProcedure.input(dashboardPeriodInput).query(({ ctx, input }) => {
       const request = ctx.req as typeof ctx.req & { get?: (name: string) => string | undefined };
       const referenceHeader = request.get?.("x-meximoney-reference-date") ?? request.headers?.["x-meximoney-reference-date"];
-      const referenceDate = Array.isArray(referenceHeader) ? referenceHeader[0] : referenceHeader;
+      const referenceDate = input?.referenceDate ?? (Array.isArray(referenceHeader) ? referenceHeader[0] : referenceHeader);
       return referenceDate ? getFinanceSnapshot(ctx.user.id, mexicoCityReferenceMonth(referenceDate)) : getFinanceSnapshot(ctx.user.id);
     }),
     workspace: router({

@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatMoney, priorityLabel, scopeLabel } from "@/lib/finance";
 import { isMonthlyClosingPending } from "@/lib/monthlyClosing";
 import { trpc } from "@/lib/trpc";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { buildPfaePanelSummary } from "../../../shared/pfaePanelSummary";
 import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CalendarClock, CheckCircle2, CircleDollarSign, Landmark, ListTodo, Plus, ReceiptText, ShieldCheck, Target, WalletCards } from "lucide-react";
@@ -13,7 +14,7 @@ function MetricCard({ icon: Icon, label, value, note, tone = "neutral" }: { icon
 }
 
 export default function Home() {
-  const { data: rawData, isLoading, error } = trpc.finance.dashboard.useQuery();
+  const { data: rawData, isLoading, error } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const [workspaceFilters, setWorkspaceFilters] = useState(emptyWorkspaceFilters);
   const data = useMemo(() => {
     if (!rawData) return rawData;

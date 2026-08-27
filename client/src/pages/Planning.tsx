@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatDate, formatMoney, fromCents, monthStartTimestamp, priorityLabel, scopeLabel, toCents } from "@/lib/finance";
 import { budgetStatusLabel, budgetTypeLabel, calculateBudgetVsActual } from "@/lib/budgetVsActual";
 import { trpc } from "@/lib/trpc";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { debtKindLabel } from "../../../shared/manualObligations";
 import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { AlertTriangle, Archive, ArchiveRestore, CalendarCheck2, Check, ChevronRight, CircleDollarSign, ClipboardCheck, FileClock, Goal, ListTodo, Pencil, Plus, Scale, Target, Trash2, WalletCards } from "lucide-react";
@@ -29,7 +30,7 @@ function PlanningEmpty({ icon: Icon, title, text, actionLabel, onAction }: { ico
 }
 
 export default function Planning() {
-  const { data, isLoading } = trpc.finance.dashboard.useQuery();
+  const { data, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const utils = trpc.useUtils();
   const [view, setView] = useState<PlanningView>("budget");
   const [dialogOpen, setDialogOpen] = useState(false);

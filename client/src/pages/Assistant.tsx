@@ -1,6 +1,7 @@
 import { AIChatBox, type Message } from "@/components/AIChatBox";
 import { formatMoney } from "@/lib/finance";
 import { trpc } from "@/lib/trpc";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { BotMessageSquare, CircleAlert, Database, LockKeyhole, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -13,7 +14,7 @@ const suggestedPrompts = [
 ];
 
 export default function Assistant() {
-  const { data, isLoading } = trpc.finance.dashboard.useQuery();
+  const { data, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const [messages, setMessages] = useState<Message[]>([]);
   const chat = trpc.finance.assistant.chat.useMutation({
     onSuccess: response => setMessages(previous => [...previous, { role: "assistant", content: response.content }]),

@@ -2,13 +2,14 @@ import { Button } from "@/components/ui/button";
 import { exportFinancialPdf, exportTransactionsCsv } from "@/lib/reportExport";
 import { formatDate, formatMoney } from "@/lib/finance";
 import { trpc } from "@/lib/trpc";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { Download, FileDown, FileSpreadsheet, FileText, LockKeyhole, ReceiptText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export default function Reports() {
-  const { data, isLoading } = trpc.finance.dashboard.useQuery();
+  const { data, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const [workspaceFilters, setWorkspaceFilters] = useState(emptyWorkspaceFilters);
   const reportSnapshot = useMemo<typeof data>(() => data ? filterWorkspaceSnapshot(data, workspaceFilters) : undefined, [data, workspaceFilters]);
   const previewMetrics = useMemo(() => {

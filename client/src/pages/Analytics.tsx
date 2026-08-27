@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { buildAssetAllocation, buildExpenseCategories, buildMonthlySeries, buildMonthlySeriesForYear, investmentValue } from "@/lib/financeAnalytics";
 import { formatDate, formatMoney } from "@/lib/finance";
 import { trpc } from "@/lib/trpc";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
 import { BarChart3, CalendarClock, ChartNoAxesCombined, Landmark, PiggyBank, WalletCards } from "lucide-react";
@@ -25,7 +26,7 @@ function Metric({ icon: Icon, label, value, note }: { icon: typeof PiggyBank; la
 }
 
 export default function Analytics() {
-  const { data: rawData, isLoading } = trpc.finance.dashboard.useQuery();
+  const { data: rawData, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const [months, setMonths] = useState(6);
   const [selectedYear, setSelectedYear] = useState("");
   const [entityId, setEntityId] = useState("");

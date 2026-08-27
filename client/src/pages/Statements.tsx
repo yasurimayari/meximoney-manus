@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate, formatMoney, scopeLabel } from "@/lib/finance";
 import { trpc } from "@/lib/trpc";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { emptyWorkspaceFilters, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { ArrowDownRight, ArrowUpRight, BadgeDollarSign, BookOpenCheck, Landmark, Save, WalletCards } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
@@ -11,7 +12,7 @@ import { toast } from "sonner";
 
 export default function Statements() {
   const utils = trpc.useUtils();
-  const { data: snapshot, isLoading } = trpc.finance.dashboard.useQuery();
+  const { data: snapshot, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const [period, setPeriod] = useState(() => new Date().toISOString().slice(0, 7));
   const [scope, setScope] = useState<"personal" | "business" | "mixed">("personal");
   const [entityId, setEntityId] = useState("");

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate, formatMoney, fromCents, scopeLabel, toCents } from "@/lib/finance";
 import { trpc } from "@/lib/trpc";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { creditCardKindLabel } from "../../../shared/manualObligations";
 import { CalendarDays, CreditCard, Pencil, Plus, ReceiptText, Trash2, WalletCards } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
@@ -20,7 +21,7 @@ function nextCycleDate(day: number | null) {
 }
 
 export default function CreditCards() {
-  const { data, isLoading } = trpc.finance.dashboard.useQuery();
+  const { data, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const utils = trpc.useUtils();
   const [editing, setEditing] = useState<any | null>(null);
   const [paying, setPaying] = useState<any | null>(null);

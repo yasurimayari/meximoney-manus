@@ -10,6 +10,7 @@ import { ImportColumn, inferImportMapping, inferImportType, parseImportAmount, p
 import { createImportTemplateCsv, importTemplateFilename } from "@/lib/importTemplate";
 import { paginateRecords } from "@/lib/recordPagination";
 import { trpc } from "@/lib/trpc";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { Archive, ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Building2, CalendarClock, CreditCard, FileText, FolderPlus, Landmark, MessageSquareText, Pencil, Plus, ReceiptText, Repeat2, Trash2, Upload, WalletCards } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -64,7 +65,7 @@ function ImportTransactionsDialog({ open, onOpenChange, snapshot, onDone }: { op
 
 export default function Records() {
   const utils = trpc.useUtils();
-  const { data, isLoading } = trpc.finance.dashboard.useQuery();
+  const { data, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const [mode, setMode] = useState<RecordMode>("movement");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMovement, setEditingMovement] = useState<any>(null);

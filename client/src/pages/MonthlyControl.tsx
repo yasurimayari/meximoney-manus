@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/finance";
 import { trpc } from "@/lib/trpc";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { buildMonthlyControlSummary } from "../../../shared/monthlyControl";
 import { AlertTriangle, ArrowUpRight, BadgeCheck, CalendarDays, CheckCircle2, ClipboardCheck, Landmark, ReceiptText, Save, ShieldCheck, WalletCards } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -23,7 +24,7 @@ const emptyChecks: Checks = { transactionsConfirmed: false, qualityConfirmed: fa
 
 export default function MonthlyControl() {
   const utils = trpc.useUtils();
-  const { data: snapshot, isLoading } = trpc.finance.dashboard.useQuery();
+  const { data: snapshot, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const [period, setPeriod] = useState(() => new Date().toISOString().slice(0, 7));
   const [checks, setChecks] = useState<Checks>(emptyChecks);
   const [status, setStatus] = useState<"draft" | "reviewed" | "closed">("draft");

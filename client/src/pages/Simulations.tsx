@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { budgetTypeLabel, calculateBudgetVsActual } from "@/lib/budgetVsActual";
 import { formatDate, formatMoney, fromCents, toCents } from "@/lib/finance";
 import { trpc } from "@/lib/trpc";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { allocateSurplus, applyCashFlowScenario, buildCashFlowBaseline, collectSimulationDebts, simulateDebtPayoff, type DebtStrategy, type SimulationDebt } from "../../../shared/financialSimulation";
 import { AlertTriangle, Calculator, CircleAlert, Coins, CreditCard, Landmark, PiggyBank, Save, Scale, ShieldCheck, WalletCards } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -35,7 +36,7 @@ function AllocationCard({ icon: Icon, label, value, currency }: { icon: typeof L
 }
 
 export default function Simulations() {
-  const { data, isLoading } = trpc.finance.dashboard.useQuery();
+  const { data, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const utils = trpc.useUtils();
   const [tab, setTab] = useState<SimulationTab>("debts");
   const [workspaceFilters, setWorkspaceFilters] = useState(emptyWorkspaceFilters);
