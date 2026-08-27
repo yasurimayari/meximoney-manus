@@ -10,6 +10,7 @@ import { trpc } from "@/lib/trpc";
 import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { debtKindLabel } from "../../../shared/manualObligations";
 import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
+import { AmortizationInsights } from "@/components/AmortizationInsights";
 import { AlertTriangle, Archive, ArchiveRestore, CalendarCheck2, Check, ChevronRight, CircleDollarSign, ClipboardCheck, FileClock, Goal, ListTodo, Pencil, Plus, Scale, Target, Trash2, WalletCards } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";

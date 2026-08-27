@@ -285,3 +285,8 @@
 - [x] Optimizar la jerarquía superior y los botones de acciones secundarias, usando iconos accesibles donde el contexto sea inequívoco y manteniendo texto en acciones críticas.
 - [x] Validar y publicar las mejoras de amortización, Score, Proyectos, documentos y navegación sin insertar datos financieros de prueba, enviar notificaciones ni alterar Telegram.
 - [x] Verificar de extremo a extremo que la tabla de amortización de activos financiados presenta capital e intereses pagados sin crear ni modificar registros.
+- [x] Auditar el contrato de amortización y las utilidades de exportación existentes para reutilizar datos conciliados y proyectados sin mutaciones.
+- [x] Añadir un resumen visual con intereses pagados confirmados, capital pagado y capital pendiente del activo financiado.
+- [x] Añadir un gráfico de proporción entre capital e intereses pagados, diferenciando interés ordinario, vencido y cargos cuando existan.
+- [x] Permitir exportar la tabla de amortización en Excel y PDF con histórico conciliado, proyección y resumen, sin incluir datos ajenos al activo elegido.
+- [x] Validar y publicar las mejoras visuales y exportables de amortización sin crear pagos, cargos ni movimientos de prueba.
