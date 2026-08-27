@@ -295,3 +295,6 @@
 - [x] Rediseñar la cabecera del diálogo de amortización para evitar textos duplicados, mejorar jerarquía, contraste y espaciado en web, móvil y PWA.
 - [x] Aplicar al diálogo de amortización de Planificación la jerarquía y los controles responsive ya aprobados para Activos financiados.
 - [x] Fijar los encabezados de las tablas de amortización durante el desplazamiento vertical, preservando el desplazamiento horizontal en móvil.
+- [x] Comprobar que el progreso de Proyectos se actualiza al completar o archivar tareas asociadas, sin cambiar tareas existentes.
+- [x] Corregir el tablero de progreso de Proyectos para incluir tareas archivadas como cerradas aunque permanezcan ocultas de la vista activa.
+- [x] Ejecutar pruebas unitarias de la barra de progreso con tareas completadas y archivadas, sin usar proyectos reales.
