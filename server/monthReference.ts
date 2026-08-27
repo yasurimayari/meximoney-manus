@@ -11,3 +11,7 @@ export function mexicoCityReferenceMonth(rawDate?: string | null, fallback = new
   }
   return fallback;
 }
+
+export function displayPeriodStart(referenceDate: Date) {
+  return new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), 1, 12));
+}

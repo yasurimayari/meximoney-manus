@@ -43,6 +43,7 @@ import {
 import { ENV } from './_core/env';
 import { calculateLiquidity, calculateNetWorth, monthBounds, reportedAmountCents, summarizeCashFlowInReportCurrency, transferIntegrityIssues, withNetCashFlow } from "./finance";
 import { comparableInvestmentValueCents, investmentNeedsManualConversion } from "./investmentData";
+import { displayPeriodStart } from "./monthReference";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -287,7 +288,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     investmentOperations: investmentOperationRows,
     surplusAllocationPolicy: surplusPolicyRows[0] ?? null,
     decisions: decisionRows,
-    dashboard: { periodStart: start, reportCurrency, cashFlow, netWorth, liquidity, essentialExpensesCents, qualityIssues },
+    dashboard: { periodStart: displayPeriodStart(referenceDate), reportCurrency, cashFlow, netWorth, liquidity, essentialExpensesCents, qualityIssues },
   };
 }
 
