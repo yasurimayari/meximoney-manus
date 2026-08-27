@@ -385,13 +385,21 @@ export const appRouter = router({
         else await db.insert(workspaceEntities).values({ ownerId: ctx.workspaceAccess.ownerId, ...values });
         return { success: true };
       }),
-      projectSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(2).max(160), status: z.enum(["active", "paused", "closed", "planned", "archived"]), color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#0f766e"), startsAt: optionalDate, targetAt: optionalDate, notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      projectSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), previousGoalId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(2).max(160), status: z.enum(["active", "paused", "closed", "planned", "archived"]), color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#0f766e"), startsAt: optionalDate, targetAt: optionalDate, notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar proyectos." });
-        const db = await requireDb(); const { id, startsAt, targetAt, status, ...values } = input;
+        const db = await requireDb(); const { id, goalId, previousGoalId, startsAt, targetAt, status, ...values } = input;
         if (values.entityId) { const [entity] = await db.select({ id: workspaceEntities.id }).from(workspaceEntities).where(and(eq(workspaceEntities.id, values.entityId), eq(workspaceEntities.ownerId, ctx.workspaceAccess.ownerId))).limit(1); if (!entity) throw new TRPCError({ code: "BAD_REQUEST", message: "La entidad seleccionada no pertenece a tu espacio." }); }
+        if (goalId) { const [goal] = await db.select({ id: financialGoals.id, entityId: financialGoals.entityId }).from(financialGoals).where(and(eq(financialGoals.id, goalId), eq(financialGoals.userId, ctx.workspaceAccess.ownerId))).limit(1); if (!goal || (goal.entityId ?? null) !== (values.entityId ?? null)) throw new TRPCError({ code: "BAD_REQUEST", message: "El objetivo debe pertenecer a tu espacio y usar la misma entidad que el proyecto." }); }
+        if (previousGoalId && id) { const [goal] = await db.select({ id: financialGoals.id }).from(financialGoals).where(and(eq(financialGoals.id, previousGoalId), eq(financialGoals.userId, ctx.workspaceAccess.ownerId), eq(financialGoals.projectId, id))).limit(1); if (!goal) throw new TRPCError({ code: "BAD_REQUEST", message: "El objetivo previo ya no está asociado a este proyecto." }); }
         const payload = { ...values, status, startsAt: asDate(startsAt), targetAt: asDate(targetAt), archivedAt: status === "archived" ? new Date() : null };
-        if (id) await db.update(financialProjects).set(payload).where(and(eq(financialProjects.id, id), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId)));
-        else await db.insert(financialProjects).values({ ownerId: ctx.workspaceAccess.ownerId, ...payload });
+        await db.transaction(async tx => {
+          let projectId = id;
+          if (projectId) await tx.update(financialProjects).set(payload).where(and(eq(financialProjects.id, projectId), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId)));
+          else { const result = await tx.insert(financialProjects).values({ ownerId: ctx.workspaceAccess.ownerId, ...payload }); projectId = Number(result[0].insertId); }
+          if (!projectId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No fue posible asociar el proyecto al objetivo." });
+          if (previousGoalId && previousGoalId !== goalId) await tx.update(financialGoals).set({ projectId: null }).where(and(eq(financialGoals.userId, ctx.workspaceAccess.ownerId), eq(financialGoals.id, previousGoalId), eq(financialGoals.projectId, projectId)));
+          if (goalId) await tx.update(financialGoals).set({ projectId }).where(and(eq(financialGoals.userId, ctx.workspaceAccess.ownerId), eq(financialGoals.id, goalId)));
+        });
         return { success: true };
       }),
       projectRemove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
@@ -401,7 +409,10 @@ export const appRouter = router({
           db.select({ id: financeTasks.id }).from(financeTasks).where(and(eq(financeTasks.userId, ctx.workspaceAccess.ownerId), eq(financeTasks.projectId, input.id))).limit(1),
         ]);
         if (dependencies[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Este proyecto contiene tareas. Archívalo o elimina/desvincula primero sus elementos para conservar la trazabilidad." });
-        await db.delete(financialProjects).where(and(eq(financialProjects.id, input.id), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId)));
+        await db.transaction(async tx => {
+          await tx.update(financialGoals).set({ projectId: null }).where(and(eq(financialGoals.userId, ctx.workspaceAccess.ownerId), eq(financialGoals.projectId, input.id)));
+          await tx.delete(financialProjects).where(and(eq(financialProjects.id, input.id), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId)));
+        });
         return { success: true };
       }),
       contactSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(2).max(180), type: z.enum(["client", "supplier", "partner", "friend", "family", "employee", "other"]), email: z.string().trim().email().max(320).nullable().optional(), phone: z.string().trim().max(64).nullable().optional(), defaultCurrency: z.string().trim().length(3).nullable().optional(), status: z.enum(["active", "paused", "archived"]), notes: z.string().trim().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {

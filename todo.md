@@ -312,3 +312,8 @@
 - [x] Corregir el arrastre de Kanban para que las transiciones de estado funcionen con ratón, pantalla táctil y alternativa de selector.
 - [x] Permitir vincular de forma opcional una tarea con un movimiento financiero existente, sin crear ni modificar movimientos desde Proyectos.
 - [x] Validar integridad del vínculo y las transiciones Kanban con pruebas unitarias, compilación y revisión segura de datos.
+- [x] Hacer visible el vínculo financiero de una tarea en Kanban con un indicador accesible y de lectura rápida.
+- [x] Sustituir el selector simple de movimientos por una búsqueda filtrable y segura dentro del formulario de tarea.
+- [x] Permitir asociar opcionalmente un proyecto a un objetivo financiero existente, sin actualizar el objetivo desde Proyectos.
+- [x] Añadir una vista de portafolio escalable para localizar y comparar diez o más proyectos sin saturar Lista, Kanban o Calendario.
+- [x] Validar relaciones, búsqueda, indicadores y respuesta móvil sin crear ni modificar datos reales durante QA.
