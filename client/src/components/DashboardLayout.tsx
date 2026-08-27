@@ -36,6 +36,7 @@ import { Button } from "./ui/button";
 const primaryMenuItems = [
   { icon: LayoutDashboard, label: "Panel", path: "/" },
   { icon: ArrowLeftRight, label: "Registros", path: "/movimientos" },
+  { icon: Landmark, label: "Cuentas", path: "/cuentas" },
   { icon: CreditCard, label: "Tarjetas", path: "/tarjetas" },
   { icon: Target, label: "Planificación", path: "/planificacion" },
   { icon: ContactRound, label: "Contactos", path: "/contactos" },

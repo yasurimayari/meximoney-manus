@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAssetAllocation, buildExpenseCategories, investmentValue } from "./financeAnalytics";
+import { buildAssetAllocation, buildExpenseCategories, buildMonthlySeries, buildMonthlySeriesForYear, investmentValue } from "./financeAnalytics";
 
 const snapshot = {
   categories: [{ id: 1, name: "Operación" }, { id: 2, name: "Hogar" }],
@@ -43,5 +43,12 @@ describe("agregaciones analíticas", () => {
     expect(buildExpenseCategories(multiCurrencySnapshot)).toEqual([{ name: "Operación", value: 1800 }]);
     expect(buildAssetAllocation(multiCurrencySnapshot)).toEqual([{ name: "Inversiones", value: 1000 }]);
     expect(investmentValue(multiCurrencySnapshot)).toBe(100000);
+  });
+
+  it("construye ventanas largas y permite anclarlas a un año explícito", () => {
+    const dated = { ...snapshot, transactions: [{ type: "income", amountCents: 10000, occurredAt: new Date("2023-01-12"), currency: "MXN" }] };
+    expect(buildMonthlySeries(dated, 24, new Date("2024-12-15")).map(item => item.key)).toEqual(expect.arrayContaining(["2023-01", "2024-12"]));
+    expect(buildMonthlySeriesForYear(dated, 2023)).toHaveLength(12);
+    expect(buildMonthlySeriesForYear(dated, 2023).find(item => item.key === "2023-01")?.ingresos).toBe(100);
   });
 });

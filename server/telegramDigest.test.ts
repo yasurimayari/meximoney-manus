@@ -7,11 +7,18 @@ describe("resumen diario de Telegram", () => {
       { title: "Pago próximo: HSBC Air", details: ["Fecha: 27 de agosto (en 2 días)", "Saldo registrado: $39,057.64"] },
       { title: "Sobregiro registrado: Klar 123456", details: ["Saldo registrado: $2,400.00"] },
     ], new Date("2026-08-25T12:00:00Z"));
-    expect(message).toContain("Pago próximo: HSBC Air");
+    expect(message).toContain("<b>1. Pago próximo: HSBC Air</b>");
     expect(message).toContain("Saldo registrado: $39,057.64");
     expect(message).toContain("Fecha: 27 de agosto (en 2 días)");
     expect(message).toContain("Sobregiro registrado: Klar ••••");
     expect(message).not.toContain("123456");
+    expect(message).toContain("<b>2 pendientes próximos</b>");
+  });
+
+  it("escapa contenido manual para que el formato HTML no interprete títulos o notas", () => {
+    const message = buildTelegramDailyDigest([{ title: "Pago <principal>", details: ["Saldo & fecha"] }], new Date("2026-08-25T12:00:00Z"));
+    expect(message).toContain("Pago &lt;principal&gt;");
+    expect(message).toContain("Saldo &amp; fecha");
   });
 
   it("deriva la clave diaria desde la hora de Ciudad de México", () => {

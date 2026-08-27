@@ -60,6 +60,7 @@ import { getOpenFiscalReviewReminder } from "../shared/fiscalReview";
 import { creditCardAlertCandidates } from "./creditCardAlerts";
 import { extractQuickCaptureDraft } from "./quickCapture";
 import { askClaudeForMexi } from "./claude";
+import { mexicoCityReferenceMonth } from "./monthReference";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { sdk } from "./_core/sdk";
 import { systemRouter } from "./_core/systemRouter";
@@ -281,7 +282,12 @@ export const appRouter = router({
     }),
   }),
   finance: router({
-    dashboard: protectedProcedure.query(({ ctx }) => getFinanceSnapshot(ctx.user.id)),
+    dashboard: protectedProcedure.query(({ ctx }) => {
+      const request = ctx.req as typeof ctx.req & { get?: (name: string) => string | undefined };
+      const referenceHeader = request.get?.("x-meximoney-reference-date") ?? request.headers?.["x-meximoney-reference-date"];
+      const referenceDate = Array.isArray(referenceHeader) ? referenceHeader[0] : referenceHeader;
+      return referenceDate ? getFinanceSnapshot(ctx.user.id, mexicoCityReferenceMonth(referenceDate)) : getFinanceSnapshot(ctx.user.id);
+    }),
     workspace: router({
       get: protectedProcedure.query(({ ctx }) => getFinanceSnapshot(ctx.user.id)),
       quickCapture: workspaceFinanceProcedure.input(z.object({ text: z.string().trim().min(4).max(800), defaultCurrency: z.string().trim().length(3) })).mutation(async ({ input }) => {
@@ -1155,8 +1161,15 @@ export const appRouter = router({
       remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(financeDocuments, input.id, ctx.user.id)),
     }),
     calendar: router({
-      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), title: z.string().min(1).max(180), eventType: z.enum(["tax", "credit_card_cutoff", "credit_card_payment", "loan_payment", "document_expiry", "insurance_renewal", "review", "other"]), scope: scopeSchema, startsAt: z.number().int().positive(), endsAt: optionalDate, recurrence: z.enum(["none", "monthly", "quarterly", "yearly"]), amountCents: moneySchema.nullable().optional(), currency: z.string().length(3), linkedDebtId: z.number().int().positive().nullable().optional(), linkedDocumentId: z.number().int().positive().nullable().optional(), linkedTaskId: z.number().int().positive().nullable().optional(), status: z.enum(["planned", "completed", "cancelled"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
-        const db = await requireDb(); const { id, startsAt, endsAt, ...values } = input; const payload = { ...values, startsAt: new Date(startsAt), endsAt: asDate(endsAt) };
+      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), title: z.string().min(1).max(180), eventType: z.enum(["tax", "credit_card_cutoff", "credit_card_payment", "loan_payment", "document_expiry", "insurance_renewal", "review", "other"]), scope: scopeSchema, startsAt: z.number().int().positive(), endsAt: optionalDate, recurrence: z.enum(["none", "monthly", "quarterly", "yearly"]), amountCents: moneySchema.nullable().optional(), currency: z.string().length(3), linkedDebtId: z.number().int().positive().nullable().optional(), linkedCreditCardId: z.number().int().positive().nullable().optional(), linkedDocumentId: z.number().int().positive().nullable().optional(), linkedTaskId: z.number().int().positive().nullable().optional(), status: z.enum(["planned", "completed", "cancelled"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const canLinkCard = input.eventType === "credit_card_cutoff" || input.eventType === "credit_card_payment";
+        if (input.linkedCreditCardId && !canLinkCard) throw new TRPCError({ code: "BAD_REQUEST", message: "Sólo los eventos de corte o pago de tarjeta pueden vincular una TDC." });
+        if (input.linkedCreditCardId) {
+          const [card] = await db.select({ id: creditCards.id }).from(creditCards).where(and(eq(creditCards.id, input.linkedCreditCardId), eq(creditCards.userId, ctx.user.id))).limit(1);
+          if (!card) throw new TRPCError({ code: "NOT_FOUND", message: "La tarjeta vinculada no pertenece a tu espacio privado." });
+        }
+        const { id, startsAt, endsAt, linkedCreditCardId, ...values } = input; const payload = { ...values, linkedCreditCardId: canLinkCard ? linkedCreditCardId ?? null : null, startsAt: new Date(startsAt), endsAt: asDate(endsAt) };
         if (id) await db.update(calendarEvents).set(payload).where(and(eq(calendarEvents.id, id), eq(calendarEvents.userId, ctx.user.id)));
         else await db.insert(calendarEvents).values({ userId: ctx.user.id, ...payload });
         return { success: true };

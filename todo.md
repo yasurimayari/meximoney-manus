@@ -232,3 +232,11 @@
 - [x] Implementar escenarios manuales de flujo, presupuesto adaptativo y política de asignación de excedentes sin ejecutar operaciones.
 - [x] Validar fórmulas, supuestos, privacidad y experiencia publicada de Fase D sin crear datos financieros de prueba.
 - [x] Incluir una opción explícita de Personal en el filtro de entidad de Simulaciones, preservando el alcance de deudas personales.
+- [x] Corregir la selección de periodo actual para que use la fecha real local y no quede anclada a julio.
+- [x] Rediseñar el resumen autorizado de Telegram para priorizar lectura breve, jerarquía visual y cifras esenciales sin añadir envíos o automatizaciones.
+- [x] Mostrar los 15 registros más recientes por defecto y paginar el resto en bloques de 20 con navegación numerada.
+- [x] Crear una sesión exclusiva de Cuentas que reúna cuentas, tarjetas y préstamos con saldos manuales y enlaces a sus movimientos.
+- [x] Ampliar Analítica con ventanas de 18, 24 y 36 meses, más selección anual para los cinco años recientes disponibles.
+- [x] Permitir editar fechas fiscales configuradas manualmente sin inferir vencimientos ni consultar el SAT.
+- [x] Vincular manualmente un evento de Calendario de corte o pago de tarjeta a la TDC correspondiente, sin crear pagos ni alterar la tarjeta.
+- [ ] Validar y publicar las mejoras de periodos, Telegram, registros, cuentas, analítica y calendario sin modificar datos financieros existentes.

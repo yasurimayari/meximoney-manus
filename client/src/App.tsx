@@ -25,6 +25,7 @@ import PasswordReset from "./pages/PasswordReset";
 import ChangePassword from "./pages/ChangePassword";
 import MonthlyControl from "./pages/MonthlyControl";
 import Simulations from "./pages/Simulations";
+import Accounts from "./pages/Accounts";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
@@ -35,6 +36,7 @@ function Router() {
       <Route path={"/seguridad/cambiar-contrasena"}><DashboardLayout><ChangePassword /></DashboardLayout></Route>
       <Route path={"/"}><DashboardLayout><Home /></DashboardLayout></Route>
       <Route path={"/movimientos"}><DashboardLayout><Records /></DashboardLayout></Route>
+      <Route path={"/cuentas"}><DashboardLayout><Accounts /></DashboardLayout></Route>
       <Route path={"/planificacion"}><DashboardLayout><Planning /></DashboardLayout></Route>
       <Route path={"/calidad"}><DashboardLayout><Quality /></DashboardLayout></Route>
       <Route path={"/asistente"}><DashboardLayout><Assistant /></DashboardLayout></Route>

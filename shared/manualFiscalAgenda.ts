@@ -6,6 +6,7 @@ export type ManualFiscalAgendaItem = {
   amountCents: number | null;
   currency: string;
   source: "calendar_event" | "profile";
+  calendarEventId?: number;
 };
 
 function startOfDay(value: Date) { return new Date(value.getFullYear(), value.getMonth(), value.getDate()); }
@@ -27,7 +28,7 @@ export function buildManualFiscalAgenda(data: { calendarEvents: any[]; profile?:
   for (let cursor = new Date(start.getFullYear(), start.getMonth(), 1); cursor < endExclusive; cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)) {
     data.calendarEvents.filter(event => event.eventType === "tax" && event.status !== "cancelled").forEach(event => {
       const occurrence = eventOccursInMonth(event, cursor.getFullYear(), cursor.getMonth());
-      if (occurrence && occurrence >= start && occurrence < endExclusive) items.push({ id: `tax-${event.id}-${cursor.getFullYear()}-${cursor.getMonth()}`, date: occurrence, title: event.title, note: event.recurrence === "none" ? "Fecha fiscal manual" : `Recurrente manual: ${event.recurrence}`, amountCents: event.amountCents ?? null, currency: event.currency || data.currency, source: "calendar_event" });
+      if (occurrence && occurrence >= start && occurrence < endExclusive) items.push({ id: `tax-${event.id}-${cursor.getFullYear()}-${cursor.getMonth()}`, date: occurrence, title: event.title, note: event.recurrence === "none" ? "Fecha fiscal manual" : `Recurrente manual: ${event.recurrence}`, amountCents: event.amountCents ?? null, currency: event.currency || data.currency, source: "calendar_event", calendarEventId: event.id });
     });
   }
   if (data.profile?.futureTaxDueAt) {

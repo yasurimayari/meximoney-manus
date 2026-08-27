@@ -8,10 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatDate, formatMoney, fromCents, scopeLabel, toCents } from "@/lib/finance";
 import { ImportColumn, inferImportMapping, inferImportType, parseImportAmount, parseImportDate, parseSpreadsheet, SpreadsheetRow } from "@/lib/importSpreadsheet";
 import { createImportTemplateCsv, importTemplateFilename } from "@/lib/importTemplate";
+import { paginateRecords } from "@/lib/recordPagination";
 import { trpc } from "@/lib/trpc";
 import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { Archive, ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Building2, CalendarClock, CreditCard, FileText, FolderPlus, Landmark, MessageSquareText, Pencil, Plus, ReceiptText, Repeat2, Trash2, Upload, WalletCards } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 
@@ -77,6 +78,7 @@ export default function Records() {
   const [initialMovementType, setInitialMovementType] = useState<keyof typeof typeLabel>("expense");
   const [workspaceFilters, setWorkspaceFilters] = useState(emptyWorkspaceFilters);
   const [importOpen, setImportOpen] = useState(false);
+  const [transactionPage, setTransactionPage] = useState(1);
 
   const refresh = async () => {
     await utils.finance.dashboard.invalidate();
@@ -100,7 +102,10 @@ export default function Records() {
   const accounts = scopedData?.accounts ?? [];
   const categories = data?.categories ?? [];
   const transactions = useMemo(() => (scopedData?.transactions ?? []).slice().sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()), [scopedData?.transactions]);
+  const paginatedTransactions = useMemo(() => paginateRecords(transactions, transactionPage), [transactionPage, transactions]);
   const templates = (data?.recurringTemplates ?? []) as any[];
+
+  useEffect(() => { setTransactionPage(1); }, [workspaceFilters.entityId, workspaceFilters.projectId, workspaceFilters.currency, workspaceFilters.reviewStatus]);
 
   const openCreate = (nextMode: RecordMode, movementType: keyof typeof typeLabel = "expense") => {
     setMode(nextMode);
@@ -181,7 +186,7 @@ export default function Records() {
       <section className="content-card overflow-hidden">
         <div className="card-title-row"><div><h2>Movimientos recientes</h2><p>{transactions.length} registros manuales en total</p></div><button className="text-link" onClick={() => openCreate("movement")}>Registrar movimiento</button></div>
         {transactions.length === 0 ? <EmptyRecords icon={ReceiptText} title="Todavía no hay movimientos" description="Empieza con un ingreso, gasto o transferencia. Los indicadores del panel se actualizarán con tus registros." action={() => openCreate("movement")} actionLabel="Registrar primer movimiento" /> : (
-          <div className="table-wrap"><table><thead><tr><th>Fecha</th><th>Detalle</th><th>Área</th><th>Cuenta</th><th>Importe</th><th></th></tr></thead><tbody>{transactions.slice(0, 16).map(item => {
+          <><div className="table-wrap"><table><thead><tr><th>Fecha</th><th>Detalle</th><th>Área</th><th>Cuenta</th><th>Importe</th><th></th></tr></thead><tbody>{paginatedTransactions.items.map(item => {
             const account = accounts.find(accountItem => accountItem.id === item.accountId);
             const category = categories.find(categoryItem => categoryItem.id === item.categoryId);
             const negative = item.type === "expense" || item.type === "transfer_out";
@@ -194,7 +199,7 @@ export default function Records() {
             const isCardPayment = transferPair.some(transaction => transaction.creditCardId && transaction.type === "transfer_in");
             const transferNote = item.notes?.split(" · ").slice(1).join(" · ") ?? "";
             return <tr key={item.id}><td>{formatDate(item.occurredAt, { day: "2-digit", month: "short" })}</td><td><div className="table-main"><span className={`movement-icon type-${item.type}`}>{item.type === "income" || item.type === "transfer_in" ? <ArrowDownLeft className="size-4" /> : <ArrowUpRight className="size-4" />}</span><span><strong>{item.notes || typeLabel[item.type]}</strong><small>{isTransfer ? isCardPayment ? "Pago de tarjeta · Gestionar desde Tarjetas" : `Traspaso entre cuentas propias · ${item.reviewStatus === "pending_review" ? "Pendiente de revisión" : "Aprobado"}` : `${category?.name ?? "Sin categoría"} · ${item.reviewStatus === "pending_review" ? "Pendiente de revisión" : item.reviewStatus === "draft" ? "Borrador" : item.status === "estimated" ? "Estimado" : "Aprobado"}`}{entity ? ` · ${entity.shortCode || entity.name}` : ""}</small></span></div></td><td><ScopePill scope={item.scope} /></td><td>{account?.name ?? "Sin cuenta"}</td><td className={negative ? "amount-negative" : "amount-positive"}>{negative ? "−" : "+"}{formatMoney(item.amountCents, item.currency)}</td><td><div className="row-actions">{isTransfer ? transferGroupId ? <>{isCardPayment ? <Link href="/tarjetas" aria-label="Gestionar pago de tarjeta"><CreditCard className="size-4" /></Link> : <button aria-label="Editar traspaso completo" disabled={!transferOut || !transferIn} onClick={() => { if (!transferOut || !transferIn) return; setMode("transfer"); setEditingTransfer({ transferGroupId, sourceAccountId: transferOut.accountId?.toString() ?? "", destinationAccountId: transferIn.accountId?.toString() ?? "", amount: fromCents(transferOut.amountCents), occurredAt: new Date(transferOut.occurredAt).toISOString().slice(0, 10), status: transferOut.status, notes: transferNote }); setDialogOpen(true); }}><Pencil className="size-4" /></button>}<button aria-label="Eliminar traspaso completo" onClick={() => { if (confirm("¿Eliminar ambas partes de este traspaso entre cuentas?")) removeTransfer.mutate({ transferGroupId }); }}><Trash2 className="size-4" /></button></> : <span className="text-xs text-muted-foreground">Revisar grupo</span> : <><button aria-label="Editar movimiento" onClick={() => { setMode("movement"); setEditingMovement(item); setDialogOpen(true); }}><Pencil className="size-4" /></button><button aria-label="Eliminar movimiento" onClick={() => { if (confirm("¿Eliminar este movimiento manual?")) removeTransaction.mutate({ id: item.id }); }}><Trash2 className="size-4" /></button></>}</div></td></tr>;
-          })}</tbody></table></div>)}
+          })}</tbody></table></div>{paginatedTransactions.totalPages > 1 ? <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-muted-foreground">Mostrando {paginatedTransactions.start + 1}–{paginatedTransactions.end} de {transactions.length} registros.</p><nav className="flex flex-wrap gap-1" aria-label="Paginación de movimientos">{Array.from({ length: paginatedTransactions.totalPages }, (_, index) => index + 1).map(page => <Button key={page} type="button" size="sm" variant={page === paginatedTransactions.page ? "default" : "outline"} aria-current={page === paginatedTransactions.page ? "page" : undefined} onClick={() => setTransactionPage(page)}>{page}</Button>)}</nav></div> : null}</>)}
       </section>
 
       <section className="content-card">

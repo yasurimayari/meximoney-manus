@@ -485,6 +485,7 @@ export const calendarEvents = mysqlTable("calendarEvents", {
   amountCents: int("amountCents"),
   currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
   linkedDebtId: int("linkedDebtId"),
+  linkedCreditCardId: int("linkedCreditCardId"),
   linkedDocumentId: int("linkedDocumentId"),
   linkedTaskId: int("linkedTaskId"),
   status: mysqlEnum("status", ["planned", "completed", "cancelled"]).notNull().default("planned"),

@@ -15,8 +15,8 @@ function reportAmountCents(item: any, currency: string | null) {
   return null;
 }
 
-export function buildMonthlySeries(snapshot: FinanceSnapshot, months: number) {
-  const now = new Date();
+export function buildMonthlySeries(snapshot: FinanceSnapshot, months: number, referenceDate = new Date()) {
+  const now = referenceDate;
   const currency = reportCurrency(snapshot);
   const anchors = Array.from({ length: months }, (_, index) => new Date(now.getFullYear(), now.getMonth() - (months - 1 - index), 1));
   return anchors.map(anchor => {
@@ -32,6 +32,10 @@ export function buildMonthlySeries(snapshot: FinanceSnapshot, months: number) {
       ahorro: (incomeCents - expenseCents) / 100,
     };
   });
+}
+
+export function buildMonthlySeriesForYear(snapshot: FinanceSnapshot, year: number) {
+  return buildMonthlySeries(snapshot, 12, new Date(year, 11, 1));
 }
 
 export function buildExpenseCategories(snapshot: FinanceSnapshot) {

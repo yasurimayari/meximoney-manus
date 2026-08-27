@@ -43,12 +43,15 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       headers() {
+        const mexicoCityParts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+        const readPart = (type: Intl.DateTimeFormatPartTypes) => mexicoCityParts.find(part => part.type === type)?.value ?? "";
+        const localReferenceDate = `${readPart("year")}-${readPart("month")}-${readPart("day")}`;
         // A local email/password login keeps this signed token only for the
         // current tab. It prevents the preview runtime's Manus token from
         // taking precedence over the user's own Meximoney session.
         try {
           const localToken = sessionStorage.getItem("meximoney-local-session");
-          if (localToken) return { "X-Meximoney-Session": localToken };
+          if (localToken) return { "X-Meximoney-Session": localToken, "X-Meximoney-Reference-Date": localReferenceDate };
         } catch {
           // sessionStorage unavailable
         }
@@ -62,14 +65,14 @@ const trpcClient = trpc.createClient({
             const prefix = `${COOKIE_NAME}=`;
             const pair = raw.split(";").find(s => s.trim().startsWith(prefix));
             const token = pair?.trim().slice(prefix.length);
-            if (token) {
-              return { Authorization: `Bearer ${token}` };
+              if (token) {
+                return { Authorization: `Bearer ${token}`, "X-Meximoney-Reference-Date": localReferenceDate };
             }
           }
         } catch {
           // sessionStorage unavailable
         }
-        return {};
+        return { "X-Meximoney-Reference-Date": localReferenceDate };
       },
       fetch(input, init) {
         return globalThis.fetch(input, {
