@@ -309,3 +309,6 @@
 - [x] Añadir filtros y ordenamiento a «En tu radar» para priorizar tareas urgentes sin modificar tareas por defecto.
 - [x] Implementar arrastrar y soltar en Kanban con animaciones, confirmación explícita y alternativa accesible para actualizar estados de tareas.
 - [x] Validar pruebas de priorización, actualización de estado y experiencia responsive sin crear ni modificar tareas reales durante QA.
+- [x] Corregir el arrastre de Kanban para que las transiciones de estado funcionen con ratón, pantalla táctil y alternativa de selector.
+- [x] Permitir vincular de forma opcional una tarea con un movimiento financiero existente, sin crear ni modificar movimientos desde Proyectos.
+- [x] Validar integridad del vínculo y las transiciones Kanban con pruebas unitarias, compilación y revisión segura de datos.

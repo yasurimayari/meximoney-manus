@@ -659,12 +659,13 @@ export const financeTasks = mysqlTable("financeTasks", {
   goalId: int("goalId"),
   debtId: int("debtId"),
   milestoneId: int("milestoneId"),
+  linkedTransactionId: int("linkedTransactionId"),
   archivedAt: timestamp("archivedAt"),
   requiresConfirmation: boolean("requiresConfirmation").notNull().default(false),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, table => [index("financeTasks_user_linked_transaction_idx").on(table.userId, table.linkedTransactionId)]);
 
 export const projectMilestones = mysqlTable("projectMilestones", {
   id: int("id").autoincrement().primaryKey(),

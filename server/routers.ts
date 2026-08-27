@@ -681,6 +681,8 @@ export const appRouter = router({
             if (card) await tx.update(creditCards).set({ balanceCents: card.balanceCents + cardPayment.amountCents }).where(and(eq(creditCards.id, card.id), eq(creditCards.userId, ctx.workspaceAccess.ownerId)));
           }
           if (loanPayment?.debtId) throw new TRPCError({ code: "BAD_REQUEST", message: "No elimines un pago de préstamo desde Registros. Revísalo desde Contactos para conservar el saldo e historial correctamente." });
+          const transferIds = transfers.map(transfer => transfer.id);
+          if (transferIds.length) await tx.update(financeTasks).set({ linkedTransactionId: null }).where(and(eq(financeTasks.userId, ctx.workspaceAccess.ownerId), inArray(financeTasks.linkedTransactionId, transferIds)));
           await tx.delete(financialTransactions).where(and(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId), eq(financialTransactions.transferGroupId, input.transferGroupId)));
         });
         return { success: true };
@@ -1362,6 +1364,7 @@ export const appRouter = router({
             const [card] = await tx.select().from(creditCards).where(and(eq(creditCards.id, transaction.creditCardId), eq(creditCards.userId, ctx.user.id))).limit(1);
             if (card) await tx.update(creditCards).set({ balanceCents: Math.max(0, card.balanceCents - transaction.amountCents) }).where(and(eq(creditCards.id, card.id), eq(creditCards.userId, ctx.user.id)));
           }
+          await tx.update(financeTasks).set({ linkedTransactionId: null }).where(and(eq(financeTasks.userId, ctx.user.id), eq(financeTasks.linkedTransactionId, input.id)));
           await tx.delete(financialTransactions).where(and(eq(financialTransactions.id, input.id), eq(financialTransactions.userId, ctx.user.id)));
         });
         return { success: true };
@@ -1556,12 +1559,13 @@ export const appRouter = router({
       }),
     }),
     tasks: router({
-      save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), projectId: z.number().int().positive().nullable().optional(), milestoneId: z.number().int().positive().nullable().optional(), title: z.string().min(1).max(180), area: z.enum(["budget", "debt", "savings", "investment", "tax", "documents", "business", "review", "other"]), scope: scopeSchema, priority: z.enum(["critical", "high", "medium", "low"]), status: z.enum(["pending", "in_progress", "waiting", "completed", "cancelled"]), dueAt: optionalDate, goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(), requiresConfirmation: z.boolean(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), projectId: z.number().int().positive().nullable().optional(), milestoneId: z.number().int().positive().nullable().optional(), linkedTransactionId: z.number().int().positive().nullable().optional(), title: z.string().min(1).max(180), area: z.enum(["budget", "debt", "savings", "investment", "tax", "documents", "business", "review", "other"]), scope: scopeSchema, priority: z.enum(["critical", "high", "medium", "low"]), status: z.enum(["pending", "in_progress", "waiting", "completed", "cancelled"]), dueAt: optionalDate, goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(), requiresConfirmation: z.boolean(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar tareas." });
-        const db = await requireDb(); const { id, dueAt, milestoneId, projectId, ...values } = input;
+        const db = await requireDb(); const { id, dueAt, milestoneId, projectId, linkedTransactionId, ...values } = input;
         if (projectId) { const [project] = await db.select({ id: financialProjects.id }).from(financialProjects).where(and(eq(financialProjects.id, projectId), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId))).limit(1); if (!project) throw new TRPCError({ code: "BAD_REQUEST", message: "El proyecto seleccionado no pertenece a tu espacio." }); }
         if (milestoneId) { const [milestone] = await db.select().from(projectMilestones).where(and(eq(projectMilestones.id, milestoneId), eq(projectMilestones.userId, ctx.workspaceAccess.ownerId))).limit(1); if (!milestone || (projectId && milestone.projectId !== projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "El hito no pertenece al proyecto seleccionado." }); }
-        const payload = { ...values, projectId: projectId ?? null, milestoneId: milestoneId ?? null, dueAt: asDate(dueAt), archivedAt: null };
+        if (linkedTransactionId) { const [transaction] = await db.select({ id: financialTransactions.id }).from(financialTransactions).where(and(eq(financialTransactions.id, linkedTransactionId), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId))).limit(1); if (!transaction) throw new TRPCError({ code: "BAD_REQUEST", message: "El movimiento seleccionado no pertenece a tu espacio privado." }); }
+        const payload = { ...values, projectId: projectId ?? null, milestoneId: milestoneId ?? null, linkedTransactionId: linkedTransactionId ?? null, dueAt: asDate(dueAt), archivedAt: null };
         if (id) await db.update(financeTasks).set(payload).where(and(eq(financeTasks.id, id), eq(financeTasks.userId, ctx.workspaceAccess.ownerId)));
         else await db.insert(financeTasks).values({ userId: ctx.workspaceAccess.ownerId, ...payload }); return { success: true };
       }),

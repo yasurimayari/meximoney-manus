@@ -9,6 +9,7 @@ export type TaskForStatusTransition = {
   scope?: "personal" | "business" | "mixed";
   priority: "critical" | "high" | "medium" | "low";
   dueAt?: Date | string | null;
+  linkedTransactionId?: number | null;
   goalId?: number | null;
   debtId?: number | null;
   requiresConfirmation?: boolean;
@@ -26,6 +27,7 @@ export function taskStatusTransitionInput(task: TaskForStatusTransition, status:
     priority: task.priority,
     status,
     dueAt: task.dueAt ? new Date(task.dueAt).getTime() : null,
+    linkedTransactionId: task.linkedTransactionId ?? null,
     goalId: task.goalId ?? null,
     debtId: task.debtId ?? null,
     requiresConfirmation: Boolean(task.requiresConfirmation),
