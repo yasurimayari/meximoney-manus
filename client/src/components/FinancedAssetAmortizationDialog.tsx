@@ -11,17 +11,20 @@ const money = (value: number, currency: string) => new Intl.NumberFormat("es-MX"
 export function FinancedAssetAmortizationDialog({ debt }: { debt: { id: number; name: string } }) {
   const { data, isLoading } = trpc.finance.debts.amortization.useQuery({ debtId: debt.id });
   const [expanded, setExpanded] = useState(false);
-  const dialogClass = amortizationDialogClass(expanded);
+  const dialogClass = `${amortizationDialogClass(expanded)} [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:z-30 [&_[data-slot=dialog-close]]:rounded-md [&_[data-slot=dialog-close]]:bg-background/95 [&_[data-slot=dialog-close]]:p-1 [&_[data-slot=dialog-close]]:shadow-sm`;
+  const expandLabel = expanded ? "Reducir" : "Ampliar";
 
   return <DialogContent className={dialogClass}>
-    <Button type="button" size="icon" variant="ghost" className="absolute right-11 top-3 z-10" aria-label={expanded ? "Reducir ventana de amortización" : "Ampliar ventana de amortización"} title={expanded ? "Reducir" : "Ampliar"} onClick={() => setExpanded(value => !value)}>
-      {expanded ? <Minimize2 className="size-4"/> : <Maximize2 className="size-4"/>}
+    <Button type="button" size="sm" variant="outline" className="absolute right-12 top-3 z-30 h-8 gap-1.5 bg-background/95 px-2 shadow-sm" aria-label={`${expandLabel} ventana de amortización`} aria-pressed={expanded} title={expandLabel} onClick={() => setExpanded(value => !value)}>
+      {expanded ? <Minimize2 className="size-3.5"/> : <Maximize2 className="size-3.5"/>}
+      <span className="hidden sm:inline">{expandLabel}</span>
     </Button>
-    <DialogHeader className="pr-16">
-      <DialogTitle>Amortización de {debt.name}</DialogTitle>
-      <DialogDescription>Resumen, histórico conciliado y escenario de referencia. Consultar o exportar no registra pagos ni intereses.</DialogDescription>
+    <DialogHeader className="sticky top-0 z-20 -mx-4 -mt-4 border-b border-border/80 bg-background/95 px-4 pb-4 pt-4 pr-28 text-left backdrop-blur-sm sm:-mx-6 sm:-mt-6 sm:px-6 sm:pb-5 sm:pt-6 sm:pr-32">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">Activo financiado</p>
+      <DialogTitle className="text-xl leading-tight tracking-tight sm:text-2xl">Amortización de {debt.name}</DialogTitle>
+      <DialogDescription className="max-w-3xl text-xs leading-relaxed sm:text-sm">Consulta de referencia: no registra ni modifica pagos, intereses o cargos.</DialogDescription>
     </DialogHeader>
-    {isLoading || !data ? <p className="py-8 text-sm text-muted-foreground">Preparando tabla…</p> : <div className="min-w-0 space-y-5">
+    {isLoading || !data ? <p className="py-8 text-sm text-muted-foreground">Preparando tabla…</p> : <div className="min-w-0 space-y-6 pb-2">
       <AmortizationInsights debt={data.debt} payments={data.payments} projection={data.projection} adjustments={data.adjustments}/>
       <section>
         <h3 className="mb-2 text-sm font-semibold">Capital e intereses pagados</h3>

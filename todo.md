@@ -292,3 +292,4 @@
 - [x] Validar y publicar las mejoras visuales y exportables de amortización sin crear pagos, cargos ni movimientos de prueba.
 - [x] Corregir el diálogo de amortización que muestra la tabla antigua pero omite el resumen, gráfico y botones de exportación publicados.
 - [x] Añadir un control de ampliar y optimizar el diálogo de amortización para web, móvil y PWA, evitando que tablas, tarjetas y acciones queden cortadas.
+- [x] Rediseñar la cabecera del diálogo de amortización para evitar textos duplicados, mejorar jerarquía, contraste y espaciado en web, móvil y PWA.
