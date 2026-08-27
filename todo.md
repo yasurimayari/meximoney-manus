@@ -303,3 +303,5 @@
 - [x] Mejorar la navegación entre Lista, Kanban y Calendario para escritorio, móvil y PWA, conservando el mismo conjunto de datos.
 - [x] Refinar tarjetas, tareas, partes y estados vacíos de Proyectos con jerarquía visual, color heredado y acciones accesibles.
 - [x] Validar tipos, pruebas, respuesta móvil y compilación del rediseño sin modificar proyectos o tareas reales.
+- [x] Rehacer la experiencia operativa de Proyectos con foco, jerarquía y navegación clara, tomando como inspiración principios de la referencia autorizada.
+- [x] Validar el rediseño de Proyectos en escritorio y móvil sin crear, editar, archivar o eliminar proyectos y tareas reales.
