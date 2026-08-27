@@ -284,3 +284,4 @@
 - [x] Reorganizar el menú en grupos y submenús de navegación para reducir desorden y mantener las rutas existentes accesibles.
 - [x] Optimizar la jerarquía superior y los botones de acciones secundarias, usando iconos accesibles donde el contexto sea inequívoco y manteniendo texto en acciones críticas.
 - [x] Validar y publicar las mejoras de amortización, Score, Proyectos, documentos y navegación sin insertar datos financieros de prueba, enviar notificaciones ni alterar Telegram.
+- [x] Verificar de extremo a extremo que la tabla de amortización de activos financiados presenta capital e intereses pagados sin crear ni modificar registros.
