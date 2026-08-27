@@ -272,4 +272,4 @@
 - [x] Permitir proyectos personales sin vincularlos de forma artificial a una entidad empresarial existente.
 - [x] Vincular tareas de proyectos financieros con el Calendario, manteniendo edición y trazabilidad desde ambas vistas sin crear eventos automáticos no confirmados.
 - [x] Integrar de forma revisable el plan financiero Jul–Dic 2026 autorizado desde Notion, sin crear tareas, eventos o movimientos reales hasta la confirmación explícita de la usuaria.
-- [ ] Validar y publicar patrimonio financiado, Score y Proyectos con pruebas y QA sin alterar datos financieros existentes ni enviar notificaciones.
+- [x] Validar y publicar patrimonio financiado, Score y Proyectos con pruebas y QA sin alterar datos financieros existentes ni enviar notificaciones.
