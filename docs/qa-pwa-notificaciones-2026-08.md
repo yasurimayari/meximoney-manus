@@ -7,7 +7,7 @@
 | Área | Comprobación | Resultado |
 |---|---|---|
 | Ruta offline pública | Se abrió `/offline` sin una sesión financiera ni una copia guardada. | Correcto: aparece únicamente la pantalla de desbloqueo, sin cifras, movimientos ni datos de perfil. |
-| Manifiesto de instalación | Se comprobó el manifiesto publicado. | Correcto: apunta a `/offline`, declara el icono de Meximoney y usa modo de aplicación independiente. |
+| Manifiesto de instalación | Se comprobó el manifiesto publicado. | Correcto: inicia una instalación nueva en `/`, declara el icono de Meximoney y usa modo de aplicación independiente. |
 | Worker de servicio | Se inspeccionó el recurso publicado y su registro en navegador. | Correcto: está activo en el dominio de Meximoney, conserva el shell de interfaz y omite expresamente las solicitudes `/api/`. |
 | Caché del worker | Se listaron las entradas del caché de la sesión de QA. | Correcto: no contiene rutas de API ni recursos privados de almacenamiento; sólo se admite el icono estático de instalación. |
 | Bóveda local | Prueba unitaria de construcción del snapshot. | Correcto: conserva información financiera autorizada y omite fecha de nacimiento, correo, foto, URLs y notas de documentos. |
@@ -17,7 +17,21 @@
 
 ## Validación técnica
 
-La versión publicada `bac95181` pasó `pnpm check`, **127 pruebas correctas** y `pnpm build`. La ruta offline publicada se comprobó visualmente y no expone contenido financiero hasta el desbloqueo local. El navegador confirmó el registro activo del worker bajo el dominio de Meximoney y un caché sin entradas de API ni recursos privados.
+La versión publicada `55286d6d` pasó `pnpm check`, **130 pruebas correctas** y `pnpm build`; se comprobó además la sintaxis del worker. La ruta offline publicada se comprobó visualmente y no expone contenido financiero hasta el desbloqueo local. El navegador confirmó el registro activo del worker bajo el dominio de Meximoney y un caché sin entradas de API ni recursos privados.
+
+## Notificaciones PWA personales
+
+La pantalla publicada de notificaciones permaneció protegida por sesión: sin credenciales sólo muestra el acceso de Meximoney, no la bandeja ni datos financieros. No se solicitó el permiso del navegador, no se activó el interruptor local, no se pulsó «Actualizar avisos» y no se emitió ninguna notificación de prueba en este navegador ni en el dispositivo de la propietaria.
+
+| Comprobación | Resultado |
+|---|---|
+| Permiso y control por dispositivo | Correcto: el permiso sólo puede abrirse desde el botón explícito de la pantalla autenticada; la preferencia adicional se conserva en el almacenamiento local del dispositivo y no modifica Telegram. |
+| Contenido del aviso | Correcto: la prueba unitaria comprueba que sólo se muestra un conteo genérico de recordatorios; no incluye importes, saldos, deudas, cuentas ni movimientos. |
+| Condiciones de entrega | Correcto: la regla comprobada requiere recordatorios nuevos, permiso concedido, worker disponible e interruptor local activado. |
+| Worker publicado | Correcto: la versión `meximoney-personal-shell-v2` ya está publicada, incluye el acceso a `/notificaciones` al tocar un aviso y no contiene manejador push ni polling. |
+| Caché publicado | Correcto: tras recargar, sólo existe el caché `meximoney-personal-shell-v2`; no hay entradas `/api/` ni recursos privados de almacenamiento. |
+
+La primera entrega no pretende enviar recordatorios cuando la aplicación está cerrada. Implementar esa capacidad requeriría Web Push completo, suscripciones protegidas y una aprobación separada de la propietaria; no se incorporó un cron, un proceso de fondo ni un nuevo proveedor de mensajería.
 
 ## Instalación móvil y contenedor externo
 
