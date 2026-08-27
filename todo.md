@@ -260,3 +260,6 @@
 - [x] Validar y publicar de forma separada los controles offline y las notificaciones sin ejecutar acciones financieras ni mutar datos fuente durante la QA.
 - [x] Mantener el alcance de PWA y notificaciones limitado a uso personal de la propietaria, sin colaboración ni perfiles de terceros.
 - [x] Asegurar que el caché del PWA no retenga recursos privados de almacenamiento, salvo el icono estático de instalación.
+- [x] Implementar notificaciones PWA personales con permiso explícito del navegador y datos mínimos visibles en el aviso.
+- [x] Vincular la creación de avisos PWA a una revisión manual explícita, sin cron adicional, sin modificar Telegram y sin ejecutar acciones financieras.
+- [ ] Validar y publicar las notificaciones PWA sin crear registros financieros ni enviar notificaciones de prueba al dispositivo de la usuaria.

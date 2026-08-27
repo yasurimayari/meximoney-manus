@@ -1,4 +1,4 @@
-const CACHE_NAME = "meximoney-personal-shell-v1";
+const CACHE_NAME = "meximoney-personal-shell-v2";
 const PWA_ICON_PATH = "/manus-storage/meximoney-pwa-icon_d935fd19.png";
 const APP_SHELL = ["/offline", "/manifest.webmanifest", PWA_ICON_PATH];
 
@@ -34,4 +34,14 @@ self.addEventListener("fetch", event => {
       return response;
     })));
   }
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  const destination = event.notification.data?.path || "/notificaciones";
+  event.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(openClients => {
+    const existing = openClients.find(client => new URL(client.url).origin === self.location.origin);
+    if (existing) return existing.focus();
+    return clients.openWindow(destination);
+  }));
 });
