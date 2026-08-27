@@ -298,3 +298,4 @@
 - [x] Comprobar que el progreso de Proyectos se actualiza al completar o archivar tareas asociadas, sin cambiar tareas existentes.
 - [x] Corregir el tablero de progreso de Proyectos para incluir tareas archivadas como cerradas aunque permanezcan ocultas de la vista activa.
 - [x] Ejecutar pruebas unitarias de la barra de progreso con tareas completadas y archivadas, sin usar proyectos reales.
+- [x] Comprobar y corregir la sincronización de proyectos, partes y tareas entre Lista, Kanban y Calendario, incluidos sus colores heredados.
