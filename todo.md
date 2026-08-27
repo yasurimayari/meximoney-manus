@@ -248,3 +248,10 @@
 - [x] Validar y publicar la corrección de Simulaciones y la experiencia mejorada de Cuentas sin alterar datos financieros existentes.
 - [ ] Corregir el estado vacío de Presupuesto adaptativo para que ayude a explorar y comparar las partidas existentes sin crear ni modificar presupuestos.
 - [ ] Validar y publicar la corrección de Presupuesto adaptativo sin alterar partidas ni movimientos financieros existentes.
+- [x] Auditar y definir un alcance conservador de PWA que no conserve datos financieros offline ni habilite acceso sin autenticación.
+- [x] Revisar la política actual de notificaciones, canales, consentimiento y datos mínimos expuestos sin alterar su programación activa.
+- [x] Priorizar y documentar el siguiente bloque funcional de la Fase E, manteniendo pendientes las decisiones de implementación.
+- [x] Diseñar un PWA que permita trabajar sin conexión con datos financieros autorizados, cifrados localmente y protegidos por una barrera de sesión, sin sincronización automática de acciones financieras.
+- [x] Implementar la integridad de notificaciones: lectura sin persistencia implícita, consentimiento por canal y retención manual visible, sin cambiar el cron o el contenido autorizado de Telegram.
+- [ ] Validar y publicar de forma separada los controles offline y las notificaciones sin ejecutar acciones financieras ni mutar datos fuente durante la QA.
+- [x] Mantener el alcance de PWA y notificaciones limitado a uso personal de la propietaria, sin colaboración ni perfiles de terceros.

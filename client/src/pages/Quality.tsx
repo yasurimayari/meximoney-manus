@@ -7,6 +7,7 @@ import { fromCents, formatDate, toCents } from "@/lib/finance";
 import { exportSecurityActivityCsv, securityEventLabel } from "@/lib/securityActivityExport";
 import { trpc } from "@/lib/trpc";
 import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
+import { clearOfflineVault } from "@/lib/offlineVault";
 import { AlertTriangle, CheckCircle2, CircleAlert, Eraser, FileCheck2, FileDown, ImagePlus, LockKeyhole, ShieldCheck, Trash2, UserRoundCheck } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -23,7 +24,7 @@ export default function Quality() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const deleteAll = trpc.finance.privacy.deleteAll.useMutation({
-    onSuccess: async () => { await utils.finance.dashboard.invalidate(); await utils.finance.privacy.listConsents.invalidate(); setDeleteOpen(false); setConfirmation(""); toast.success("Se han borrado todos tus datos financieros manuales."); },
+    onSuccess: async () => { await clearOfflineVault(); await utils.finance.dashboard.invalidate(); await utils.finance.privacy.listConsents.invalidate(); setDeleteOpen(false); setConfirmation(""); toast.success("Se han borrado todos tus datos financieros manuales y la copia offline local."); },
     onError: error => toast.error(error.message),
   });
   const acceptConsent = trpc.finance.privacy.recordConsent.useMutation({

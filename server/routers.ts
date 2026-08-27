@@ -1,5 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
-import { and, desc, eq, gt, gte, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -160,6 +160,35 @@ function createManualSnapshotText(snapshot: Awaited<ReturnType<typeof getFinance
     statements: snapshot.statements.map(item => ({ periodStart: item.periodStart, scope: item.scope, status: item.status, incomeCents: item.incomeCents, expenseCents: item.expenseCents, netCashFlowCents: item.netCashFlowCents, assetCents: item.assetCents, liabilityCents: item.liabilityCents, netWorthCents: item.netWorthCents })),
     dashboard: snapshot.dashboard,
   });
+}
+
+type NotificationCandidate = { type: string; title: string; message: string; relatedEntityType: string; relatedEntityId: number };
+type NotificationPreferenceState = { inAppEnabled: boolean; calendarEnabled: boolean; documentsEnabled: boolean; debtsEnabled: boolean; reviewsEnabled: boolean; budgetEnabled: boolean; taxReserveEnabled: boolean; telegramEnabled: boolean; telegramScheduleCronTaskUid: string | null; telegramLastDigestDate: string | null };
+
+const defaultNotificationPreferences: NotificationPreferenceState = { inAppEnabled: true, calendarEnabled: true, documentsEnabled: true, debtsEnabled: true, reviewsEnabled: true, budgetEnabled: true, taxReserveEnabled: true, telegramEnabled: false, telegramScheduleCronTaskUid: null, telegramLastDigestDate: null };
+
+export function buildNotificationCandidates(snapshot: any, preferences: NotificationPreferenceState, now = new Date()): NotificationCandidate[] {
+  if (!preferences.inAppEnabled) return [];
+  const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const candidates: NotificationCandidate[] = [];
+  if (preferences.calendarEnabled) (snapshot.calendarEvents ?? []).filter((event: any) => event.status === "planned" && event.startsAt >= now && event.startsAt <= inSevenDays).forEach((event: any) => candidates.push({ type: "calendar", title: `Próximo: ${event.title}`, message: "Tienes una fecha programada en los próximos 7 días.", relatedEntityType: "calendar_event", relatedEntityId: event.id }));
+  if (preferences.documentsEnabled) (snapshot.documents ?? []).filter((document: any) => document.expiresAt && document.expiresAt >= now && document.expiresAt <= inSevenDays).forEach((document: any) => candidates.push({ type: "document", title: `Documento próximo a vencer: ${document.name}`, message: "Revisa el documento y su referencia antes de su vencimiento.", relatedEntityType: "document", relatedEntityId: document.id }));
+  if (preferences.debtsEnabled) (snapshot.debts ?? []).filter((debt: any) => debt.status === "active" && debt.nextDueAt && debt.nextDueAt >= now && debt.nextDueAt <= inSevenDays).forEach((debt: any) => candidates.push({ type: "debt", title: `Vencimiento próximo: ${debt.name}`, message: "Revisa esta deuda y confirma manualmente su siguiente pago o ajuste.", relatedEntityType: "debt", relatedEntityId: debt.id }));
+  if (preferences.debtsEnabled) creditCardAlertCandidates(snapshot.creditCards ?? [], now, 7).forEach(candidate => candidates.push(candidate));
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  if (preferences.budgetEnabled) (snapshot.budgets ?? []).filter((budget: any) => budget.periodStart >= monthStart && budget.periodStart < nextMonthStart).forEach((budget: any) => candidates.push({ type: "budget", title: "Revisión manual de presupuesto", message: "Revisa manualmente este presupuesto mensual frente a tus registros confirmados.", relatedEntityType: "budget", relatedEntityId: budget.id }));
+  if (preferences.taxReserveEnabled && snapshot.profile?.futureTaxReserveCents > 0 && snapshot.profile.futureTaxDueAt && snapshot.profile.futureTaxDueAt >= now && snapshot.profile.futureTaxDueAt <= inSevenDays) candidates.push({ type: "tax_reserve", title: "Revisa tu reserva fiscal manual", message: "Hay una fecha de referencia cercana. Confirma tus datos antes de tomar cualquier decisión fiscal.", relatedEntityType: "financial_profile", relatedEntityId: snapshot.profile.id });
+  if (preferences.reviewsEnabled && snapshot.workspaceAccess?.role !== "manager") (snapshot.transactions ?? []).filter((transaction: any) => transaction.reviewStatus === "pending_review").forEach((transaction: any) => candidates.push({ type: "review", title: "Movimiento pendiente de revisión", message: "Hay un movimiento que espera confirmación humana.", relatedEntityType: "transaction", relatedEntityId: transaction.id }));
+  if (preferences.reviewsEnabled && snapshot.workspaceAccess?.role === "owner") {
+    const pfaeReminder = getOpenFiscalReviewReminder(snapshot.fiscalRecords ?? [], snapshot.fiscalPeriodReviews ?? [], now);
+    if (pfaeReminder) candidates.push({ type: "pfae_review", title: `Revisión PFAE pendiente: ${pfaeReminder.periodLabel}`, message: "El periodo anterior tiene renglones o una rutina abierta. Revísalo manualmente antes de cerrar tu expediente.", relatedEntityType: "fiscal_period_review", relatedEntityId: pfaeReminder.relatedEntityId });
+  }
+  return candidates;
+}
+
+function visibleNotificationTypes(preferences: NotificationPreferenceState) {
+  return new Set([preferences.calendarEnabled && "calendar", preferences.documentsEnabled && "document", preferences.debtsEnabled && "debt", preferences.debtsEnabled && "credit_card_cutoff", preferences.debtsEnabled && "credit_card_payment", preferences.debtsEnabled && "credit_card_overlimit", preferences.reviewsEnabled && "review", preferences.reviewsEnabled && "pfae_review", preferences.budgetEnabled && "budget", preferences.taxReserveEnabled && "tax_reserve"]);
 }
 
 export const appRouter = router({
@@ -1024,30 +1053,24 @@ export const appRouter = router({
       get: privateFinanceProcedure.query(async ({ ctx }) => {
         const db = await requireDb();
         const [storedPreferences] = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, ctx.user.id)).limit(1);
-        const preferences = storedPreferences ?? { inAppEnabled: true, calendarEnabled: true, documentsEnabled: true, debtsEnabled: true, reviewsEnabled: true, budgetEnabled: true, taxReserveEnabled: true, telegramEnabled: false, telegramScheduleCronTaskUid: null, telegramLastDigestDate: null };
-        if (!preferences.inAppEnabled) return { preferences, notifications: [] };
-        const snapshot = await getFinanceSnapshot(ctx.user.id);
-        const now = new Date(); const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const candidates: Array<{ type: string; title: string; message: string; relatedEntityType: string; relatedEntityId: number }> = [];
-        if (preferences.inAppEnabled && preferences.calendarEnabled) snapshot.calendarEvents.filter(event => event.status === "planned" && event.startsAt >= now && event.startsAt <= inSevenDays).forEach(event => candidates.push({ type: "calendar", title: `Próximo: ${event.title}`, message: "Tienes una fecha programada en los próximos 7 días.", relatedEntityType: "calendar_event", relatedEntityId: event.id }));
-        if (preferences.inAppEnabled && preferences.documentsEnabled) snapshot.documents.filter(document => document.expiresAt && document.expiresAt >= now && document.expiresAt <= inSevenDays).forEach(document => candidates.push({ type: "document", title: `Documento próximo a vencer: ${document.name}`, message: "Revisa el documento y su referencia antes de su vencimiento.", relatedEntityType: "document", relatedEntityId: document.id }));
-        if (preferences.inAppEnabled && preferences.debtsEnabled) snapshot.debts.filter(debt => debt.status === "active" && debt.nextDueAt && debt.nextDueAt >= now && debt.nextDueAt <= inSevenDays).forEach(debt => candidates.push({ type: "debt", title: `Vencimiento próximo: ${debt.name}`, message: "Revisa esta deuda y confirma manualmente su siguiente pago o ajuste.", relatedEntityType: "debt", relatedEntityId: debt.id }));
-        if (preferences.inAppEnabled && preferences.debtsEnabled) creditCardAlertCandidates(snapshot.creditCards ?? [], now, 7).forEach(candidate => candidates.push(candidate));
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1); const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        if (preferences.inAppEnabled && preferences.budgetEnabled) snapshot.budgets.filter(budget => budget.periodStart >= monthStart && budget.periodStart < nextMonthStart).forEach(budget => candidates.push({ type: "budget", title: "Revisión manual de presupuesto", message: "Revisa manualmente este presupuesto mensual frente a tus registros confirmados.", relatedEntityType: "budget", relatedEntityId: budget.id }));
-        if (preferences.inAppEnabled && preferences.taxReserveEnabled && snapshot.profile?.futureTaxReserveCents > 0 && snapshot.profile.futureTaxDueAt && snapshot.profile.futureTaxDueAt >= now && snapshot.profile.futureTaxDueAt <= inSevenDays) candidates.push({ type: "tax_reserve", title: "Revisa tu reserva fiscal manual", message: "Hay una fecha de referencia cercana. Confirma tus datos antes de tomar cualquier decisión fiscal.", relatedEntityType: "financial_profile", relatedEntityId: snapshot.profile.id });
-        if (preferences.inAppEnabled && preferences.reviewsEnabled && snapshot.workspaceAccess?.role !== "manager") snapshot.transactions.filter(transaction => transaction.reviewStatus === "pending_review").forEach(transaction => candidates.push({ type: "review", title: "Movimiento pendiente de revisión", message: "Hay un movimiento que espera confirmación humana.", relatedEntityType: "transaction", relatedEntityId: transaction.id }));
-        if (preferences.inAppEnabled && preferences.reviewsEnabled && snapshot.workspaceAccess?.role === "owner") {
-          const pfaeReminder = getOpenFiscalReviewReminder(snapshot.fiscalRecords ?? [], snapshot.fiscalPeriodReviews ?? [], now);
-          if (pfaeReminder) candidates.push({ type: "pfae_review", title: `Revisión PFAE pendiente: ${pfaeReminder.periodLabel}`, message: "El periodo anterior tiene renglones o una rutina abierta. Revísalo manualmente antes de cerrar tu expediente.", relatedEntityType: "fiscal_period_review", relatedEntityId: pfaeReminder.relatedEntityId });
-        }
+        const preferences = storedPreferences ?? defaultNotificationPreferences;
+        const existing = await db.select().from(financeNotifications).where(eq(financeNotifications.userId, ctx.user.id));
+        const resolvedCount = existing.filter(notification => notification.readAt || notification.dismissedAt).length;
+        if (!preferences.inAppEnabled) return { preferences, notifications: [], resolvedCount };
+        const visibleTypes = visibleNotificationTypes(preferences);
+        return { preferences, notifications: existing.filter(notification => !notification.dismissedAt && visibleTypes.has(notification.type)).sort((left, right) => right.occurredAt.getTime() - left.occurredAt.getTime()), resolvedCount };
+      }),
+      refreshInbox: privateFinanceProcedure.mutation(async ({ ctx }) => {
+        const db = await requireDb();
+        const [storedPreferences] = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, ctx.user.id)).limit(1);
+        const preferences = storedPreferences ?? defaultNotificationPreferences;
+        if (!preferences.inAppEnabled) return { createdCount: 0, skipped: "in-app-disabled" as const };
+        const candidates = buildNotificationCandidates(await getFinanceSnapshot(ctx.user.id), preferences);
         const existing = await db.select().from(financeNotifications).where(eq(financeNotifications.userId, ctx.user.id));
         const existingKeys = new Set(existing.map(notification => `${notification.type}:${notification.relatedEntityType}:${notification.relatedEntityId}`));
         const pending = candidates.filter(candidate => !existingKeys.has(`${candidate.type}:${candidate.relatedEntityType}:${candidate.relatedEntityId}`));
         if (pending.length) await db.insert(financeNotifications).values(pending.map(candidate => ({ userId: ctx.user.id, ...candidate })));
-        const notifications = pending.length ? await db.select().from(financeNotifications).where(eq(financeNotifications.userId, ctx.user.id)) : existing;
-        const visibleTypes = new Set([preferences.calendarEnabled && "calendar", preferences.documentsEnabled && "document", preferences.debtsEnabled && "debt", preferences.debtsEnabled && "credit_card_cutoff", preferences.debtsEnabled && "credit_card_payment", preferences.debtsEnabled && "credit_card_overlimit", preferences.reviewsEnabled && "review", preferences.reviewsEnabled && "pfae_review", preferences.budgetEnabled && "budget", preferences.taxReserveEnabled && "tax_reserve"]);
-        return { preferences, notifications: notifications.filter(notification => !notification.dismissedAt && visibleTypes.has(notification.type)).sort((left, right) => right.occurredAt.getTime() - left.occurredAt.getTime()) };
+        return { createdCount: pending.length, skipped: null };
       }),
       savePreferences: privateFinanceProcedure.input(z.object({ inAppEnabled: z.boolean(), calendarEnabled: z.boolean(), documentsEnabled: z.boolean(), debtsEnabled: z.boolean(), reviewsEnabled: z.boolean(), budgetEnabled: z.boolean(), taxReserveEnabled: z.boolean() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
@@ -1066,6 +1089,11 @@ export const appRouter = router({
       }),
       dismiss: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb(); await db.update(financeNotifications).set({ dismissedAt: new Date() }).where(and(eq(financeNotifications.id, input.id), eq(financeNotifications.userId, ctx.user.id))); return { success: true };
+      }),
+      clearResolved: privateFinanceProcedure.input(z.object({ confirmed: z.literal(true) })).mutation(async ({ ctx }) => {
+        const db = await requireDb();
+        await db.delete(financeNotifications).where(and(eq(financeNotifications.userId, ctx.user.id), or(isNotNull(financeNotifications.readAt), isNotNull(financeNotifications.dismissedAt))));
+        return { success: true };
       }),
     }),
     quality: router({
@@ -1094,6 +1122,19 @@ export const appRouter = router({
         await db.insert(privacyConsents).values({
           userId: ctx.user.id,
           purpose: "almacenamiento_manual_financiero",
+          accepted: input.accepted,
+          policyVersion: input.policyVersion,
+        });
+        return { success: true };
+      }),
+      recordOfflineVaultConsent: protectedProcedure.input(z.object({
+        accepted: z.boolean(),
+        policyVersion: z.string().min(1).max(40),
+      })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        await db.insert(privacyConsents).values({
+          userId: ctx.user.id,
+          purpose: "boveda_offline_cifrada_personal",
           accepted: input.accepted,
           policyVersion: input.policyVersion,
         });

@@ -26,6 +26,8 @@ import ChangePassword from "./pages/ChangePassword";
 import MonthlyControl from "./pages/MonthlyControl";
 import Simulations from "./pages/Simulations";
 import Accounts from "./pages/Accounts";
+import Offline from "./pages/Offline";
+import OfflineData from "./pages/OfflineData";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
@@ -33,7 +35,9 @@ function Router() {
   return (
     <Switch>
       <Route path={"/restablecer-contrasena"} component={PasswordReset} />
+      <Route path={"/offline"} component={Offline} />
       <Route path={"/seguridad/cambiar-contrasena"}><DashboardLayout><ChangePassword /></DashboardLayout></Route>
+      <Route path={"/datos-offline"}><DashboardLayout><OfflineData /></DashboardLayout></Route>
       <Route path={"/"}><DashboardLayout><Home /></DashboardLayout></Route>
       <Route path={"/movimientos"}><DashboardLayout><Records /></DashboardLayout></Route>
       <Route path={"/cuentas"}><DashboardLayout><Accounts /></DashboardLayout></Route>

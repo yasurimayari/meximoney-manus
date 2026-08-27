@@ -16,6 +16,7 @@ import {
   fiscalPeriodReviews,
   fiscalRecords,
   financeDocuments,
+  financeNotifications,
   financeTasks,
   financialGoals,
   financialProfiles,
@@ -27,6 +28,7 @@ import {
   monthlyReviewControls,
   monthlyReviews,
   monthlyFinancialStatements,
+  notificationPreferences,
   payablePayments,
   payables,
   passwordResetEvents,
@@ -328,6 +330,8 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(categories).where(eq(categories.userId, userId));
     await tx.delete(accounts).where(eq(accounts.userId, userId));
     await tx.delete(financialProfiles).where(eq(financialProfiles.userId, userId));
+    await tx.delete(financeNotifications).where(eq(financeNotifications.userId, userId));
+    await tx.delete(notificationPreferences).where(eq(notificationPreferences.userId, userId));
     await tx.delete(privacyConsents).where(eq(privacyConsents.userId, userId));
     await tx.delete(qualityIssueAcknowledgements).where(eq(qualityIssueAcknowledgements.userId, userId));
     await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));

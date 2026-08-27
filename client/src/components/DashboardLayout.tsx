@@ -25,7 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
 import { notificationBadgeLabel, unreadNotificationCount } from "@/lib/notificationBadge";
-import { ArrowLeftRight, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, ContactRound, CreditCard, EyeOff, FileDown, KeyRound, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck, ReceiptText, Calculator } from "lucide-react";
+import { ArrowLeftRight, BarChart3, BellRing, BotMessageSquare, CalendarDays, CircleCheckBig, CloudDownload, ContactRound, CreditCard, EyeOff, FileDown, KeyRound, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck, ReceiptText, Calculator } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -189,7 +189,7 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = [...primaryMenuItems, ...accountMenuItems].find(item => item.path === location) ?? [{ path: "/calidad", label: "Perfil y privacidad" }, { path: "/seguridad/cambiar-contrasena", label: "Cambiar contraseña" }, { path: "/notificaciones", label: "Notificaciones" }, { path: "/espacio", label: "Espacio" }].find(item => item.path === location);
+  const activeMenuItem = [...primaryMenuItems, ...accountMenuItems].find(item => item.path === location) ?? [{ path: "/calidad", label: "Perfil y privacidad" }, { path: "/seguridad/cambiar-contrasena", label: "Cambiar contraseña" }, { path: "/notificaciones", label: "Notificaciones" }, { path: "/datos-offline", label: "Datos offline" }, { path: "/espacio", label: "Espacio" }].find(item => item.path === location);
   const isMobile = useIsMobile();
   const { data: notificationData } = trpc.finance.notifications.get.useQuery(undefined, { enabled: Boolean(user) });
   const unreadNotifications = notificationData ? unreadNotificationCount(notificationData.notifications) : 0;
@@ -314,6 +314,10 @@ function DashboardLayoutContent({
                   <BellRing className="mr-2 h-4 w-4" />
                   <span>Notificaciones</span>
                   {unreadNotifications ? <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[0.62rem] font-bold text-primary-foreground">{notificationBadgeLabel(unreadNotifications)}</span> : null}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation("/datos-offline")} className="cursor-pointer">
+                  <CloudDownload className="mr-2 h-4 w-4" />
+                  <span>Datos offline</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setLocation("/espacio")} className="cursor-pointer">
                   <Settings2 className="mr-2 h-4 w-4" />

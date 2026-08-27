@@ -71,6 +71,8 @@ export default function Notifications() {
   });
   const markRead = trpc.finance.notifications.markRead.useMutation({ onSuccess: refresh });
   const dismiss = trpc.finance.notifications.dismiss.useMutation({ onSuccess: refresh });
+  const refreshInbox = trpc.finance.notifications.refreshInbox.useMutation({ onSuccess: async result => { await refresh(); toast.success(result.skipped ? "La bandeja interna está desactivada." : result.createdCount ? `${result.createdCount} aviso${result.createdCount === 1 ? "" : "s"} actualizado${result.createdCount === 1 ? "" : "s"}.` : "No hay avisos nuevos."); }, onError: error => toast.error(error.message) });
+  const clearResolved = trpc.finance.notifications.clearResolved.useMutation({ onSuccess: async () => { await refresh(); toast.success("Avisos leídos o descartados eliminados."); }, onError: error => toast.error(error.message) });
 
   const updatePreference = (key: Exclude<keyof NotificationPreferences, "telegramEnabled" | "telegramScheduleCronTaskUid">, value: boolean) => {
     const next = { ...preferences, [key]: value };
@@ -128,11 +130,11 @@ export default function Notifications() {
           </div>
           {!preferences.telegramScheduleCronTaskUid ? <p className="mt-3 text-xs text-muted-foreground">La programación segura aún está pendiente. Este interruptor se habilitará cuando quede registrada.</p> : null}
         </div>
-        <div className="mt-5 flex items-start gap-3 rounded-xl bg-primary/[0.045] p-4 text-xs leading-5 text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" /><p>Las notificaciones internas se generan al consultar esta bandeja. No programan pagos, no se conectan a bancos y no envían correos o mensajes automáticos.</p></div>
+        <div className="mt-5 flex items-start gap-3 rounded-xl bg-primary/[0.045] p-4 text-xs leading-5 text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" /><p>Consultar esta pantalla no crea avisos. Usa «Actualizar avisos» cuando quieras revisar tus datos manuales; no programa pagos, no se conecta a bancos y no envía correos o mensajes automáticos.</p></div>
       </section>
 
       <section className="content-card">
-        <div className="card-title-row"><div><h2>Bandeja</h2><p>{data.notifications.length ? "Filtra, agrupa y abre el contexto relacionado sin salir de tu espacio privado." : "No hay avisos activos por ahora."}</p></div></div>
+        <div className="card-title-row gap-3"><div><h2>Bandeja</h2><p>{data.notifications.length ? "Filtra, agrupa y abre el contexto relacionado sin salir de tu espacio privado." : "No hay avisos activos por ahora."}</p></div><div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={refreshInbox.isPending || !preferences.inAppEnabled} onClick={() => refreshInbox.mutate()}>{refreshInbox.isPending ? "Actualizando…" : "Actualizar avisos"}</Button><Button type="button" size="sm" variant="ghost" disabled={clearResolved.isPending || !data.resolvedCount} onClick={() => { if (window.confirm(`Eliminar ${data.resolvedCount} aviso${data.resolvedCount === 1 ? "" : "s"} leído${data.resolvedCount === 1 ? "" : "s"} o descartado${data.resolvedCount === 1 ? "" : "s"}? Esta acción no altera tus datos financieros.`)) clearResolved.mutate({ confirmed: true }); }}>{clearResolved.isPending ? "Eliminando…" : `Limpiar resueltos${data.resolvedCount ? ` (${data.resolvedCount})` : ""}`}</Button></div></div>
         {data.notifications.length ? <>
           <div className="mt-5 flex flex-col gap-3 rounded-xl bg-muted/35 p-3">
             <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant={onlyUnread ? "default" : "outline"} onClick={() => setOnlyUnread(current => !current)} aria-pressed={onlyUnread}>No leídas{unread ? ` (${unread})` : ""}</Button><span className="self-center text-xs font-medium text-muted-foreground">Categoría</span><Button type="button" size="sm" variant={category === "all" ? "default" : "outline"} onClick={() => setCategory("all")} aria-pressed={category === "all"}>Todas</Button>{availableCategories.map(item => <Button key={item} type="button" size="sm" variant={category === item ? "default" : "outline"} onClick={() => setCategory(item)} aria-pressed={category === item}>{categoryLabels[item] ?? "Otros"}</Button>)}</div>

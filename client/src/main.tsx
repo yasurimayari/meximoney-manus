@@ -90,3 +90,7 @@ createRoot(document.getElementById("root")!).render(
     </QueryClientProvider>
   </trpc.Provider>
 );
+
+if ("serviceWorker" in navigator && window.isSecureContext) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(error => console.warn("[PWA] No fue posible registrar el modo offline.", error)));
+}
