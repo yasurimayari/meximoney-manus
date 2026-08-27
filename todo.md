@@ -299,3 +299,7 @@
 - [x] Corregir el tablero de progreso de Proyectos para incluir tareas archivadas como cerradas aunque permanezcan ocultas de la vista activa.
 - [x] Ejecutar pruebas unitarias de la barra de progreso con tareas completadas y archivadas, sin usar proyectos reales.
 - [x] Comprobar y corregir la sincronización de proyectos, partes y tareas entre Lista, Kanban y Calendario, incluidos sus colores heredados.
+- [x] Rediseñar la cabecera y el resumen operativo de Proyectos para priorizar orientación, progreso y acciones principales.
+- [x] Mejorar la navegación entre Lista, Kanban y Calendario para escritorio, móvil y PWA, conservando el mismo conjunto de datos.
+- [x] Refinar tarjetas, tareas, partes y estados vacíos de Proyectos con jerarquía visual, color heredado y acciones accesibles.
+- [x] Validar tipos, pruebas, respuesta móvil y compilación del rediseño sin modificar proyectos o tareas reales.
