@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { creditScoreRange } from "./creditScoreRange";
+import { creditScoreRange, creditScoreRanges } from "./creditScoreRange";
 
 describe("rangos visuales del score crediticio", () => {
   it("conserva los límites publicados de cada color", () => {
@@ -17,5 +17,14 @@ describe("rangos visuales del score crediticio", () => {
     expect(creditScoreRange(580).key).toBe("unclassified");
     expect(creditScoreRange(900).key).toBe("unclassified");
     expect(creditScoreRange(null).key).toBe("unclassified");
+  });
+
+  it("expone una etiqueta y un tono legibles para cada rango publicado", () => {
+    expect(creditScoreRanges.map(range => [range.key, range.title, range.solidColor])).toEqual([
+      ["red", "Riesgo alto", "#e11d48"],
+      ["orange", "Regular", "#ea580c"],
+      ["yellow", "Bueno", "#ca8a04"],
+      ["green", "Excelente", "#059669"],
+    ]);
   });
 });

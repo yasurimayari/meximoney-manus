@@ -329,3 +329,6 @@
 - [x] Ampliar y reorganizar el diálogo de detalle de Proyecto para aprovechar la pantalla en web, móvil y PWA.
 - [x] Mostrar en el detalle los movimientos financieros vinculados a tareas como referencias de solo lectura y trazabilidad.
 - [x] Validar la integridad de los vínculos, tipos, pruebas y respuesta responsive sin crear o modificar datos reales.
+- [x] Verificar los rangos de score de riesgo crediticio publicados por Buró de Crédito México y traducirlos a una escala visual trazable.
+- [x] Aplicar colores de rango accesibles y etiquetas explicativas en la sesión Score sin inferir ni modificar el valor manual.
+- [x] Validar límites, contraste, tipos, respuesta móvil y compilación de la escala de Score.
