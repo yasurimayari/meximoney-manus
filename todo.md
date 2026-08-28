@@ -326,3 +326,6 @@
 - [x] Optimizar las pestañas horizontales de Proyectos para pantallas pequeñas con navegación fluida y sin cortes.
 - [x] Mejorar el Calendario de Proyectos para mostrar la semana completa desde lunes y una cuadrícula mensual completa.
 - [x] Validar tipos, lógica de calendario, navegación y compilación sin modificar datos reales durante QA.
+- [x] Ampliar y reorganizar el diálogo de detalle de Proyecto para aprovechar la pantalla en web, móvil y PWA.
+- [x] Mostrar en el detalle los movimientos financieros vinculados a tareas como referencias de solo lectura y trazabilidad.
+- [x] Validar la integridad de los vínculos, tipos, pruebas y respuesta responsive sin crear o modificar datos reales.
