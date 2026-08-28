@@ -343,3 +343,7 @@
 - [x] Añadir búsqueda por fecha, tipo, importe, moneda o nota al selector de movimientos al registrar una operación de inversión.
 - [x] Incorporar indicadores visuales accesibles de variación reciente y saldo positivo o negativo en Cuentas y obligaciones.
 - [x] Validar formularios precargados, búsqueda, señales de color, tipos, respuesta móvil y compilación sin modificar datos reales.
+- [x] Añadir un gráfico de resumen que compare los saldos positivos y negativos consolidados por moneda en Cuentas.
+- [x] Verificar y reforzar el mensaje de éxito visible tras guardar una posición u operación de inversión.
+- [x] Añadir un filtro por tipo de activo en Ahorro e inversiones, con estado vacío claro y conteo contextual.
+- [x] Validar totales del gráfico, filtros, mensajes, tipos, respuesta móvil y compilación sin modificar datos reales.
