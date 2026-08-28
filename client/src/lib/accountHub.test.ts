@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAccountHistory, deriveAccountBalance, paginateAccountHistory, relatedMovements } from "./accountHub";
+import { balanceSignal, buildAccountHistory, deriveAccountBalance, paginateAccountHistory, relatedMovements } from "./accountHub";
 
 describe("movimientos del centro de cuentas", () => {
   const transactions = [
@@ -36,5 +36,12 @@ describe("movimientos del centro de cuentas", () => {
       { id: 5, accountId: 5, type: "income", amountCents: 9999, occurredAt: new Date("2026-08-01T12:00:00Z"), status: "confirmed" },
     ]);
     expect(balance).toMatchObject({ referenceBalanceCents: 10000, movementDeltaCents: 1800, currentBalanceCents: 11800, includedMovementCount: 2 });
+  });
+
+  it("distingue con una señal visible los saldos favorables de cuentas y obligaciones", () => {
+    expect(balanceSignal(1200)).toEqual({ tone: "positive", label: "Saldo positivo" });
+    expect(balanceSignal(-1200)).toEqual({ tone: "negative", label: "Saldo negativo" });
+    expect(balanceSignal(1200, true)).toEqual({ tone: "negative", label: "Saldo pendiente" });
+    expect(balanceSignal(0, true)).toEqual({ tone: "neutral", label: "Sin saldo pendiente" });
   });
 });

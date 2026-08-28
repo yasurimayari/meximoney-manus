@@ -30,6 +30,12 @@ export function deriveAccountBalance(account: { id: number; currentValueCents: n
   return { referenceBalanceCents: account.currentValueCents, movementDeltaCents, currentBalanceCents: account.currentValueCents + movementDeltaCents, includedMovementCount: movements.length, referenceDate };
 }
 
+export function balanceSignal(valueCents: number, isLiability = false) {
+  if (valueCents === 0) return { tone: "neutral" as const, label: isLiability ? "Sin saldo pendiente" : "Saldo en cero" };
+  const isPositive = isLiability ? valueCents < 0 : valueCents > 0;
+  return isPositive ? { tone: "positive" as const, label: isLiability ? "Saldo a favor" : "Saldo positivo" } : { tone: "negative" as const, label: isLiability ? "Saldo pendiente" : "Saldo negativo" };
+}
+
 export type AccountHistoryResource = { id: number; name: string; type: "account" | "creditCard" | "debt" };
 export type AccountHistoryRow = { movement: any; resources: AccountHistoryResource[] };
 

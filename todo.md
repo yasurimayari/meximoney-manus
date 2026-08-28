@@ -339,3 +339,7 @@
 - [x] Mostrar un saldo derivado y su diferencia respecto al saldo manual para cada cuenta, con trazabilidad de movimientos y criterios explícitos.
 - [x] Permitir exportar los resultados filtrados de búsqueda en Registro a CSV y PDF, sin incluir datos que no aparezcan en la consulta.
 - [x] Validar cálculos de saldo, exportaciones, tipos, privacidad, respuesta móvil y compilación sin crear ni modificar datos reales.
+- [x] Auditar y corregir la precarga de datos al editar una posición de ahorro o inversión existente.
+- [x] Añadir búsqueda por fecha, tipo, importe, moneda o nota al selector de movimientos al registrar una operación de inversión.
+- [x] Incorporar indicadores visuales accesibles de variación reciente y saldo positivo o negativo en Cuentas y obligaciones.
+- [x] Validar formularios precargados, búsqueda, señales de color, tipos, respuesta móvil y compilación sin modificar datos reales.
