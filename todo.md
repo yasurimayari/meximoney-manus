@@ -332,3 +332,6 @@
 - [x] Verificar los rangos de score de riesgo crediticio publicados por Buró de Crédito México y traducirlos a una escala visual trazable.
 - [x] Aplicar colores de rango accesibles y etiquetas explicativas en la sesión Score sin inferir ni modificar el valor manual.
 - [x] Validar límites, contraste, tipos, respuesta móvil y compilación de la escala de Score.
+- [x] Auditar los datos y la navegación de Registro para localizar movimientos, inversiones y estados financieros ya generados de forma privada.
+- [x] Implementar una búsqueda unificada por texto, tipo y periodo con resultados contextuales y navegación segura.
+- [x] Validar el filtrado, tipos, privacidad, respuesta móvil y compilación sin modificar datos existentes.
