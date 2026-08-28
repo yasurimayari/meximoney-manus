@@ -335,3 +335,7 @@
 - [x] Auditar los datos y la navegación de Registro para localizar movimientos, inversiones y estados financieros ya generados de forma privada.
 - [x] Implementar una búsqueda unificada por texto, tipo y periodo con resultados contextuales y navegación segura.
 - [x] Validar el filtrado, tipos, privacidad, respuesta móvil y compilación sin modificar datos existentes.
+- [x] Auditar el cálculo visible de saldos en Cuentas frente a movimientos confirmados y traspasos vinculados, sin cambiar saldos manuales almacenados.
+- [x] Mostrar un saldo derivado y su diferencia respecto al saldo manual para cada cuenta, con trazabilidad de movimientos y criterios explícitos.
+- [x] Permitir exportar los resultados filtrados de búsqueda en Registro a CSV y PDF, sin incluir datos que no aparezcan en la consulta.
+- [x] Validar cálculos de saldo, exportaciones, tipos, privacidad, respuesta móvil y compilación sin crear ni modificar datos reales.

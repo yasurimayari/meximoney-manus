@@ -6,6 +6,30 @@ export function relatedMovements(transactions: any[], type: "account" | "creditC
     .sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime());
 }
 
+export type DerivedAccountBalance = {
+  referenceBalanceCents: number;
+  movementDeltaCents: number;
+  currentBalanceCents: number;
+  includedMovementCount: number;
+  referenceDate: Date | string | null;
+};
+
+function isConfirmedMovement(transaction: any) {
+  return transaction.status !== "draft" && transaction.reviewStatus !== "draft" && transaction.reviewStatus !== "pending_review";
+}
+
+function movementAmountDelta(transaction: any) {
+  return transaction.type === "income" || transaction.type === "transfer_in" ? transaction.amountCents : transaction.type === "expense" || transaction.type === "transfer_out" ? -transaction.amountCents : 0;
+}
+
+export function deriveAccountBalance(account: { id: number; currentValueCents: number; valuationDate?: Date | string | null }, transactions: any[]): DerivedAccountBalance {
+  const referenceDate = account.valuationDate ?? null;
+  const referenceTime = referenceDate ? new Date(referenceDate).getTime() : Number.NaN;
+  const movements = Number.isNaN(referenceTime) ? [] : transactions.filter(transaction => transaction.accountId === account.id && isConfirmedMovement(transaction) && new Date(transaction.occurredAt).getTime() > referenceTime);
+  const movementDeltaCents = movements.reduce((sum, transaction) => sum + movementAmountDelta(transaction), 0);
+  return { referenceBalanceCents: account.currentValueCents, movementDeltaCents, currentBalanceCents: account.currentValueCents + movementDeltaCents, includedMovementCount: movements.length, referenceDate };
+}
+
 export type AccountHistoryResource = { id: number; name: string; type: "account" | "creditCard" | "debt" };
 export type AccountHistoryRow = { movement: any; resources: AccountHistoryResource[] };
 

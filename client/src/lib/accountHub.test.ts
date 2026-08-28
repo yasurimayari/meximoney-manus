@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAccountHistory, paginateAccountHistory, relatedMovements } from "./accountHub";
+import { buildAccountHistory, deriveAccountBalance, paginateAccountHistory, relatedMovements } from "./accountHub";
 
 describe("movimientos del centro de cuentas", () => {
   const transactions = [
@@ -25,5 +25,16 @@ describe("movimientos del centro de cuentas", () => {
     expect(history.map(row => row.movement.id)).toEqual([2, 1]);
     expect(history[0]?.resources.map(resource => resource.name)).toEqual(["Cuenta origen", "Tarjeta"]);
     expect(paginateAccountHistory(history, 2, 1)).toMatchObject({ page: 2, totalPages: 2, start: 1, end: 2, items: [history[1]] });
+  });
+
+  it("deriva el saldo actual desde la valoración manual y sólo movimientos confirmados posteriores", () => {
+    const balance = deriveAccountBalance({ id: 5, currentValueCents: 10000, valuationDate: new Date("2026-08-01T12:00:00Z") }, [
+      { id: 1, accountId: 5, type: "income", amountCents: 2500, occurredAt: new Date("2026-08-02T12:00:00Z"), status: "confirmed" },
+      { id: 2, accountId: 5, type: "transfer_out", amountCents: 700, occurredAt: new Date("2026-08-03T12:00:00Z"), status: "confirmed" },
+      { id: 3, accountId: 5, type: "income", amountCents: 9999, occurredAt: new Date("2026-08-04T12:00:00Z"), status: "draft" },
+      { id: 4, accountId: 5, type: "income", amountCents: 9999, occurredAt: new Date("2026-08-04T12:00:00Z"), reviewStatus: "pending_review" },
+      { id: 5, accountId: 5, type: "income", amountCents: 9999, occurredAt: new Date("2026-08-01T12:00:00Z"), status: "confirmed" },
+    ]);
+    expect(balance).toMatchObject({ referenceBalanceCents: 10000, movementDeltaCents: 1800, currentBalanceCents: 11800, includedMovementCount: 2 });
   });
 });
