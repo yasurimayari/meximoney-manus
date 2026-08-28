@@ -321,3 +321,8 @@
 - [x] Unificar Proyectos y Portafolio en una vista principal funcional, sin duplicación de navegación o contenido.
 - [x] Reubicar Proyectos, Flujo y Calendario en una navegación horizontal responsive para ampliar el área de trabajo.
 - [x] Validar el diseño simplificado en escritorio y móvil sin modificar datos reales.
+- [x] Eliminar los botones de proyecto sin acción útil de la vista Flujo.
+- [x] Añadir una vista de detalle de proyecto accesible desde sus tarjetas, con información, partes y tareas asociadas.
+- [x] Optimizar las pestañas horizontales de Proyectos para pantallas pequeñas con navegación fluida y sin cortes.
+- [x] Mejorar el Calendario de Proyectos para mostrar la semana completa desde lunes y una cuadrícula mensual completa.
+- [x] Validar tipos, lógica de calendario, navegación y compilación sin modificar datos reales durante QA.
