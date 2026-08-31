@@ -400,3 +400,6 @@
 
 - [x] Auditar y corregir los colores residuales de saldos, etiquetas y evolución manual en Patrimonio según activo, pasivo y patrimonio neto.
 - [x] Validar Patrimonio en escritorio y móvil, con pruebas y compilación, sin modificar datos financieros reales.
+
+- [x] Corregir el importe visible de deuda en Evolución Manual para que coincida con la barra roja y conserve el signo negativo.
+- [x] Validar la corrección de Evolución Manual con pruebas, compilación, PWA y revisión responsive sin modificar históricos.
