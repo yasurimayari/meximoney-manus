@@ -348,7 +348,7 @@
 - [x] Añadir un filtro por tipo de activo en Ahorro e inversiones, con estado vacío claro y conteo contextual.
 - [x] Validar totales del gráfico, filtros, mensajes, tipos, respuesta móvil y compilación sin modificar datos reales.
 
-- [ ] Convertir Registrar Categorías a una vista de lista compacta y usable.
-- [ ] Permitir seleccionar tarjetas registradas como medio de pago en plantillas recurrentes.
-- [ ] Permitir asociar un gasto con una financiación existente, validando la relación sin crear pagos automáticamente.
-- [ ] Validar formularios, relaciones, tipos, privacidad, respuesta móvil y compilación sin modificar datos reales.
+- [x] Convertir Registrar Categorías a una vista de lista compacta y usable.
+- [x] Permitir seleccionar tarjetas registradas como medio de pago en plantillas recurrentes.
+- [x] Permitir asociar un gasto con una financiación existente, validando la relación sin crear pagos automáticamente.
+- [x] Validar formularios, relaciones, tipos, privacidad, respuesta móvil y compilación sin modificar datos reales.
