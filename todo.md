@@ -379,3 +379,7 @@
 - [x] Mostrar una etiqueta roja llamativa en activos con pagos vencidos o intereses/cargos acumulados.
 - [x] Permitir exportar el detalle de un activo financiado a PDF y CSV con pagos, intereses, vencimientos y amortización.
 - [x] Validar alerta, contenido de archivos, privacidad, tipos, respuesta móvil y compilación sin modificar datos reales durante QA.
+
+- [x] Añadir una acción rápida por activo para registrar manualmente cargos por atraso o intereses adicionales documentados.
+- [x] Añadir búsqueda y ordenamiento de activos por fecha de vencimiento y saldo pendiente.
+- [x] Validar cargos, límites, filtros, ordenamiento, privacidad, tipos, respuesta móvil y compilación sin modificar datos reales durante QA.
