@@ -9,6 +9,8 @@ export type RecordSearchResult = {
   date: Date | string | null;
   amountCents?: number | null;
   currency?: string | null;
+  transactionType?: string;
+
   href: string;
 };
 
@@ -51,6 +53,7 @@ export function findRecordSearchResults(snapshot: any, options: SearchOptions = 
     date: item.occurredAt,
     amountCents: item.amountCents,
     currency: item.currency,
+    transactionType: item.type,
     href: `/movimientos#transaction-${item.id}`,
   }));
   const investments: RecordSearchResult[] = (snapshot?.investments ?? []).map((item: any) => ({

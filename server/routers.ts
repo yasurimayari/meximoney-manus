@@ -1080,7 +1080,10 @@ export const appRouter = router({
               asset: assetRows.find(asset => asset.id === purchase.investmentId) ?? null,
               debt: debt ? {
                 ...debt,
+                capitalPaidCents: payments.reduce((sum, item) => sum + item.principalCents, 0),
+                interestPaidCents: payments.reduce((sum, item) => sum + item.interestCents + item.lateInterestCents, 0),
                 lateInterestPaidCents: payments.reduce((sum, item) => sum + item.lateInterestCents, 0),
+                interestGeneratedCents: payments.reduce((sum, item) => sum + item.interestCents + item.lateInterestCents, 0) + adjustments.filter(item => item.type === "late_interest").reduce((sum, item) => sum + Math.max(0, item.amountCents), 0),
                 manualChargesCents: adjustments.reduce((sum, item) => sum + (item.type === "correction" ? 0 : Math.max(0, item.amountCents)), 0),
               } : null,
             };

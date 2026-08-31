@@ -383,3 +383,12 @@
 - [x] Añadir una acción rápida por activo para registrar manualmente cargos por atraso o intereses adicionales documentados.
 - [x] Añadir búsqueda y ordenamiento de activos por fecha de vencimiento y saldo pendiente.
 - [x] Validar cargos, límites, filtros, ordenamiento, privacidad, tipos, respuesta móvil y compilación sin modificar datos reales durante QA.
+
+- [x] Mostrar una confirmación visible tras registrar correctamente un cargo manual por atraso o interés adicional.
+- [x] Integrar un gráfico visual por activo que compare capital pagado e intereses generados, con valores y leyenda accesibles.
+- [x] Añadir una acción rápida para marcar un pago vencido como pagado desde la tarjeta, con confirmación y trazabilidad.
+- [x] Validar estados, pagos, gráfico, privacidad, tipos, respuesta móvil y compilación sin modificar datos reales durante QA.
+
+- [x] Auditar componentes, utilidades y excepciones de color de importes en toda Meximoney.
+- [x] Aplicar positivos en verde y negativos en rojo con texto o icono complementario, manteniendo ceros y neutros legibles.
+- [x] Validar cobertura, contraste, tipos, respuesta móvil y compilación sin modificar datos financieros.
