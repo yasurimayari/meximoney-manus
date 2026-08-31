@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { amountTone, amountToneClass, signedTransactionCents } from "./amountTone";
+import { amountTone, amountToneClass, displayAmountCents, signedTransactionCents } from "./amountTone";
 
 describe("amountTone", () => {
   it("clasifica positivos, negativos y ceros", () => {
@@ -13,6 +13,14 @@ describe("amountTone", () => {
     expect(amountToneClass(1)).toContain("emerald");
     expect(amountToneClass(-1)).toContain("rose");
     expect(amountToneClass(0)).toBe("text-foreground");
+  });
+
+  it("convierte magnitudes financieras a su signo visual semántico", () => {
+    expect(displayAmountCents(1250, "income")).toBe(1250);
+    expect(displayAmountCents(1250, "asset")).toBe(1250);
+    expect(displayAmountCents(1250, "expense")).toBe(-1250);
+    expect(displayAmountCents(1250, "liability")).toBe(-1250);
+    expect(displayAmountCents(-1250, "liability")).toBe(-1250);
   });
 
   it("convierte el tipo del movimiento en un importe con signo", () => {

@@ -392,3 +392,8 @@
 - [x] Auditar componentes, utilidades y excepciones de color de importes en toda Meximoney.
 - [x] Aplicar positivos en verde y negativos en rojo con texto o icono complementario, manteniendo ceros y neutros legibles.
 - [x] Validar cobertura, contraste, tipos, respuesta móvil y compilación sin modificar datos financieros.
+
+- [x] Corregir saldos pendientes de tarjetas y obligaciones para que se muestren en rojo, no como importes positivos verdes.
+- [x] Revisar y actualizar la semántica cromática de Patrimonio, Presupuesto y plantillas recurrentes según ingreso/gasto y activo/pasivo.
+- [x] Corregir el error de renderizado de la sección Situación Actual del Panel que muestra expresiones JSX en pantalla.
+- [x] Validar tipos, pruebas, compilación, PWA, contraste y respuesta móvil sin modificar datos financieros reales.

@@ -1,4 +1,5 @@
 export type AmountTone = "positive" | "negative" | "neutral";
+export type AmountSemantic = "income" | "expense" | "asset" | "liability" | "transfer_in" | "transfer_out";
 
 export function amountTone(valueCents: number | null | undefined): AmountTone {
   const value = Number(valueCents ?? 0);
@@ -13,7 +14,11 @@ export function amountToneClass(valueCents: number | null | undefined) {
   return "text-foreground";
 }
 
-export function signedTransactionCents(type: string, amountCents: number) {
+export function displayAmountCents(amountCents: number | null | undefined, semantic: AmountSemantic) {
   const amount = Math.abs(Number(amountCents) || 0);
-  return type === "expense" || type === "transfer_out" ? -amount : amount;
+  return semantic === "expense" || semantic === "liability" || semantic === "transfer_out" ? -amount : amount;
+}
+
+export function signedTransactionCents(type: string, amountCents: number) {
+  return displayAmountCents(amountCents, type === "expense" ? "expense" : type === "transfer_out" ? "transfer_out" : "income");
 }
