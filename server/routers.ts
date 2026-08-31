@@ -1064,16 +1064,27 @@ export const appRouter = router({
       financedAssets: router({
         list: workspaceFinanceProcedure.query(async ({ ctx }) => {
           const db = await requireDb();
-          const [purchases, assetRows, debtRows] = await Promise.all([
+          const [purchases, assetRows, debtRows, paymentRows, adjustmentRows] = await Promise.all([
             db.select().from(financedAssetPurchases).where(eq(financedAssetPurchases.userId, ctx.workspaceAccess.ownerId)),
             db.select().from(investments).where(eq(investments.userId, ctx.workspaceAccess.ownerId)),
             db.select().from(debts).where(eq(debts.userId, ctx.workspaceAccess.ownerId)),
+            db.select().from(debtPayments).where(eq(debtPayments.userId, ctx.workspaceAccess.ownerId)),
+            db.select().from(debtBalanceAdjustments).where(eq(debtBalanceAdjustments.userId, ctx.workspaceAccess.ownerId)),
           ]);
-          return purchases.map(purchase => ({
-            ...purchase,
-            asset: assetRows.find(asset => asset.id === purchase.investmentId) ?? null,
-            debt: purchase.debtId ? debtRows.find(debt => debt.id === purchase.debtId) ?? null : null,
-          }));
+          return purchases.map(purchase => {
+            const debt = purchase.debtId ? debtRows.find(item => item.id === purchase.debtId) ?? null : null;
+            const payments = debt ? paymentRows.filter(item => item.debtId === debt.id) : [];
+            const adjustments = debt ? adjustmentRows.filter(item => item.debtId === debt.id) : [];
+            return {
+              ...purchase,
+              asset: assetRows.find(asset => asset.id === purchase.investmentId) ?? null,
+              debt: debt ? {
+                ...debt,
+                lateInterestPaidCents: payments.reduce((sum, item) => sum + item.lateInterestCents, 0),
+                manualChargesCents: adjustments.reduce((sum, item) => sum + (item.type === "correction" ? 0 : Math.max(0, item.amountCents)), 0),
+              } : null,
+            };
+          });
         }),
         create: workspaceFinanceProcedure.input(z.object({
           entityId: z.number().int().positive().nullable().optional(),

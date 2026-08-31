@@ -375,3 +375,7 @@
 - [x] Añadir vistas Lista y Tarjetas para activos, con filtros y conteos consistentes.
 - [x] Integrar la tarjeta de amortización dentro del detalle de cada activo, evitando una sección separada y duplicada.
 - [x] Validar intereses, acciones destructivas, vistas, amortización integrada, tipos, privacidad, respuesta móvil y compilación sin modificar datos reales durante QA.
+
+- [x] Mostrar una etiqueta roja llamativa en activos con pagos vencidos o intereses/cargos acumulados.
+- [x] Permitir exportar el detalle de un activo financiado a PDF y CSV con pagos, intereses, vencimientos y amortización.
+- [x] Validar alerta, contenido de archivos, privacidad, tipos, respuesta móvil y compilación sin modificar datos reales durante QA.
