@@ -403,3 +403,8 @@
 
 - [x] Corregir el importe visible de deuda en Evolución Manual para que coincida con la barra roja y conserve el signo negativo.
 - [x] Validar la corrección de Evolución Manual con pruebas, compilación, PWA y revisión responsive sin modificar históricos.
+
+- [x] Auditar botones con texto y clasificar acciones primarias, secundarias, destructivas y repetitivas por módulo.
+- [x] Crear o consolidar patrones de botones sólo con icono, nombre accesible y tooltip contextual.
+- [x] Aplicar la optimización de botones en los módulos principales sin perder claridad ni acciones críticas.
+- [x] Validar teclado, foco, tooltips, responsive, pruebas y compilación sin modificar datos financieros reales.

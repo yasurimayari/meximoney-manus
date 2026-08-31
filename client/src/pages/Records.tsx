@@ -1,5 +1,6 @@
 import { MoneyText } from "@/components/MoneyText";
 import { Button } from "@/components/ui/button";
+import { IconActionButton } from "@/components/IconActionButton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -144,7 +145,7 @@ export default function Records() {
           <p>Captura movimientos, recursos y documentos que hayas confirmado. No se conectan cuentas ni se mueve dinero.</p>
         </div>
         {data ? <><ImportTransactionsDialog open={importOpen} onOpenChange={setImportOpen} snapshot={data} onDone={refresh} /><QuickCaptureDialog open={quickCaptureOpen} onOpenChange={setQuickCaptureOpen} currency={data.profile?.currency || "MXN"} onUseDraft={useQuickDraft} /><Dialog open={templateOpen} onOpenChange={value => { if (!value) closeTemplate(); else setTemplateOpen(true); }}><DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>{editingTemplate ? "Editar plantilla recurrente" : "Nueva plantilla recurrente"}</DialogTitle><DialogDescription>Las plantillas no crean movimientos automáticamente. Tú decides cuándo aplicar cada una.</DialogDescription></DialogHeader><RecurringTemplateForm key={editingTemplate ? `template-${editingTemplate.id}` : "new-template"} template={editingTemplate} snapshot={data} onDone={() => { refresh(); closeTemplate(); }} /></DialogContent></Dialog></> : null}
-        <div className="flex flex-wrap gap-2"><Button size="icon" variant="outline" title="Captura rápida" aria-label="Captura rápida" onClick={() => setQuickCaptureOpen(true)}><MessageSquareText className="size-4" /></Button><Button size="icon" variant="outline" title="Importar CSV o Excel" aria-label="Importar CSV o Excel" onClick={() => setImportOpen(true)}><Upload className="size-4" /></Button><Button size="icon" variant="outline" title="Plantilla recurrente" aria-label="Plantilla recurrente" onClick={() => { setEditingTemplate(null); setTemplateOpen(true); }}><Repeat2 className="size-4" /></Button></div>
+        <div className="flex flex-wrap gap-2"><IconActionButton size="icon" variant="outline" onClick={() => setQuickCaptureOpen(true)} icon={<MessageSquareText className="size-4" />} label="Captura rápida" /><IconActionButton size="icon" variant="outline" onClick={() => setImportOpen(true)} icon={<Upload className="size-4" />} label="Importar CSV o Excel" /><IconActionButton size="icon" variant="outline" onClick={() => { setEditingTemplate(null); setTemplateOpen(true); }} icon={<Repeat2 className="size-4" />} label="Plantilla recurrente" /></div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="btn-primary" onClick={() => openCreate("movement")}><Plus className="size-4" /> Nuevo registro</Button>
