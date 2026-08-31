@@ -357,3 +357,10 @@
 - [x] Añadir acciones rápidas de editar y eliminar en cada categoría de la lista de Registro.
 - [x] Mostrar un indicador visual o distintivo de la tarjeta seleccionada en cada plantilla recurrente.
 - [x] Validar reducción, confirmaciones, relaciones, tipos, privacidad, respuesta móvil y compilación sin modificar datos reales durante QA.
+
+- [x] Sincronizar en Patrimonio la sección Cuentas y activos con las fuentes de saldos y movimientos actuales.
+- [x] Corregir la actualización de la sección Evolución manual y su historial de valuaciones.
+- [x] Permitir editar la configuración y las cuotas de amortización de activos financiados.
+- [x] Permitir editar aportaciones existentes dentro de objetivos, preservando su trazabilidad.
+- [x] Propagar de forma consistente el cambio de precio inicial de un activo a sus relaciones derivadas, con confirmación y sin duplicar movimientos.
+- [x] Validar sincronización, edición, propagación, tipos, privacidad, respuesta móvil y compilación sin modificar datos reales durante QA.

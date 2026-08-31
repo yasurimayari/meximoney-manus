@@ -51,6 +51,7 @@ import {
   workspaceEntities,
 } from "../drizzle/schema";
 import { calculateDebtReduction } from "../shared/debtReduction";
+import { financedAssetAmounts } from "../shared/financedAssetPricing";
 import { createPasswordResetToken, hashPassword, hashPasswordResetToken, verifyPassword } from "./credentials";
 import { sendPasswordResetEmail } from "./passwordResetEmail";
 import { passwordResetRequestResponse } from "./passwordResetResponse";
@@ -957,8 +958,18 @@ export const appRouter = router({
             if (goal.currency !== values.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "La posición y el objetivo vinculado deben usar la misma moneda." });
           }
           const payload = { ...values, goalId: goalId ?? null, exchangeRateDate: asDate(exchangeRateDate), valuationDate: asDate(valuationDate) };
-          if (id) await db.update(investments).set(payload).where(and(eq(investments.id, id), eq(investments.userId, ctx.workspaceAccess.ownerId)));
-          else await db.insert(investments).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+          const purchase = id ? (await db.select().from(financedAssetPurchases).where(and(eq(financedAssetPurchases.investmentId, id), eq(financedAssetPurchases.userId, ctx.workspaceAccess.ownerId))).limit(1))[0] : null;
+          if (!id || !purchase) {
+            if (id) await db.update(investments).set(payload).where(and(eq(investments.id, id), eq(investments.userId, ctx.workspaceAccess.ownerId)));
+            else await db.insert(investments).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+          } else {
+            await db.transaction(async tx => {
+              await tx.update(investments).set(payload).where(and(eq(investments.id, id), eq(investments.userId, ctx.workspaceAccess.ownerId)));
+              const nextAmounts = financedAssetAmounts(values.costBasisCents, purchase.cashContributionCents);
+              await tx.update(financedAssetPurchases).set({ purchaseValueCents: nextAmounts.purchaseValueCents, financedAmountCents: nextAmounts.financedAmountCents }).where(and(eq(financedAssetPurchases.id, purchase.id), eq(financedAssetPurchases.userId, ctx.workspaceAccess.ownerId)));
+              if (purchase.debtId) await tx.update(debts).set({ originalAmountCents: nextAmounts.financedAmountCents }).where(and(eq(debts.id, purchase.debtId), eq(debts.userId, ctx.workspaceAccess.ownerId)));
+            });
+          }
           return { success: true };
         }),
         remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
