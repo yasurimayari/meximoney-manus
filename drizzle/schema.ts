@@ -365,6 +365,7 @@ export const recurringTemplates = mysqlTable("recurringTemplates", {
   entityId: int("entityId"),
   projectId: int("projectId"),
   accountId: int("accountId"),
+  creditCardId: int("creditCardId"),
   categoryId: int("categoryId"),
   contactId: int("contactId"),
   name: varchar("name", { length: 180 }).notNull(),
