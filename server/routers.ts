@@ -50,6 +50,7 @@ import {
   users,
   workspaceEntities,
 } from "../drizzle/schema";
+import { calculateDebtReduction } from "../shared/debtReduction";
 import { createPasswordResetToken, hashPassword, hashPasswordResetToken, verifyPassword } from "./credentials";
 import { sendPasswordResetEmail } from "./passwordResetEmail";
 import { passwordResetRequestResponse } from "./passwordResetResponse";
@@ -542,32 +543,57 @@ export const appRouter = router({
         await db.update(collaborationInvites).set({ status: "revoked" }).where(and(eq(collaborationInvites.id, input.inviteId), eq(collaborationInvites.ownerId, ctx.workspaceAccess.ownerId)));
         return { success: true };
       }),
-      transactionSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(), creditCardId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), type: z.enum(["income", "expense", "transfer_out", "transfer_in"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), reportCurrency: z.string().length(3).nullable().optional(), reportAmountCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), occurredAt: z.number().int().positive(), isEssential: z.boolean(), transferGroupId: z.string().max(64).nullable().optional(), status: z.enum(["confirmed", "estimated", "needs_review"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      transactionSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(), creditCardId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), type: z.enum(["income", "expense", "transfer_out", "transfer_in"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), reduceDebtBalance: z.boolean().optional().default(false), reportCurrency: z.string().length(3).nullable().optional(), reportAmountCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), occurredAt: z.number().int().positive(), isEssential: z.boolean(), transferGroupId: z.string().max(64).nullable().optional(), status: z.enum(["confirmed", "estimated", "needs_review"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner" && !ctx.workspaceAccess.canCreateDrafts) throw new TRPCError({ code: "FORBIDDEN", message: "Tu rol no permite crear borradores." });
         if (input.type === "transfer_out" || input.type === "transfer_in") throw new TRPCError({ code: "BAD_REQUEST", message: "Usa el formulario de traspaso entre cuentas para crear ambas partes de forma coherente." });
-        const db = await requireDb(); const { id, occurredAt, exchangeRateDate, ...values } = input;
+        const db = await requireDb(); const { id, occurredAt, exchangeRateDate, reduceDebtBalance, ...values } = input;
         if (values.contactId) {
           const contact = await db.select({ id: financialContacts.id }).from(financialContacts).where(and(eq(financialContacts.id, values.contactId), eq(financialContacts.userId, ctx.workspaceAccess.ownerId))).limit(1);
           if (!contact[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El contacto seleccionado no pertenece a tu espacio privado." });
         }
         if (values.creditCardId && values.type !== "expense") throw new TRPCError({ code: "BAD_REQUEST", message: "Una tarjeta de crédito sólo puede vincularse a un gasto." });
+        const isOwner = ctx.workspaceAccess.role === "owner";
         if (values.debtId) {
           const [debt] = await db.select().from(debts).where(and(eq(debts.id, values.debtId), eq(debts.userId, ctx.workspaceAccess.ownerId))).limit(1);
           if (!debt || debt.currency !== values.currency || (debt.status !== "active" && debt.status !== "review")) throw new TRPCError({ code: "BAD_REQUEST", message: "La deuda debe estar activa, pertenecer a tu espacio y usar la misma moneda." });
           if (values.type !== "expense") throw new TRPCError({ code: "BAD_REQUEST", message: "Una deuda sólo puede vincularse a un gasto real." });
+          
         }
-        const isOwner = ctx.workspaceAccess.role === "owner";
+        if (reduceDebtBalance && (!values.debtId || values.type !== "expense" || !isOwner)) throw new TRPCError({ code: "BAD_REQUEST", message: "La reducción automática requiere un gasto con financiación y una sesión de propietaria." });
         const payload = { ...values, occurredAt: new Date(occurredAt), exchangeRateDate: asDate(exchangeRateDate), reviewStatus: isOwner ? "approved" as const : "pending_review" as const, status: isOwner ? values.status : "needs_review" as const, createdByUserId: ctx.user.id, reviewedByUserId: isOwner ? ctx.user.id : null, reviewedAt: isOwner ? new Date() : null };
         await db.transaction(async tx => {
           const previous = id ? (await tx.select().from(financialTransactions).where(and(eq(financialTransactions.id, id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId))).limit(1))[0] : null;
+          const previousDebtPayment = previous ? (await tx.select().from(debtPayments).where(and(eq(debtPayments.userId, ctx.workspaceAccess.ownerId), eq(debtPayments.linkedTransactionId, previous.id))).limit(1))[0] : null;
+          if (previousDebtPayment) {
+            const [previousDebt] = await tx.select().from(debts).where(and(eq(debts.id, previousDebtPayment.debtId), eq(debts.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (previousDebt) {
+              const restoredBalance = previousDebt.balanceCents + previousDebtPayment.principalCents;
+              await tx.update(debts).set({ balanceCents: restoredBalance, status: "active" }).where(and(eq(debts.id, previousDebt.id), eq(debts.userId, ctx.workspaceAccess.ownerId)));
+            }
+            await tx.delete(debtPayments).where(and(eq(debtPayments.id, previousDebtPayment.id), eq(debtPayments.userId, ctx.workspaceAccess.ownerId)));
+          }
+          if (reduceDebtBalance && payload.debtId) {
+            const [debt] = await tx.select().from(debts).where(and(eq(debts.id, payload.debtId), eq(debts.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!debt || (debt.status !== "active" && debt.status !== "review")) throw new TRPCError({ code: "BAD_REQUEST", message: "La financiación debe estar activa o en revisión para reducir su saldo." });
+            if (payload.amountCents > debt.balanceCents) throw new TRPCError({ code: "BAD_REQUEST", message: "La reducción no puede superar el saldo pendiente de la financiación." });
+          }
           const cardIds = Array.from(new Set([previous?.creditCardId, payload.creditCardId].filter((cardId): cardId is number => Boolean(cardId))));
           const cards = cardIds.length ? await tx.select().from(creditCards).where(and(eq(creditCards.userId, ctx.workspaceAccess.ownerId), inArray(creditCards.id, cardIds))) : [];
           if (payload.creditCardId) {
             const card = cards.find(item => item.id === payload.creditCardId);
             if (!card || card.currency !== payload.currency || card.status !== "active") throw new TRPCError({ code: "BAD_REQUEST", message: "La tarjeta debe estar activa, pertenecer a tu espacio y usar la misma moneda." });
           }
+          let transactionId = id;
           if (id) await tx.update(financialTransactions).set(payload).where(and(eq(financialTransactions.id, id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId)));
-          else await tx.insert(financialTransactions).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+          else { const result = await tx.insert(financialTransactions).values({ userId: ctx.workspaceAccess.ownerId, ...payload }); transactionId = Number((result as any)?.[0]?.insertId ?? 0) || undefined; }
+          if (reduceDebtBalance && payload.debtId && transactionId) {
+            const [debt] = await tx.select().from(debts).where(and(eq(debts.id, payload.debtId), eq(debts.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!debt) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró la financiación seleccionada." });
+            await tx.insert(debtPayments).values({ userId: ctx.workspaceAccess.ownerId, debtId: debt.id, linkedTransactionId: transactionId, totalPaymentCents: payload.amountCents, principalCents: payload.amountCents, interestCents: 0, lateInterestCents: 0, feeCents: 0, currency: payload.currency, paidAt: payload.occurredAt, notes: "Pago de principal registrado junto con el gasto" });
+            const reduction = calculateDebtReduction(debt.balanceCents, payload.amountCents);
+            if (!reduction) throw new TRPCError({ code: "BAD_REQUEST", message: "La reducción no puede superar el saldo pendiente de la financiación." });
+            await tx.update(debts).set({ balanceCents: reduction.nextBalanceCents, status: reduction.status }).where(and(eq(debts.id, debt.id), eq(debts.userId, ctx.workspaceAccess.ownerId)));
+          }
           for (const card of cards) {
             const priorEffect = previous?.creditCardId === card.id && previous.type === "expense" ? previous.amountCents : 0;
             const nextEffect = payload.creditCardId === card.id && payload.type === "expense" ? payload.amountCents : 0;

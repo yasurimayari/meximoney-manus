@@ -352,3 +352,8 @@
 - [x] Permitir seleccionar tarjetas registradas como medio de pago en plantillas recurrentes.
 - [x] Permitir asociar un gasto con una financiación existente, validando la relación sin crear pagos automáticamente.
 - [x] Validar formularios, relaciones, tipos, privacidad, respuesta móvil y compilación sin modificar datos reales.
+
+- [x] Permitir reducción opcional y explícita del saldo de una financiación al guardar un gasto vinculado, con trazabilidad y límites.
+- [x] Añadir acciones rápidas de editar y eliminar en cada categoría de la lista de Registro.
+- [x] Mostrar un indicador visual o distintivo de la tarjeta seleccionada en cada plantilla recurrente.
+- [x] Validar reducción, confirmaciones, relaciones, tipos, privacidad, respuesta móvil y compilación sin modificar datos reales durante QA.
