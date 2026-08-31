@@ -976,9 +976,29 @@ export const appRouter = router({
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar posiciones." });
           const db = await requireDb();
           await db.transaction(async tx => {
+            const [asset] = await tx.select({ id: investments.id }).from(investments).where(and(eq(investments.id, input.id), eq(investments.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "La posición no pertenece a tu espacio privado." });
+            const [purchase] = await tx.select().from(financedAssetPurchases).where(and(eq(financedAssetPurchases.investmentId, input.id), eq(financedAssetPurchases.userId, ctx.workspaceAccess.ownerId))).limit(1);
+            if (purchase?.debtId) {
+              const [payment] = await tx.select({ id: debtPayments.id }).from(debtPayments).where(and(eq(debtPayments.debtId, purchase.debtId), eq(debtPayments.userId, ctx.workspaceAccess.ownerId))).limit(1);
+              const [adjustment] = await tx.select({ id: debtBalanceAdjustments.id }).from(debtBalanceAdjustments).where(and(eq(debtBalanceAdjustments.debtId, purchase.debtId), eq(debtBalanceAdjustments.userId, ctx.workspaceAccess.ownerId))).limit(1);
+              if (payment || adjustment) throw new TRPCError({ code: "CONFLICT", message: "Este activo tiene cuotas o cargos de amortización. Archívalo para conservar su historial." });
+              if (purchase) await tx.delete(financedAssetPurchases).where(and(eq(financedAssetPurchases.id, purchase.id), eq(financedAssetPurchases.userId, ctx.workspaceAccess.ownerId)));
+              await tx.delete(debts).where(and(eq(debts.id, purchase.debtId), eq(debts.userId, ctx.workspaceAccess.ownerId)));
+            } else if (purchase) {
+              await tx.delete(financedAssetPurchases).where(and(eq(financedAssetPurchases.id, purchase.id), eq(financedAssetPurchases.userId, ctx.workspaceAccess.ownerId)));
+            }
             await tx.delete(investmentOperations).where(and(eq(investmentOperations.investmentId, input.id), eq(investmentOperations.userId, ctx.workspaceAccess.ownerId)));
             await tx.delete(investments).where(and(eq(investments.id, input.id), eq(investments.userId, ctx.workspaceAccess.ownerId)));
           });
+          return { success: true };
+        }),
+        statusSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["active", "paused", "closed"]) })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede cambiar el estado de una posición." });
+          const db = await requireDb();
+          const [asset] = await db.select({ id: investments.id }).from(investments).where(and(eq(investments.id, input.id), eq(investments.userId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "La posición no pertenece a tu espacio privado." });
+          await db.update(investments).set({ status: input.status }).where(and(eq(investments.id, input.id), eq(investments.userId, ctx.workspaceAccess.ownerId)));
           return { success: true };
         }),
         operationSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), investmentId: z.number().int().positive(), linkedTransactionId: z.number().int().positive().nullable().optional(), type: z.enum(["contribution", "withdrawal", "yield", "valuation_adjustment", "depreciation"]), amountCents: z.number().int().positive(), currency: z.string().length(3), occurredAt: z.number().int().positive(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {

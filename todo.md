@@ -369,3 +369,9 @@
 - [x] Permitir exportar la evolución manual visible a CSV y Excel, usando sólo el historial de la usuaria.
 - [x] Añadir confirmación explícita y deshacer seguro al editar amortización o precio inicial de un activo.
 - [x] Validar totales, archivos, confirmaciones, reversión, tipos, privacidad, respuesta móvil y compilación sin modificar datos reales durante QA.
+
+- [x] Integrar intereses por atraso y cargos manuales acumulados en la lectura del activo financiado, sin inventar cargos ni ejecutar pagos automáticamente.
+- [x] Permitir editar, archivar y eliminar un activo con confirmaciones y protección de relaciones.
+- [x] Añadir vistas Lista y Tarjetas para activos, con filtros y conteos consistentes.
+- [x] Integrar la tarjeta de amortización dentro del detalle de cada activo, evitando una sección separada y duplicada.
+- [x] Validar intereses, acciones destructivas, vistas, amortización integrada, tipos, privacidad, respuesta móvil y compilación sin modificar datos reales durante QA.
