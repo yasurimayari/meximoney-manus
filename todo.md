@@ -397,3 +397,6 @@
 - [x] Revisar y actualizar la semántica cromática de Patrimonio, Presupuesto y plantillas recurrentes según ingreso/gasto y activo/pasivo.
 - [x] Corregir el error de renderizado de la sección Situación Actual del Panel que muestra expresiones JSX en pantalla.
 - [x] Validar tipos, pruebas, compilación, PWA, contraste y respuesta móvil sin modificar datos financieros reales.
+
+- [x] Auditar y corregir los colores residuales de saldos, etiquetas y evolución manual en Patrimonio según activo, pasivo y patrimonio neto.
+- [x] Validar Patrimonio en escritorio y móvil, con pruebas y compilación, sin modificar datos financieros reales.
