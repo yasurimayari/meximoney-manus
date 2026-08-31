@@ -364,3 +364,8 @@
 - [x] Permitir editar aportaciones existentes dentro de objetivos, preservando su trazabilidad.
 - [x] Propagar de forma consistente el cambio de precio inicial de un activo a sus relaciones derivadas, con confirmación y sin duplicar movimientos.
 - [x] Validar sincronización, edición, propagación, tipos, privacidad, respuesta móvil y compilación sin modificar datos reales durante QA.
+
+- [x] Añadir un gráfico circular accesible de distribución de activos y pasivos en Patrimonio, sin mezclar monedas.
+- [x] Permitir exportar la evolución manual visible a CSV y Excel, usando sólo el historial de la usuaria.
+- [x] Añadir confirmación explícita y deshacer seguro al editar amortización o precio inicial de un activo.
+- [x] Validar totales, archivos, confirmaciones, reversión, tipos, privacidad, respuesta móvil y compilación sin modificar datos reales durante QA.
