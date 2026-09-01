@@ -428,3 +428,8 @@
 
 - [x] Corregir el rechazo de fechas válidas al crear un viaje desde el formulario de Viajes.
 - [x] Añadir prueba de regresión para fechas locales y validar tipos, compilación, PWA y ausencia de cambios en datos existentes.
+
+- [x] Añadir vista semanal al calendario de Viajes con eventos coloreados por categoría y filtros por categoría, estado y tipo de viaje.
+- [x] Implementar exportación del itinerario en formato .ics con fechas y eventos del viaje seleccionado.
+- [x] Añadir gráficos de gastos por categoría y comparación histórica de costos entre viajes.
+- [x] Validar filtros, calendario, ICS, gráficos, accesibilidad, móvil, PWA y ausencia de modificación o duplicación de movimientos.
