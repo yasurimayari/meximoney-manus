@@ -797,6 +797,7 @@ export const travelPlans = mysqlTable("travelPlans", {
   endsAt: timestamp("endsAt"),
   budgetCents: int("budgetCents").notNull().default(0),
   currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  timeZone: varchar("timeZone", { length: 64 }).notNull().default("America/Mexico_City"),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

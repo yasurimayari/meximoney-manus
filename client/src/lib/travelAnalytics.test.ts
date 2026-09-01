@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateTravelExpenses, buildTravelIcs, filterTravelItems, weekDays } from "./travelAnalytics";
+import { aggregateTravelExpenses, buildTravelIcs, filterTravelItems, formatTripTime, weekDays } from "./travelAnalytics";
 
 describe("travelAnalytics", () => {
   const plans = [{ id: 1, scope: "personal" as const }, { id: 2, scope: "business" as const }];
@@ -24,9 +24,12 @@ describe("travelAnalytics", () => {
   });
 
   it("creates an ICS document without cancelled events", () => {
-    const ics = buildTravelIcs({ id: 4, name: "Viaje", startsAt: "2026-09-01T10:00:00Z" }, [{ id: 7, title: "Vuelo", startsAt: "2026-09-01T10:00:00Z", endsAt: "2026-09-01T12:00:00Z", status: "booked" }, { id: 8, title: "Cancelado", startsAt: "2026-09-01T13:00:00Z", status: "cancelled" }]);
+    const ics = buildTravelIcs({ id: 4, name: "Viaje", startsAt: "2026-09-01T10:00:00Z", timeZone: "Europe/Madrid" }, [{ id: 7, title: "Vuelo", startsAt: "2026-09-01T10:00:00Z", endsAt: "2026-09-01T12:00:00Z", status: "booked" }, { id: 8, title: "Cancelado", startsAt: "2026-09-01T13:00:00Z", status: "cancelled" }]);
     expect(ics).toContain("BEGIN:VCALENDAR");
     expect(ics).toContain("SUMMARY:Viaje · Vuelo");
+    expect(ics).toContain("DTSTART;TZID=Europe/Madrid:20260901T100000");
+    expect(ics).toContain("DTEND;TZID=Europe/Madrid:20260901T120000");
+    expect(formatTripTime("2026-09-01T10:00:00Z")).toBe("10:00");
     expect(ics).not.toContain("Cancelado");
   });
 });

@@ -33,10 +33,18 @@ export function aggregateTravelExpenses(items: Array<{ amountCents: number; cate
   }, {});
 }
 
-export function formatIcsDate(value: Date | string | null | undefined) {
+export function formatTripTime(value: Date | string | null | undefined) {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
+  return `${String(date.getUTCHours()).padStart(2, "0")}:${String(date.getUTCMinutes()).padStart(2, "0")}`;
+}
+
+export function formatIcsDate(value: Date | string | null | undefined, timeZone?: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  if (timeZone) return `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, "0")}${String(date.getUTCDate()).padStart(2, "0")}T${String(date.getUTCHours()).padStart(2, "0")}${String(date.getUTCMinutes()).padStart(2, "0")}${String(date.getUTCSeconds()).padStart(2, "0")}`;
   return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
 }
 
@@ -44,12 +52,12 @@ export function escapeIcs(value: string) {
   return value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 }
 
-export function buildTravelIcs(plan: { id: number; name: string; origin?: string | null; destination?: string | null; startsAt: Date | string; endsAt?: Date | string | null }, items: Array<{ id: number; title: string; startsAt?: Date | string | null; endsAt?: Date | string | null; location?: string | null; notes?: string | null; status: string }>) {
+export function buildTravelIcs(plan: { id: number; name: string; origin?: string | null; destination?: string | null; startsAt: Date | string; endsAt?: Date | string | null; timeZone?: string | null }, items: Array<{ id: number; title: string; startsAt?: Date | string | null; endsAt?: Date | string | null; location?: string | null; notes?: string | null; status: string }>) {
   const events = items.filter(item => item.status !== "cancelled").flatMap(item => {
-    const start = formatIcsDate(item.startsAt ?? plan.startsAt);
-    const end = formatIcsDate(item.endsAt ?? item.startsAt ?? plan.endsAt ?? plan.startsAt);
+    const start = formatIcsDate(item.startsAt ?? plan.startsAt, plan.timeZone ?? "America/Mexico_City");
+    const end = formatIcsDate(item.endsAt ?? item.startsAt ?? plan.endsAt ?? plan.startsAt, plan.timeZone ?? "America/Mexico_City");
     if (!start || !end) return [];
-    return [`BEGIN:VEVENT\nUID:meximoney-travel-${plan.id}-${item.id}@meximoney\nDTSTAMP:${formatIcsDate(new Date())}\nDTSTART:${start}\nDTEND:${end}\nSUMMARY:${escapeIcs(`${plan.name} · ${item.title}`)}\nLOCATION:${escapeIcs(item.location ?? `${plan.origin ?? ""} → ${plan.destination ?? ""}`)}\nDESCRIPTION:${escapeIcs(item.notes ?? "")}\nEND:VEVENT`];
+    return [`BEGIN:VEVENT\nUID:meximoney-travel-${plan.id}-${item.id}@meximoney\nDTSTAMP:${formatIcsDate(new Date())}\nDTSTART;TZID=${escapeIcs(plan.timeZone ?? "America/Mexico_City")}:${start}\nDTEND;TZID=${escapeIcs(plan.timeZone ?? "America/Mexico_City")}:${end}\nSUMMARY:${escapeIcs(`${plan.name} · ${item.title}`)}\nLOCATION:${escapeIcs(item.location ?? `${plan.origin ?? ""} → ${plan.destination ?? ""}`)}\nDESCRIPTION:${escapeIcs(item.notes ?? "")}\nEND:VEVENT`];
   });
   return `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Meximoney//Viajes//ES\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n${events.join("\n")}\nEND:VCALENDAR\n`;
 }

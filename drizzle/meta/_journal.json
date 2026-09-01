@@ -281,6 +281,13 @@
       "when": 1788223726209,
       "tag": "0039_nappy_amazoness",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "5",
+      "when": 1788241132354,
+      "tag": "0040_dear_lockheed",
+      "breakpoints": true
     }
   ]
 }

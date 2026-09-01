@@ -439,3 +439,8 @@
 
 - [x] Añadir campos opcionales de hora de inicio y fin en los eventos del itinerario.
 - [x] Combinar fecha y hora de forma segura, conservar eventos sin hora y validar pruebas, compilación y PWA sin modificar datos existentes.
+
+- [x] Mostrar horas de inicio y fin en la vista semanal del calendario de Viajes.
+- [x] Añadir zona horaria configurable por viaje y aplicar conversión consistente al itinerario.
+- [x] Incluir horas y zona horaria en la exportación .ics y añadir pruebas de regresión.
+- [x] Validar calendario, ICS, conversiones, móvil, compilación y PWA sin modificar datos existentes.

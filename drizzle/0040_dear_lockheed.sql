@@ -1,0 +1,1 @@
+ALTER TABLE `travelPlans` ADD `timeZone` varchar(64) DEFAULT 'America/Mexico_City' NOT NULL;
