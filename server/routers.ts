@@ -68,6 +68,7 @@ import { applyInvestmentDelta, investmentOperationDelta, totalsFromInvestmentOpe
 import { findPossibleDuplicates } from "./imports";
 import { getOpenFiscalReviewReminder } from "../shared/fiscalReview";
 import { creditCardAlertCandidates } from "./creditCardAlerts";
+import { payableAlertCandidates, upcomingTravelAlertCandidates } from "./scheduledAlertCandidates";
 import { extractQuickCaptureDraft } from "./quickCapture";
 import { askClaudeForMexi } from "./claude";
 import { mexicoCityReferenceMonth } from "./monthReference";
@@ -199,22 +200,24 @@ function createManualSnapshotText(snapshot: Awaited<ReturnType<typeof getFinance
 }
 
 type NotificationCandidate = { type: string; title: string; message: string; relatedEntityType: string; relatedEntityId: number };
-type NotificationPreferenceState = { inAppEnabled: boolean; calendarEnabled: boolean; documentsEnabled: boolean; debtsEnabled: boolean; reviewsEnabled: boolean; budgetEnabled: boolean; taxReserveEnabled: boolean; telegramEnabled: boolean; telegramScheduleCronTaskUid: string | null; telegramLastDigestDate: string | null };
+type NotificationPreferenceState = { inAppEnabled: boolean; calendarEnabled: boolean; documentsEnabled: boolean; debtsEnabled: boolean; reviewsEnabled: boolean; budgetEnabled: boolean; taxReserveEnabled: boolean; travelsEnabled: boolean; reminderDays: number; telegramEnabled: boolean; telegramScheduleCronTaskUid: string | null; telegramLastDigestDate: string | null };
 
-const defaultNotificationPreferences: NotificationPreferenceState = { inAppEnabled: true, calendarEnabled: true, documentsEnabled: true, debtsEnabled: true, reviewsEnabled: true, budgetEnabled: true, taxReserveEnabled: true, telegramEnabled: false, telegramScheduleCronTaskUid: null, telegramLastDigestDate: null };
+const defaultNotificationPreferences: NotificationPreferenceState = { inAppEnabled: true, calendarEnabled: true, documentsEnabled: true, debtsEnabled: true, reviewsEnabled: true, budgetEnabled: true, taxReserveEnabled: true, travelsEnabled: true, reminderDays: 7, telegramEnabled: false, telegramScheduleCronTaskUid: null, telegramLastDigestDate: null };
 
 export function buildNotificationCandidates(snapshot: any, preferences: NotificationPreferenceState, now = new Date()): NotificationCandidate[] {
   if (!preferences.inAppEnabled) return [];
-  const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const horizon = new Date(now.getTime() + preferences.reminderDays * 24 * 60 * 60 * 1000);
   const candidates: NotificationCandidate[] = [];
-  if (preferences.calendarEnabled) (snapshot.calendarEvents ?? []).filter((event: any) => event.status === "planned" && event.startsAt >= now && event.startsAt <= inSevenDays).forEach((event: any) => candidates.push({ type: "calendar", title: `Próximo: ${event.title}`, message: "Tienes una fecha programada en los próximos 7 días.", relatedEntityType: "calendar_event", relatedEntityId: event.id }));
-  if (preferences.documentsEnabled) (snapshot.documents ?? []).filter((document: any) => document.expiresAt && document.expiresAt >= now && document.expiresAt <= inSevenDays).forEach((document: any) => candidates.push({ type: "document", title: `Documento próximo a vencer: ${document.name}`, message: "Revisa el documento y su referencia antes de su vencimiento.", relatedEntityType: "document", relatedEntityId: document.id }));
-  if (preferences.debtsEnabled) (snapshot.debts ?? []).filter((debt: any) => debt.status === "active" && debt.nextDueAt && debt.nextDueAt >= now && debt.nextDueAt <= inSevenDays).forEach((debt: any) => candidates.push({ type: "debt", title: `Vencimiento próximo: ${debt.name}`, message: "Revisa esta deuda y confirma manualmente su siguiente pago o ajuste.", relatedEntityType: "debt", relatedEntityId: debt.id }));
-  if (preferences.debtsEnabled) creditCardAlertCandidates(snapshot.creditCards ?? [], now, 7).forEach(candidate => candidates.push(candidate));
+  if (preferences.calendarEnabled) (snapshot.calendarEvents ?? []).filter((event: any) => event.status === "planned" && event.startsAt >= now && event.startsAt <= horizon).forEach((event: any) => candidates.push({ type: "calendar", title: `Próximo: ${event.title}`, message: `Tienes una fecha programada en los próximos ${preferences.reminderDays} días.`, relatedEntityType: "calendar_event", relatedEntityId: event.id }));
+  if (preferences.documentsEnabled) (snapshot.documents ?? []).filter((document: any) => document.expiresAt && document.expiresAt >= now && document.expiresAt <= horizon).forEach((document: any) => candidates.push({ type: "document", title: `Documento próximo a vencer: ${document.name}`, message: "Revisa el documento y su referencia antes de su vencimiento.", relatedEntityType: "document", relatedEntityId: document.id }));
+  if (preferences.debtsEnabled) (snapshot.debts ?? []).filter((debt: any) => debt.status === "active" && debt.nextDueAt && debt.nextDueAt >= now && debt.nextDueAt <= horizon).forEach((debt: any) => candidates.push({ type: "debt", title: `Vencimiento próximo: ${debt.name}`, message: "Revisa esta deuda y confirma manualmente su siguiente pago o ajuste.", relatedEntityType: "debt", relatedEntityId: debt.id }));
+  if (preferences.debtsEnabled) creditCardAlertCandidates(snapshot.creditCards ?? [], now, preferences.reminderDays).forEach(candidate => candidates.push(candidate));
+  if (preferences.debtsEnabled) payableAlertCandidates(snapshot.payables ?? [], now, preferences.reminderDays).forEach(candidate => candidates.push(candidate));
+  if (preferences.travelsEnabled) upcomingTravelAlertCandidates(snapshot.travelPlans ?? [], now, preferences.reminderDays).forEach(candidate => candidates.push(candidate));
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   if (preferences.budgetEnabled) (snapshot.budgets ?? []).filter((budget: any) => budget.periodStart >= monthStart && budget.periodStart < nextMonthStart).forEach((budget: any) => candidates.push({ type: "budget", title: "Revisión manual de presupuesto", message: "Revisa manualmente este presupuesto mensual frente a tus registros confirmados.", relatedEntityType: "budget", relatedEntityId: budget.id }));
-  if (preferences.taxReserveEnabled && snapshot.profile?.futureTaxReserveCents > 0 && snapshot.profile.futureTaxDueAt && snapshot.profile.futureTaxDueAt >= now && snapshot.profile.futureTaxDueAt <= inSevenDays) candidates.push({ type: "tax_reserve", title: "Revisa tu reserva fiscal manual", message: "Hay una fecha de referencia cercana. Confirma tus datos antes de tomar cualquier decisión fiscal.", relatedEntityType: "financial_profile", relatedEntityId: snapshot.profile.id });
+  if (preferences.taxReserveEnabled && snapshot.profile?.futureTaxReserveCents > 0 && snapshot.profile.futureTaxDueAt && snapshot.profile.futureTaxDueAt >= now && snapshot.profile.futureTaxDueAt <= horizon) candidates.push({ type: "tax_reserve", title: "Revisa tu reserva fiscal manual", message: "Hay una fecha de referencia cercana. Confirma tus datos antes de tomar cualquier decisión fiscal.", relatedEntityType: "financial_profile", relatedEntityId: snapshot.profile.id });
   if (preferences.reviewsEnabled && snapshot.workspaceAccess?.role !== "manager") (snapshot.transactions ?? []).filter((transaction: any) => transaction.reviewStatus === "pending_review").forEach((transaction: any) => candidates.push({ type: "review", title: "Movimiento pendiente de revisión", message: "Hay un movimiento que espera confirmación humana.", relatedEntityType: "transaction", relatedEntityId: transaction.id }));
   if (preferences.reviewsEnabled && snapshot.workspaceAccess?.role === "owner") {
     const pfaeReminder = getOpenFiscalReviewReminder(snapshot.fiscalRecords ?? [], snapshot.fiscalPeriodReviews ?? [], now);
@@ -224,7 +227,7 @@ export function buildNotificationCandidates(snapshot: any, preferences: Notifica
 }
 
 function visibleNotificationTypes(preferences: NotificationPreferenceState) {
-  return new Set([preferences.calendarEnabled && "calendar", preferences.documentsEnabled && "document", preferences.debtsEnabled && "debt", preferences.debtsEnabled && "credit_card_cutoff", preferences.debtsEnabled && "credit_card_payment", preferences.debtsEnabled && "credit_card_overlimit", preferences.reviewsEnabled && "review", preferences.reviewsEnabled && "pfae_review", preferences.budgetEnabled && "budget", preferences.taxReserveEnabled && "tax_reserve"]);
+  return new Set([preferences.calendarEnabled && "calendar", preferences.documentsEnabled && "document", preferences.debtsEnabled && "debt", preferences.debtsEnabled && "payable", preferences.debtsEnabled && "credit_card_cutoff", preferences.debtsEnabled && "credit_card_payment", preferences.debtsEnabled && "credit_card_overlimit", preferences.travelsEnabled && "travel", preferences.reviewsEnabled && "review", preferences.reviewsEnabled && "pfae_review", preferences.budgetEnabled && "budget", preferences.taxReserveEnabled && "tax_reserve"]);
 }
 
 export const appRouter = router({
@@ -1307,7 +1310,7 @@ export const appRouter = router({
         if (pending.length) await db.insert(financeNotifications).values(pending.map(candidate => ({ userId: ctx.user.id, ...candidate })));
         return { createdCount: pending.length, skipped: null };
       }),
-      savePreferences: privateFinanceProcedure.input(z.object({ inAppEnabled: z.boolean(), calendarEnabled: z.boolean(), documentsEnabled: z.boolean(), debtsEnabled: z.boolean(), reviewsEnabled: z.boolean(), budgetEnabled: z.boolean(), taxReserveEnabled: z.boolean() })).mutation(async ({ ctx, input }) => {
+      savePreferences: privateFinanceProcedure.input(z.object({ inAppEnabled: z.boolean(), calendarEnabled: z.boolean(), documentsEnabled: z.boolean(), debtsEnabled: z.boolean(), reviewsEnabled: z.boolean(), budgetEnabled: z.boolean(), taxReserveEnabled: z.boolean(), travelsEnabled: z.boolean(), reminderDays: z.number().int().min(1).max(30) })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
         await db.insert(notificationPreferences).values({ userId: ctx.user.id, ...input }).onDuplicateKeyUpdate({ set: input });
         return { success: true };

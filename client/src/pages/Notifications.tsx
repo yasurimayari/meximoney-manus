@@ -1,15 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { filterNotificationInbox, notificationDestination } from "@/lib/notificationInbox";
 import { getPwaNotificationPermission, isPwaNotificationsEnabled, isPwaStandalone, requestPwaNotificationPermission, setPwaNotificationsEnabled, showPwaInboxNotification, updatePwaBadge, type PwaNotificationPermission } from "@/lib/pwaNotifications";
 import { trpc } from "@/lib/trpc";
-import { BellRing, CalendarDays, CheckCheck, ChevronRight, CreditCard, FileClock, Landmark, MessageCircle, PiggyBank, ReceiptText, ShieldCheck, Smartphone, X } from "lucide-react";
+import { BellRing, CalendarDays, CheckCheck, ChevronRight, CreditCard, FileClock, HandCoins, Landmark, MessageCircle, PiggyBank, Plane, ReceiptText, ShieldCheck, Smartphone, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-const notificationIcons = { calendar: CalendarDays, document: FileClock, debt: Landmark, credit_card_cutoff: CreditCard, credit_card_payment: CreditCard, credit_card_overlimit: CreditCard, budget: PiggyBank, tax_reserve: ReceiptText, review: CheckCheck } as const;
-const categoryLabels: Record<string, string> = { calendar: "Calendario", document: "Documentos", debt: "Deudas y cuotas", credit_card_cutoff: "Cortes de tarjeta", credit_card_payment: "Pagos de tarjeta", credit_card_overlimit: "Sobregiros", budget: "Presupuesto", tax_reserve: "Reserva fiscal", review: "Revisiones" };
+const notificationIcons = { calendar: CalendarDays, travel: Plane, payable: HandCoins, document: FileClock, debt: Landmark, credit_card_cutoff: CreditCard, credit_card_payment: CreditCard, credit_card_overlimit: CreditCard, budget: PiggyBank, tax_reserve: ReceiptText, review: CheckCheck } as const;
+const categoryLabels: Record<string, string> = { calendar: "Calendario", travel: "Viajes", payable: "Cuentas por pagar", document: "Documentos", debt: "Deudas y cuotas", credit_card_cutoff: "Cortes de tarjeta", credit_card_payment: "Pagos de tarjeta", credit_card_overlimit: "Sobregiros", budget: "Presupuesto", tax_reserve: "Reserva fiscal", review: "Revisiones" };
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", year: "numeric" });
 
 type NotificationPreferences = {
@@ -20,6 +21,8 @@ type NotificationPreferences = {
   reviewsEnabled: boolean;
   budgetEnabled: boolean;
   taxReserveEnabled: boolean;
+  travelsEnabled: boolean;
+  reminderDays: number;
   telegramEnabled: boolean;
   telegramScheduleCronTaskUid?: string | null;
 };
@@ -34,6 +37,8 @@ const defaultPreferences: NotificationPreferences = {
   reviewsEnabled: true,
   budgetEnabled: true,
   taxReserveEnabled: true,
+  travelsEnabled: true,
+  reminderDays: 7,
   telegramEnabled: false,
   telegramScheduleCronTaskUid: null,
 };
@@ -78,10 +83,16 @@ export default function Notifications() {
   const refreshInbox = trpc.finance.notifications.refreshInbox.useMutation({ onError: error => toast.error(error.message) });
   const clearResolved = trpc.finance.notifications.clearResolved.useMutation({ onSuccess: async () => { await refresh(); toast.success("Avisos leídos o descartados eliminados."); }, onError: error => toast.error(error.message) });
 
-  const updatePreference = (key: Exclude<keyof NotificationPreferences, "telegramEnabled" | "telegramScheduleCronTaskUid">, value: boolean) => {
+  const savePreferenceState = (next: NotificationPreferences) => savePreferences.mutate({ inAppEnabled: next.inAppEnabled, calendarEnabled: next.calendarEnabled, documentsEnabled: next.documentsEnabled, debtsEnabled: next.debtsEnabled, reviewsEnabled: next.reviewsEnabled, budgetEnabled: next.budgetEnabled, taxReserveEnabled: next.taxReserveEnabled, travelsEnabled: next.travelsEnabled, reminderDays: next.reminderDays });
+  const updatePreference = (key: "inAppEnabled" | "calendarEnabled" | "documentsEnabled" | "debtsEnabled" | "reviewsEnabled" | "budgetEnabled" | "taxReserveEnabled" | "travelsEnabled", value: boolean) => {
     const next = { ...preferences, [key]: value };
     setPreferences(next);
-    savePreferences.mutate({ inAppEnabled: next.inAppEnabled, calendarEnabled: next.calendarEnabled, documentsEnabled: next.documentsEnabled, debtsEnabled: next.debtsEnabled, reviewsEnabled: next.reviewsEnabled, budgetEnabled: next.budgetEnabled, taxReserveEnabled: next.taxReserveEnabled });
+    savePreferenceState(next);
+  };
+  const updateReminderDays = (reminderDays: number) => {
+    const next = { ...preferences, reminderDays };
+    setPreferences(next);
+    savePreferenceState(next);
   };
   const updateTelegram = (enabled: boolean) => {
     setPreferences(current => ({ ...current, telegramEnabled: enabled }));
@@ -152,16 +163,18 @@ export default function Notifications() {
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           <NotificationToggle label="Bandeja dentro de Meximoney" description="Muestra tus avisos privados en esta pantalla." checked={preferences.inAppEnabled} onChange={value => updatePreference("inAppEnabled", value)} />
           <NotificationToggle label="Fechas de calendario y obligaciones SAT" description="Eventos manuales programados en los próximos 7 días." checked={preferences.calendarEnabled} onChange={value => updatePreference("calendarEnabled", value)} disabled={!preferences.inAppEnabled} />
+          <NotificationToggle label="Próximos viajes" description={`Viajes planeados que comienzan en los próximos ${preferences.reminderDays} días.`} checked={preferences.travelsEnabled} onChange={value => updatePreference("travelsEnabled", value)} disabled={!preferences.inAppEnabled} />
           <NotificationToggle label="Documentos próximos a vencer" description="Referencias documentales con vencimiento cercano." checked={preferences.documentsEnabled} onChange={value => updatePreference("documentsEnabled", value)} disabled={!preferences.inAppEnabled} />
           <NotificationToggle label="Deudas, cuotas y tarjetas" description="Vencimientos, cortes, pagos y sobregiros registrados manualmente." checked={preferences.debtsEnabled} onChange={value => updatePreference("debtsEnabled", value)} disabled={!preferences.inAppEnabled} />
           <NotificationToggle label="Revisión mensual de presupuesto" description="Presupuestos del mes actual para contrastar manualmente con registros confirmados." checked={preferences.budgetEnabled} onChange={value => updatePreference("budgetEnabled", value)} disabled={!preferences.inAppEnabled} />
           <NotificationToggle label="Reserva fiscal manual" description="Fecha de referencia de tu reserva; no calcula ni presenta impuestos." checked={preferences.taxReserveEnabled} onChange={value => updatePreference("taxReserveEnabled", value)} disabled={!preferences.inAppEnabled} />
           <NotificationToggle label="Revisión humana" description="Movimientos que esperan confirmación de una persona autorizada." checked={preferences.reviewsEnabled} onChange={value => updatePreference("reviewsEnabled", value)} disabled={!preferences.inAppEnabled} />
+          <div className="rounded-xl border bg-muted/25 p-4"><Label htmlFor="reminder-days" className="text-sm font-semibold">Anticipación</Label><p className="mt-1 text-xs leading-5 text-muted-foreground">Define con cuántos días de margen se revisan viajes, pagos, tarjetas, documentos y calendario.</p><select id="reminder-days" className="mt-3 w-full" value={preferences.reminderDays} onChange={event => updateReminderDays(Number(event.target.value))}>{[1, 3, 7, 14, 30].map(days => <option key={days} value={days}>{days} día{days === 1 ? "" : "s"} antes</option>)}</select></div>
         </div>
         <div className="mt-5 rounded-xl border border-primary/15 bg-primary/[0.035] p-4">
           <div className="flex items-start gap-3">
             <MessageCircle className="mt-0.5 size-4 shrink-0 text-primary" />
-            <div className="min-w-0 flex-1"><p className="text-sm font-semibold">Resumen diario por Telegram</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Se ejecutará diariamente a las 08:00 de Ciudad de México. Si lo activas, Telegram recibirá títulos, fechas o días restantes, importes de pago o cuota y saldos de alertas relacionadas. Nunca incluye números de cuenta, credenciales, movimientos completos ni ejecuta pagos. Al desactivarlo, la comprobación diaria continúa pero omite el envío.</p></div>
+            <div className="min-w-0 flex-1"><p className="text-sm font-semibold">Resumen diario por Telegram</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Se ejecuta diariamente a las 08:00 de Ciudad de México. Incluye próximos viajes, vencimientos de deudas y cuentas por pagar, cortes y pagos de tarjetas dentro del margen elegido. Nunca incluye números de cuenta, credenciales, movimientos completos ni ejecuta pagos.</p></div>
             <Switch checked={preferences.telegramEnabled} disabled={!preferences.telegramScheduleCronTaskUid || setTelegramDaily.isPending} aria-label="Resumen diario por Telegram" onCheckedChange={updateTelegram} />
           </div>
           {!preferences.telegramScheduleCronTaskUid ? <p className="mt-3 text-xs text-muted-foreground">La programación segura aún está pendiente. Este interruptor se habilitará cuando quede registrada.</p> : null}
@@ -169,7 +182,7 @@ export default function Notifications() {
         <div className="mt-4 rounded-xl border border-primary/15 bg-primary/[0.035] p-4">
           <div className="flex items-start gap-3"><Smartphone className="mt-0.5 size-4 shrink-0 text-primary" /><div className="min-w-0 flex-1"><p className="text-sm font-semibold">Avisos en este dispositivo</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Al actualizar manualmente la bandeja, Meximoney puede mostrar un aviso genérico con el número de recordatorios nuevos. No expone importes, saldos, nombres ni movimientos.</p><p className="mt-2 text-xs font-medium text-muted-foreground">Estado: {pwaPermission === "granted" ? "permitidos" : pwaPermission === "denied" ? "bloqueados por el dispositivo" : pwaPermission === "unsupported" ? "no compatibles en este navegador" : "pendientes de autorización"}{isInstalledApp ? " · PWA instalada" : " · añade Meximoney a la pantalla de inicio en iPhone para habilitar los avisos de la app instalada"}</p></div><Button type="button" size="sm" variant="outline" disabled={pwaPermission === "granted" || pwaPermission === "unsupported"} onClick={() => void requestPwaPermission()}>{pwaPermission === "granted" ? "Permiso listo" : "Autorizar"}</Button></div>
           <div className="mt-3 flex items-center justify-between rounded-lg bg-background/70 px-3 py-2"><div><p className="text-xs font-semibold">Mostrar avisos aquí</p><p className="mt-0.5 text-xs text-muted-foreground">Control local de esta instalación. No modifica Telegram.</p></div><Switch checked={pwaEnabledOnDevice} disabled={pwaPermission !== "granted"} onCheckedChange={updatePwaDevicePreference} aria-label="Mostrar avisos PWA en este dispositivo" /></div>
-          <p className="mt-3 text-xs leading-5 text-muted-foreground">Esta primera versión no manda avisos de fondo ni añade una programación nueva. La entrega sólo ocurre tras tu acción explícita de actualizar los avisos.</p>
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">Telegram funciona en segundo plano. Los avisos PWA de este dispositivo se muestran al actualizar o abrir Meximoney; no contienen importes ni nombres sensibles.</p>
         </div>
         <div className="mt-5 flex items-start gap-3 rounded-xl bg-primary/[0.045] p-4 text-xs leading-5 text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" /><p>Consultar esta pantalla no crea avisos. Usa «Actualizar avisos» cuando quieras revisar tus datos manuales; no programa pagos, no se conecta a bancos y no envía correos o mensajes automáticos.</p></div>
       </section>

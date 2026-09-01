@@ -444,3 +444,7 @@
 - [x] Añadir zona horaria configurable por viaje y aplicar conversión consistente al itinerario.
 - [x] Incluir horas y zona horaria en la exportación .ics y añadir pruebas de regresión.
 - [x] Validar calendario, ICS, conversiones, móvil, compilación y PWA sin modificar datos existentes.
+- [x] Auditar la infraestructura actual de notificaciones, Telegram, PWA y tareas programadas.
+- [x] Definir reglas configurables de anticipación y privacidad para viajes y vencimientos de pagos.
+- [x] Implementar alertas automáticas deduplicadas por Telegram y notificaciones internas/push cuando estén habilitadas.
+- [x] Validar programación, entrega, preferencias, pruebas, compilación y PWA sin crear ni modificar datos financieros reales.

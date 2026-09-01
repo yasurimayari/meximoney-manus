@@ -9,6 +9,8 @@ const preferences = {
   reviewsEnabled: true,
   budgetEnabled: true,
   taxReserveEnabled: true,
+  travelsEnabled: true,
+  reminderDays: 7,
   telegramEnabled: false,
   telegramScheduleCronTaskUid: null,
   telegramLastDigestDate: null,
@@ -22,6 +24,8 @@ describe("candidatos de notificaciones", () => {
       documents: [{ id: 2, name: "Póliza", expiresAt: new Date("2026-09-01T12:00:00.000Z") }],
       debts: [{ id: 3, name: "Préstamo personal", status: "active", nextDueAt: new Date("2026-09-02T12:00:00.000Z") }],
       creditCards: [],
+      payables: [{ id: 5, creditor: "Proveedor", dueAt: new Date("2026-08-29T12:00:00.000Z"), status: "pending", amountCents: 250000, currency: "MXN" }],
+      travelPlans: [{ id: 6, name: "Viaje de trabajo", destination: "Madrid", startsAt: new Date("2026-08-31T12:00:00.000Z"), status: "planned", timeZone: "Europe/Madrid" }],
       budgets: [{ id: 4, periodStart: new Date("2026-08-01T12:00:00.000Z") }],
       profile: null,
       transactions: [],
@@ -30,7 +34,7 @@ describe("candidatos de notificaciones", () => {
       fiscalPeriodReviews: [],
     }, preferences, now);
 
-    expect(candidates.map(candidate => candidate.type)).toEqual(["calendar", "document", "debt", "budget"]);
+    expect(candidates.map(candidate => candidate.type)).toEqual(["calendar", "document", "debt", "payable", "travel", "budget"]);
     expect(candidates.every(candidate => candidate.relatedEntityId > 0)).toBe(true);
   });
 

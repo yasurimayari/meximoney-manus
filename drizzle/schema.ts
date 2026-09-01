@@ -92,6 +92,8 @@ export const notificationPreferences = mysqlTable("notificationPreferences", {
   reviewsEnabled: boolean("reviewsEnabled").notNull().default(true),
   budgetEnabled: boolean("budgetEnabled").notNull().default(true),
   taxReserveEnabled: boolean("taxReserveEnabled").notNull().default(true),
+  travelsEnabled: boolean("travelsEnabled").notNull().default(true),
+  reminderDays: int("reminderDays").notNull().default(7),
   telegramEnabled: boolean("telegramEnabled").notNull().default(false),
   telegramScheduleCronTaskUid: varchar("telegramScheduleCronTaskUid", { length: 65 }),
   telegramLastDigestDate: varchar("telegramLastDigestDate", { length: 10 }),

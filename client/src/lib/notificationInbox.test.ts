@@ -12,6 +12,8 @@ describe("bandeja de notificaciones", () => {
 
   it("dirige cada aviso hacia una vista privada relevante", () => {
     expect(notificationDestination("calendar")).toBe("/calendario");
+    expect(notificationDestination("travel")).toBe("/viajes");
+    expect(notificationDestination("payable")).toBe("/contactos");
     expect(notificationDestination("tax_reserve")).toBe("/calidad");
     expect(notificationDestination("unknown")).toBe("/notificaciones");
   });
