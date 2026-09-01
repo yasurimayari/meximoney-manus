@@ -419,3 +419,9 @@
 - [x] Implementar el módulo Viajes con CRUD seguro, presupuesto vs gasto real y trazabilidad de relaciones.
 - [x] Añadir navegación, vistas de lista y detalle, estados, filtros y experiencia responsive para Viajes.
 - [x] Validar aislamiento, accesibilidad, pruebas, compilación, PWA y ausencia de modificaciones financieras no autorizadas.
+
+- [x] Corregir el botón Nuevo viaje para que abra y permita guardar el formulario correctamente.
+- [x] Añadir calendario interactivo de fechas y eventos del itinerario.
+- [x] Añadir exportación PDF del resumen completo del viaje con presupuesto y gastos vinculados.
+- [x] Añadir categorías personalizables para gastos de viaje y comparación visual personal/profesional.
+- [x] Validar relaciones, accesibilidad, móvil, pruebas, compilación, PWA y ausencia de duplicación de movimientos.

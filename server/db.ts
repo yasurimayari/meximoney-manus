@@ -48,7 +48,8 @@ import {
   workspaceEntities,
   travelPlans,
   travelItems,
-} from "../drizzle/schema";
+  travelCategories,
+} from "./../drizzle/schema";
 import { ENV } from './_core/env';
 import { calculateLiquidity, calculateNetWorth, monthBounds, reportedAmountCents, summarizeCashFlowInReportCurrency, transferIntegrityIssues, withNetCashFlow } from "./finance";
 import { comparableInvestmentValueCents, investmentNeedsManualConversion } from "./investmentData";
@@ -318,6 +319,7 @@ export async function deleteAllFinancialData(userId: number) {
   const db = await requireDb();
   await db.transaction(async tx => {
     await tx.delete(travelItems).where(eq(travelItems.userId, userId));
+    await tx.delete(travelCategories).where(eq(travelCategories.userId, userId));
     await tx.delete(travelPlans).where(eq(travelPlans.userId, userId));
     await tx.delete(financialTransactions).where(eq(financialTransactions.userId, userId));
     await tx.delete(debtPayments).where(eq(debtPayments.userId, userId));

@@ -813,6 +813,7 @@ export const travelItems = mysqlTable("travelItems", {
   entityId: int("entityId"),
   contactId: int("contactId"),
   documentId: int("documentId"),
+  categoryId: int("categoryId"),
   itemType: mysqlEnum("itemType", ["flight", "train", "car_rental", "ride", "hotel", "airbnb", "exhibition", "meal", "other"]).notNull().default("other"),
   title: varchar("title", { length: 180 }).notNull(),
   provider: varchar("provider", { length: 180 }),
@@ -825,4 +826,15 @@ export const travelItems = mysqlTable("travelItems", {
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, table => [index("travel_items_user_plan_idx").on(table.userId, table.travelPlanId)]);
+}, table => [index("travel_items_user_plan_idx").on(table.userId, table.travelPlanId), index("travel_items_user_category_idx").on(table.userId, table.categoryId)]);
+
+
+export const travelCategories = mysqlTable("travelCategories", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  colorKey: mysqlEnum("colorKey", ["teal", "emerald", "sky", "indigo", "violet", "amber", "orange", "rose", "slate"]).notNull().default("teal"),
+  isActive: boolean("isActive").notNull().default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [index("travel_categories_user_active_idx").on(table.userId, table.isActive)]);

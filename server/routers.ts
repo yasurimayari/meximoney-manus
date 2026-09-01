@@ -1,5 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
-import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -51,6 +51,7 @@ import {
   workspaceEntities,
   travelPlans,
   travelItems,
+  travelCategories,
 } from "../drizzle/schema";
 import { calculateDebtReduction } from "../shared/debtReduction";
 import { financedAssetAmounts } from "../shared/financedAssetPricing";
@@ -1773,7 +1774,19 @@ export const appRouter = router({
         const plans = await db.select().from(travelPlans).where(eq(travelPlans.userId, ctx.user.id)).orderBy(desc(travelPlans.startsAt));
         const planIds = plans.map(plan => plan.id);
         const items = planIds.length ? await db.select().from(travelItems).where(and(eq(travelItems.userId, ctx.user.id), inArray(travelItems.travelPlanId, planIds))).orderBy(desc(travelItems.startsAt)) : [];
-        return { plans, items };
+        const categories = await db.select().from(travelCategories).where(and(eq(travelCategories.userId, ctx.user.id), eq(travelCategories.isActive, true))).orderBy(asc(travelCategories.name));
+        return { plans, items, categories };
+      }),
+      categorySave: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(1).max(100), colorKey: z.enum(["teal", "emerald", "sky", "indigo", "violet", "amber", "orange", "rose", "slate"]) })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        if (input.id) await db.update(travelCategories).set({ name: input.name, colorKey: input.colorKey, isActive: true }).where(and(eq(travelCategories.id, input.id), eq(travelCategories.userId, ctx.user.id)));
+        else await db.insert(travelCategories).values({ userId: ctx.user.id, name: input.name, colorKey: input.colorKey });
+        return { success: true };
+      }),
+      categoryRemove: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        await db.update(travelCategories).set({ isActive: false }).where(and(eq(travelCategories.id, input.id), eq(travelCategories.userId, ctx.user.id)));
+        return { success: true };
       }),
       save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(1).max(180), origin: z.string().trim().max(140).nullable().optional(), destination: z.string().trim().max(140).nullable().optional(), purpose: z.string().trim().max(240).nullable().optional(), scope: scopeSchema, status: z.enum(["planned", "in_progress", "completed", "cancelled", "archived"]), startsAt: z.string().min(1), endsAt: z.string().nullable().optional(), budgetCents: z.number().int().min(0), currency: z.string().length(3), projectId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), notes: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
@@ -1782,11 +1795,15 @@ export const appRouter = router({
         else await db.insert(travelPlans).values({ userId: ctx.user.id, ...payload });
         return { success: true };
       }),
-      itemSave: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), travelPlanId: z.number().int().positive(), itemType: z.enum(["flight", "train", "car_rental", "ride", "hotel", "airbnb", "exhibition", "meal", "other"]), title: z.string().trim().min(1).max(180), provider: z.string().trim().max(180).nullable().optional(), location: z.string().trim().max(180).nullable().optional(), startsAt: z.string().nullable().optional(), endsAt: z.string().nullable().optional(), amountCents: z.number().int().min(0), currency: z.string().length(3), status: z.enum(["planned", "booked", "paid", "completed", "cancelled"]), transactionId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), taskId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), documentId: z.number().int().positive().nullable().optional(), notes: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      itemSave: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), travelPlanId: z.number().int().positive(), itemType: z.enum(["flight", "train", "car_rental", "ride", "hotel", "airbnb", "exhibition", "meal", "other"]), title: z.string().trim().min(1).max(180), provider: z.string().trim().max(180).nullable().optional(), location: z.string().trim().max(180).nullable().optional(), startsAt: z.string().nullable().optional(), endsAt: z.string().nullable().optional(), amountCents: z.number().int().min(0), currency: z.string().length(3), status: z.enum(["planned", "booked", "paid", "completed", "cancelled"]), transactionId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), taskId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), documentId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), notes: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
         const plan = await db.select({ id: travelPlans.id }).from(travelPlans).where(and(eq(travelPlans.id, input.travelPlanId), eq(travelPlans.userId, ctx.user.id))).limit(1);
         if (!plan[0]) throw new TRPCError({ code: "NOT_FOUND", message: "El viaje no existe en tu espacio privado." });
-        const payload = { travelPlanId: input.travelPlanId, itemType: input.itemType, title: input.title, provider: input.provider ?? null, location: input.location ?? null, startsAt: input.startsAt ? new Date(input.startsAt) : null, endsAt: input.endsAt ? new Date(input.endsAt) : null, amountCents: input.amountCents, currency: input.currency.toUpperCase(), status: input.status, transactionId: input.transactionId ?? null, projectId: input.projectId ?? null, taskId: input.taskId ?? null, goalId: input.goalId ?? null, entityId: input.entityId ?? null, contactId: input.contactId ?? null, documentId: input.documentId ?? null, notes: input.notes ?? null };
+        if (input.categoryId) {
+          const category = await db.select({ id: travelCategories.id }).from(travelCategories).where(and(eq(travelCategories.id, input.categoryId), eq(travelCategories.userId, ctx.user.id), eq(travelCategories.isActive, true))).limit(1);
+          if (!category[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "La categoría no pertenece a tu espacio privado." });
+        }
+        const payload = { travelPlanId: input.travelPlanId, itemType: input.itemType, title: input.title, provider: input.provider ?? null, location: input.location ?? null, startsAt: input.startsAt ? new Date(input.startsAt) : null, endsAt: input.endsAt ? new Date(input.endsAt) : null, amountCents: input.amountCents, currency: input.currency.toUpperCase(), status: input.status, transactionId: input.transactionId ?? null, projectId: input.projectId ?? null, taskId: input.taskId ?? null, goalId: input.goalId ?? null, entityId: input.entityId ?? null, contactId: input.contactId ?? null, documentId: input.documentId ?? null, categoryId: input.categoryId ?? null, notes: input.notes ?? null };
         if (input.id) await db.update(travelItems).set(payload).where(and(eq(travelItems.id, input.id), eq(travelItems.userId, ctx.user.id), eq(travelItems.travelPlanId, input.travelPlanId)));
         else await db.insert(travelItems).values({ userId: ctx.user.id, ...payload });
         return { success: true };

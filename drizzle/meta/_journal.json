@@ -267,6 +267,20 @@
       "when": 1788222685591,
       "tag": "0037_boring_otto_octavius",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "5",
+      "when": 1788223688654,
+      "tag": "0038_workable_mattie_franklin",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "5",
+      "when": 1788223726209,
+      "tag": "0039_nappy_amazoness",
+      "breakpoints": true
     }
   ]
 }
