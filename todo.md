@@ -425,3 +425,6 @@
 - [x] Añadir exportación PDF del resumen completo del viaje con presupuesto y gastos vinculados.
 - [x] Añadir categorías personalizables para gastos de viaje y comparación visual personal/profesional.
 - [x] Validar relaciones, accesibilidad, móvil, pruebas, compilación, PWA y ausencia de duplicación de movimientos.
+
+- [x] Corregir el rechazo de fechas válidas al crear un viaje desde el formulario de Viajes.
+- [x] Añadir prueba de regresión para fechas locales y validar tipos, compilación, PWA y ausencia de cambios en datos existentes.
