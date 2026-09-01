@@ -436,3 +436,6 @@
 
 - [x] Corregir la precarga incompleta del campo Fin datetime-local en elementos del itinerario.
 - [x] Validar que un Fin vacío opcional no bloquee el guardado y que una fecha/hora completa sí sea aceptada.
+
+- [x] Añadir campos opcionales de hora de inicio y fin en los eventos del itinerario.
+- [x] Combinar fecha y hora de forma segura, conservar eventos sin hora y validar pruebas, compilación y PWA sin modificar datos existentes.
