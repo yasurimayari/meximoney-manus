@@ -433,3 +433,6 @@
 - [x] Implementar exportación del itinerario en formato .ics con fechas y eventos del viaje seleccionado.
 - [x] Añadir gráficos de gastos por categoría y comparación histórica de costos entre viajes.
 - [x] Validar filtros, calendario, ICS, gráficos, accesibilidad, móvil, PWA y ausencia de modificación o duplicación de movimientos.
+
+- [x] Corregir la precarga incompleta del campo Fin datetime-local en elementos del itinerario.
+- [x] Validar que un Fin vacío opcional no bloquee el guardado y que una fecha/hora completa sí sea aceptada.
