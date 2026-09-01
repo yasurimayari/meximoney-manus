@@ -408,3 +408,8 @@
 - [x] Crear o consolidar patrones de botones sólo con icono, nombre accesible y tooltip contextual.
 - [x] Aplicar la optimización de botones en los módulos principales sin perder claridad ni acciones críticas.
 - [x] Validar teclado, foco, tooltips, responsive, pruebas y compilación sin modificar datos financieros reales.
+
+- [x] Auditar títulos y subtítulos superiores de todas las vistas y detectar jerarquía, redundancias y problemas responsive.
+- [x] Rediseñar el selector de periodos de Analítica con estados, agrupación y navegación responsive más claros.
+- [x] Aplicar patrones consistentes de encabezado y contexto en los módulos principales.
+- [x] Validar accesibilidad, selección temporal, móvil, pruebas y compilación sin modificar datos financieros reales.
