@@ -46,6 +46,8 @@ import {
   surplusAllocationPolicies,
   users,
   workspaceEntities,
+  travelPlans,
+  travelItems,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { calculateLiquidity, calculateNetWorth, monthBounds, reportedAmountCents, summarizeCashFlowInReportCurrency, transferIntegrityIssues, withNetCashFlow } from "./finance";
@@ -307,7 +309,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   };
 }
 
-export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof debtPayments | typeof creditCards | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements | typeof receivables | typeof receivablePayments | typeof fiscalRecords | typeof recurringTemplates | typeof payables | typeof payablePayments | typeof investments | typeof investmentOperations, id: number, userId: number) {
+export async function deleteOwnedRow(table: typeof accounts | typeof categories | typeof financialTransactions | typeof budgets | typeof debts | typeof debtPayments | typeof creditCards | typeof financialGoals | typeof financeTasks | typeof financeDocuments | typeof decisionRecords | typeof calendarEvents | typeof monthlyFinancialStatements | typeof receivables | typeof receivablePayments | typeof fiscalRecords | typeof recurringTemplates | typeof payables | typeof payablePayments | typeof investments | typeof investmentOperations | typeof travelPlans | typeof travelItems, id: number, userId: number) {
   const db = await requireDb();
   await db.delete(table).where(and(eq(table.id, id), eq(table.userId, userId)));
 }
@@ -315,6 +317,8 @@ export async function deleteOwnedRow(table: typeof accounts | typeof categories 
 export async function deleteAllFinancialData(userId: number) {
   const db = await requireDb();
   await db.transaction(async tx => {
+    await tx.delete(travelItems).where(eq(travelItems.userId, userId));
+    await tx.delete(travelPlans).where(eq(travelPlans.userId, userId));
     await tx.delete(financialTransactions).where(eq(financialTransactions.userId, userId));
     await tx.delete(debtPayments).where(eq(debtPayments.userId, userId));
     await tx.delete(debtBalanceAdjustments).where(eq(debtBalanceAdjustments.userId, userId));

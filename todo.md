@@ -413,3 +413,9 @@
 - [x] Rediseñar el selector de periodos de Analítica con estados, agrupación y navegación responsive más claros.
 - [x] Aplicar patrones consistentes de encabezado y contexto en los módulos principales.
 - [x] Validar accesibilidad, selección temporal, móvil, pruebas y compilación sin modificar datos financieros reales.
+
+- [x] Auditar modelos, rutas y componentes reutilizables para integrar Viajes sin duplicar entidades existentes.
+- [x] Diseñar viajes, itinerarios y relaciones con movimientos, proyectos, tareas, objetivos, entidades, contactos y documentos.
+- [x] Implementar el módulo Viajes con CRUD seguro, presupuesto vs gasto real y trazabilidad de relaciones.
+- [x] Añadir navegación, vistas de lista y detalle, estados, filtros y experiencia responsive para Viajes.
+- [x] Validar aislamiento, accesibilidad, pruebas, compilación, PWA y ausencia de modificaciones financieras no autorizadas.

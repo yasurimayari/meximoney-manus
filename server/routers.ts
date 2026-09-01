@@ -49,6 +49,8 @@ import {
   surplusAllocationPolicies,
   users,
   workspaceEntities,
+  travelPlans,
+  travelItems,
 } from "../drizzle/schema";
 import { calculateDebtReduction } from "../shared/debtReduction";
 import { financedAssetAmounts } from "../shared/financedAssetPricing";
@@ -1764,6 +1766,39 @@ export const appRouter = router({
         return { success: true, statement: calculated };
       }),
       remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(monthlyFinancialStatements, input.id, ctx.user.id)),
+    }),
+    travels: router({
+      list: privateFinanceProcedure.query(async ({ ctx }) => {
+        const db = await requireDb();
+        const plans = await db.select().from(travelPlans).where(eq(travelPlans.userId, ctx.user.id)).orderBy(desc(travelPlans.startsAt));
+        const planIds = plans.map(plan => plan.id);
+        const items = planIds.length ? await db.select().from(travelItems).where(and(eq(travelItems.userId, ctx.user.id), inArray(travelItems.travelPlanId, planIds))).orderBy(desc(travelItems.startsAt)) : [];
+        return { plans, items };
+      }),
+      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(1).max(180), origin: z.string().trim().max(140).nullable().optional(), destination: z.string().trim().max(140).nullable().optional(), purpose: z.string().trim().max(240).nullable().optional(), scope: scopeSchema, status: z.enum(["planned", "in_progress", "completed", "cancelled", "archived"]), startsAt: z.string().min(1), endsAt: z.string().nullable().optional(), budgetCents: z.number().int().min(0), currency: z.string().length(3), projectId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), notes: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const payload = { name: input.name, origin: input.origin ?? null, destination: input.destination ?? null, purpose: input.purpose ?? null, scope: input.scope, status: input.status, startsAt: new Date(input.startsAt), endsAt: input.endsAt ? new Date(input.endsAt) : null, budgetCents: input.budgetCents, currency: input.currency.toUpperCase(), projectId: input.projectId ?? null, entityId: input.entityId ?? null, goalId: input.goalId ?? null, contactId: input.contactId ?? null, notes: input.notes ?? null };
+        if (input.id) await db.update(travelPlans).set(payload).where(and(eq(travelPlans.id, input.id), eq(travelPlans.userId, ctx.user.id)));
+        else await db.insert(travelPlans).values({ userId: ctx.user.id, ...payload });
+        return { success: true };
+      }),
+      itemSave: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), travelPlanId: z.number().int().positive(), itemType: z.enum(["flight", "train", "car_rental", "ride", "hotel", "airbnb", "exhibition", "meal", "other"]), title: z.string().trim().min(1).max(180), provider: z.string().trim().max(180).nullable().optional(), location: z.string().trim().max(180).nullable().optional(), startsAt: z.string().nullable().optional(), endsAt: z.string().nullable().optional(), amountCents: z.number().int().min(0), currency: z.string().length(3), status: z.enum(["planned", "booked", "paid", "completed", "cancelled"]), transactionId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), taskId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), documentId: z.number().int().positive().nullable().optional(), notes: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const plan = await db.select({ id: travelPlans.id }).from(travelPlans).where(and(eq(travelPlans.id, input.travelPlanId), eq(travelPlans.userId, ctx.user.id))).limit(1);
+        if (!plan[0]) throw new TRPCError({ code: "NOT_FOUND", message: "El viaje no existe en tu espacio privado." });
+        const payload = { travelPlanId: input.travelPlanId, itemType: input.itemType, title: input.title, provider: input.provider ?? null, location: input.location ?? null, startsAt: input.startsAt ? new Date(input.startsAt) : null, endsAt: input.endsAt ? new Date(input.endsAt) : null, amountCents: input.amountCents, currency: input.currency.toUpperCase(), status: input.status, transactionId: input.transactionId ?? null, projectId: input.projectId ?? null, taskId: input.taskId ?? null, goalId: input.goalId ?? null, entityId: input.entityId ?? null, contactId: input.contactId ?? null, documentId: input.documentId ?? null, notes: input.notes ?? null };
+        if (input.id) await db.update(travelItems).set(payload).where(and(eq(travelItems.id, input.id), eq(travelItems.userId, ctx.user.id), eq(travelItems.travelPlanId, input.travelPlanId)));
+        else await db.insert(travelItems).values({ userId: ctx.user.id, ...payload });
+        return { success: true };
+      }),
+      remove: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const linked = await db.select({ id: travelItems.id }).from(travelItems).where(and(eq(travelItems.travelPlanId, input.id), eq(travelItems.userId, ctx.user.id))).limit(1);
+        if (linked[0]) throw new TRPCError({ code: "CONFLICT", message: "Archiva el viaje si conserva itinerarios; no se elimina para proteger su trazabilidad." });
+        await db.delete(travelPlans).where(and(eq(travelPlans.id, input.id), eq(travelPlans.userId, ctx.user.id)));
+        return { success: true };
+      }),
+      itemRemove: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { const db = await requireDb(); await db.delete(travelItems).where(and(eq(travelItems.id, input.id), eq(travelItems.userId, ctx.user.id))); return { success: true }; }),
     }),
     decisions: router({
       save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), title: z.string().min(1).max(180), area: z.enum(["budget", "debt", "savings", "investment", "tax", "insurance", "assets", "other"]), status: z.enum(["proposal", "approved", "reviewed", "discarded"]), dataUsed: z.string().max(5000).nullable().optional(), assumptions: z.string().max(5000).nullable().optional(), risks: z.string().max(5000).nullable().optional(), alternatives: z.string().max(5000).nullable().optional(), approvedAction: z.string().max(5000).nullable().optional(), reviewAt: optionalDate })).mutation(async ({ ctx, input }) => {

@@ -260,6 +260,13 @@
       "when": 1788203137692,
       "tag": "0036_black_golden_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "5",
+      "when": 1788222685591,
+      "tag": "0037_boring_otto_octavius",
+      "breakpoints": true
     }
   ]
 }

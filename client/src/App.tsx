@@ -30,6 +30,7 @@ import Offline from "./pages/Offline";
 import OfflineData from "./pages/OfflineData";
 import Projects from "./pages/Projects";
 import Score from "./pages/Score";
+import Travels from "./pages/Travels";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
@@ -45,6 +46,7 @@ function Router() {
       <Route path={"/cuentas"}><DashboardLayout><Accounts /></DashboardLayout></Route>
       <Route path={"/planificacion"}><DashboardLayout><Planning /></DashboardLayout></Route>
       <Route path={"/proyectos"}><DashboardLayout><Projects /></DashboardLayout></Route>
+      <Route path={"/viajes"}><DashboardLayout><Travels /></DashboardLayout></Route>
       <Route path={"/score"}><DashboardLayout><Score /></DashboardLayout></Route>
       <Route path={"/calidad"}><DashboardLayout><Quality /></DashboardLayout></Route>
       <Route path={"/asistente"}><DashboardLayout><Assistant /></DashboardLayout></Route>
