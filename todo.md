@@ -448,3 +448,7 @@
 - [x] Definir reglas configurables de anticipación y privacidad para viajes y vencimientos de pagos.
 - [x] Implementar alertas automáticas deduplicadas por Telegram y notificaciones internas/push cuando estén habilitadas.
 - [x] Validar programación, entrega, preferencias, pruebas, compilación y PWA sin crear ni modificar datos financieros reales.
+- [x] Auditar modelos de Proyectos, tareas, objetivos, presupuestos, deudas, cuentas por cobrar y cierres mensuales para el Plan Financiero.
+- [x] Diseñar la estructura editable de prioridades, escenarios, meses, compromisos y reglas manuales de Plan Financiero.
+- [x] Implementar datos, relaciones protegidas, vistas mensuales y escenarios de ingresos dentro de Proyectos.
+- [x] Validar cálculos informativos, aislamiento, accesibilidad, móvil, pruebas, PWA y ausencia de movimientos o pagos automáticos.

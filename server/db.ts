@@ -22,6 +22,11 @@ import {
   financeTasks,
   financedAssetPurchases,
   financialGoals,
+  financialPlanLevels,
+  financialPlanLinks,
+  financialPlanPeriods,
+  financialPlanScenarios,
+  financialPlans,
   financialProfiles,
   financialProjects,
   financialTransactions,
@@ -174,7 +179,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, creditCardRows, goalRows, taskRows, reviewRows, monthlyControlRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, financedAssetRows, milestoneRows, creditScoreRows, personalScoreRows, qualityAcknowledgementRows, surplusPolicyRows, travelPlanRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, creditCardRows, goalRows, taskRows, reviewRows, monthlyControlRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, financedAssetRows, milestoneRows, creditScoreRows, personalScoreRows, qualityAcknowledgementRows, surplusPolicyRows, travelPlanRows, financialPlanRows, financialPlanLevelRows, financialPlanScenarioRows, financialPlanPeriodRows, financialPlanLinkRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
@@ -213,6 +218,11 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(qualityIssueAcknowledgements).where(eq(qualityIssueAcknowledgements.userId, ownerId)),
     db.select().from(surplusAllocationPolicies).where(eq(surplusAllocationPolicies.userId, ownerId)).limit(1),
     db.select().from(travelPlans).where(eq(travelPlans.userId, ownerId)),
+    db.select().from(financialPlans).where(eq(financialPlans.userId, ownerId)),
+    db.select().from(financialPlanLevels).where(eq(financialPlanLevels.userId, ownerId)),
+    db.select().from(financialPlanScenarios).where(eq(financialPlanScenarios.userId, ownerId)),
+    db.select().from(financialPlanPeriods).where(eq(financialPlanPeriods.userId, ownerId)),
+    db.select().from(financialPlanLinks).where(eq(financialPlanLinks.userId, ownerId)),
   ]);
 
   const { start, end } = monthBounds(referenceDate);
@@ -299,6 +309,11 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     recurringTemplates: templateRows,
     payables: payableRows,
     travelPlans: travelPlanRows,
+    financialPlans: financialPlanRows,
+    financialPlanLevels: financialPlanLevelRows,
+    financialPlanScenarios: financialPlanScenarioRows,
+    financialPlanPeriods: financialPlanPeriodRows,
+    financialPlanLinks: financialPlanLinkRows,
     payablePayments: payablePaymentRows,
     investments: investmentRows,
     investmentOperations: investmentOperationRows,
@@ -320,6 +335,11 @@ export async function deleteOwnedRow(table: typeof accounts | typeof categories 
 export async function deleteAllFinancialData(userId: number) {
   const db = await requireDb();
   await db.transaction(async tx => {
+    await tx.delete(financialPlanLinks).where(eq(financialPlanLinks.userId, userId));
+    await tx.delete(financialPlanPeriods).where(eq(financialPlanPeriods.userId, userId));
+    await tx.delete(financialPlanScenarios).where(eq(financialPlanScenarios.userId, userId));
+    await tx.delete(financialPlanLevels).where(eq(financialPlanLevels.userId, userId));
+    await tx.delete(financialPlans).where(eq(financialPlans.userId, userId));
     await tx.delete(travelItems).where(eq(travelItems.userId, userId));
     await tx.delete(travelCategories).where(eq(travelCategories.userId, userId));
     await tx.delete(travelPlans).where(eq(travelPlans.userId, userId));

@@ -841,3 +841,71 @@ export const travelCategories = mysqlTable("travelCategories", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => [index("travel_categories_user_active_idx").on(table.userId, table.isActive)]);
+
+export const financialPlans = mysqlTable("financialPlans", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  projectId: int("projectId").notNull(),
+  title: varchar("title", { length: 160 }).notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("MXN"),
+  status: mysqlEnum("status", ["draft", "active", "completed", "archived"]).notNull().default("draft"),
+  startsAt: timestamp("startsAt"),
+  endsAt: timestamp("endsAt"),
+  guidingRule: text("guidingRule"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [uniqueIndex("financial_plans_user_project_unique").on(table.userId, table.projectId), index("financial_plans_user_status_idx").on(table.userId, table.status)]);
+
+export const financialPlanLevels = mysqlTable("financialPlanLevels", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  financialPlanId: int("financialPlanId").notNull(),
+  position: int("position").notNull(),
+  title: varchar("title", { length: 160 }).notNull(),
+  monthlyTargetCents: int("monthlyTargetCents").notNull().default(0),
+  activationRule: text("activationRule"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [uniqueIndex("financial_plan_levels_user_plan_position_unique").on(table.userId, table.financialPlanId, table.position)]);
+
+export const financialPlanScenarios = mysqlTable("financialPlanScenarios", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  financialPlanId: int("financialPlanId").notNull(),
+  title: varchar("title", { length: 120 }).notNull(),
+  incomeFloorCents: int("incomeFloorCents"),
+  incomeCeilingCents: int("incomeCeilingCents"),
+  allocationThroughPosition: int("allocationThroughPosition").notNull().default(0),
+  guidance: text("guidance"),
+  colorKey: mysqlEnum("colorKey", ["rose", "amber", "sky", "emerald", "slate"]).notNull().default("slate"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [index("financial_plan_scenarios_user_plan_idx").on(table.userId, table.financialPlanId)]);
+
+export const financialPlanPeriods = mysqlTable("financialPlanPeriods", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  financialPlanId: int("financialPlanId").notNull(),
+  periodStart: timestamp("periodStart").notNull(),
+  expectedIncomeCents: int("expectedIncomeCents").notNull().default(0),
+  plannedCommitmentsCents: int("plannedCommitmentsCents").notNull().default(0),
+  plannedSavingsCents: int("plannedSavingsCents").notNull().default(0),
+  status: mysqlEnum("status", ["draft", "in_review", "complete"]).notNull().default("draft"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [uniqueIndex("financial_plan_periods_user_plan_month_unique").on(table.userId, table.financialPlanId, table.periodStart)]);
+
+export const financialPlanLinks = mysqlTable("financialPlanLinks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  financialPlanId: int("financialPlanId").notNull(),
+  financialPlanLevelId: int("financialPlanLevelId"),
+  financialPlanPeriodId: int("financialPlanPeriodId"),
+  resourceType: mysqlEnum("resourceType", ["budget", "debt", "credit_card", "payable", "receivable", "goal", "task", "calendar_event", "fiscal_review", "document"]).notNull(),
+  resourceId: int("resourceId").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [uniqueIndex("financial_plan_links_user_plan_resource_unique").on(table.userId, table.financialPlanId, table.resourceType, table.resourceId), index("financial_plan_links_user_plan_idx").on(table.userId, table.financialPlanId)]);

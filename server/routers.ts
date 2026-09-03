@@ -25,6 +25,11 @@ import {
   fiscalPeriodReviews,
   fiscalRecords,
   financialGoals,
+  financialPlanLevels,
+  financialPlanLinks,
+  financialPlanPeriods,
+  financialPlanScenarios,
+  financialPlans,
   financialProfiles,
   financialProjects,
   financialTransactions,
@@ -166,6 +171,25 @@ const workspaceFinanceProcedure = protectedProcedure.use(async ({ ctx, next }) =
 
 function asDate(value: number | null | undefined) {
   return value ? new Date(value) : null;
+}
+
+const financialPlanResourceTable = {
+  budget: budgets,
+  debt: debts,
+  credit_card: creditCards,
+  payable: payables,
+  receivable: receivables,
+  goal: financialGoals,
+  task: financeTasks,
+  calendar_event: calendarEvents,
+  fiscal_review: fiscalPeriodReviews,
+  document: financeDocuments,
+} as const;
+
+async function assertFinancialPlanResourceOwnership(db: Awaited<ReturnType<typeof requireDb>>, userId: number, resourceType: keyof typeof financialPlanResourceTable, resourceId: number) {
+  const table = financialPlanResourceTable[resourceType];
+  const [resource] = await db.select({ id: table.id }).from(table).where(and(eq(table.id, resourceId), eq(table.userId, userId))).limit(1);
+  if (!resource) throw new TRPCError({ code: "BAD_REQUEST", message: "La referencia seleccionada no pertenece a tu espacio privado." });
 }
 
 export function receivableSettlement(receivable: { amountCents: number; dueAt: Date | null }, payments: Array<{ amountCents: number; linkedTransactionId: number | null; paidAt: Date }>) {
@@ -414,10 +438,12 @@ export const appRouter = router({
       projectRemove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar proyectos." });
         const db = await requireDb();
-        const [dependencies] = await Promise.all([
+        const [dependencies, financialPlanDependency] = await Promise.all([
           db.select({ id: financeTasks.id }).from(financeTasks).where(and(eq(financeTasks.userId, ctx.workspaceAccess.ownerId), eq(financeTasks.projectId, input.id))).limit(1),
+          db.select({ id: financialPlans.id }).from(financialPlans).where(and(eq(financialPlans.userId, ctx.workspaceAccess.ownerId), eq(financialPlans.projectId, input.id))).limit(1),
         ]);
         if (dependencies[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Este proyecto contiene tareas. Archívalo o elimina/desvincula primero sus elementos para conservar la trazabilidad." });
+        if (financialPlanDependency[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Este proyecto contiene un Plan Financiero. Elimínalo o archívalo desde su propia sección antes de eliminar el proyecto." });
         await db.transaction(async tx => {
           await tx.update(financialGoals).set({ projectId: null }).where(and(eq(financialGoals.userId, ctx.workspaceAccess.ownerId), eq(financialGoals.projectId, input.id)));
           await tx.delete(financialProjects).where(and(eq(financialProjects.id, input.id), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId)));
@@ -1634,6 +1660,112 @@ export const appRouter = router({
         else await db.insert(financialGoals).values({ userId: ctx.user.id, ...payload }); return { success: true };
       }),
       remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(financialGoals, input.id, ctx.user.id)),
+    }),
+    financialPlans: router({
+      save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), projectId: z.number().int().positive(), title: z.string().trim().min(2).max(160), currency: z.string().trim().length(3), status: z.enum(["draft", "active", "completed", "archived"]), startsAt: optionalDate, endsAt: optionalDate, guidingRule: z.string().trim().max(3000).nullable().optional(), notes: z.string().trim().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar planes financieros." });
+        const db = await requireDb();
+        const [project] = await db.select({ id: financialProjects.id }).from(financialProjects).where(and(eq(financialProjects.id, input.projectId), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (!project) throw new TRPCError({ code: "BAD_REQUEST", message: "El proyecto seleccionado no pertenece a tu espacio." });
+        const { id, startsAt, endsAt, status, ...values } = input;
+        if (startsAt && endsAt && endsAt < startsAt) throw new TRPCError({ code: "BAD_REQUEST", message: "La fecha final del plan no puede ser anterior a la inicial." });
+        const payload = { ...values, currency: values.currency.toUpperCase(), status, startsAt: asDate(startsAt), endsAt: asDate(endsAt) };
+        if (id) {
+          const [existing] = await db.select({ id: financialPlans.id }).from(financialPlans).where(and(eq(financialPlans.id, id), eq(financialPlans.userId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "El plan financiero no pertenece a tu espacio." });
+          await db.update(financialPlans).set(payload).where(and(eq(financialPlans.id, id), eq(financialPlans.userId, ctx.workspaceAccess.ownerId)));
+          return { success: true, id };
+        }
+        const result = await db.insert(financialPlans).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+        return { success: true, id: Number(result[0].insertId) };
+      }),
+      remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar planes financieros." });
+        const db = await requireDb();
+        const [existing] = await db.select({ id: financialPlans.id }).from(financialPlans).where(and(eq(financialPlans.id, input.id), eq(financialPlans.userId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (!existing) return { success: true };
+        await db.transaction(async tx => {
+          await tx.delete(financialPlanLinks).where(and(eq(financialPlanLinks.financialPlanId, input.id), eq(financialPlanLinks.userId, ctx.workspaceAccess.ownerId)));
+          await tx.delete(financialPlanPeriods).where(and(eq(financialPlanPeriods.financialPlanId, input.id), eq(financialPlanPeriods.userId, ctx.workspaceAccess.ownerId)));
+          await tx.delete(financialPlanScenarios).where(and(eq(financialPlanScenarios.financialPlanId, input.id), eq(financialPlanScenarios.userId, ctx.workspaceAccess.ownerId)));
+          await tx.delete(financialPlanLevels).where(and(eq(financialPlanLevels.financialPlanId, input.id), eq(financialPlanLevels.userId, ctx.workspaceAccess.ownerId)));
+          await tx.delete(financialPlans).where(and(eq(financialPlans.id, input.id), eq(financialPlans.userId, ctx.workspaceAccess.ownerId)));
+        });
+        return { success: true };
+      }),
+      levelSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), financialPlanId: z.number().int().positive(), position: z.number().int().min(0).max(99), title: z.string().trim().min(2).max(160), monthlyTargetCents: moneySchema, activationRule: z.string().trim().max(2000).nullable().optional(), notes: z.string().trim().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar prioridades del plan." });
+        const db = await requireDb();
+        const [plan] = await db.select({ id: financialPlans.id }).from(financialPlans).where(and(eq(financialPlans.id, input.financialPlanId), eq(financialPlans.userId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (!plan) throw new TRPCError({ code: "BAD_REQUEST", message: "El plan financiero no pertenece a tu espacio." });
+        const { id, ...payload } = input;
+        if (id) await db.update(financialPlanLevels).set(payload).where(and(eq(financialPlanLevels.id, id), eq(financialPlanLevels.userId, ctx.workspaceAccess.ownerId), eq(financialPlanLevels.financialPlanId, input.financialPlanId)));
+        else await db.insert(financialPlanLevels).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+        return { success: true };
+      }),
+      levelRemove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar prioridades del plan." });
+        const db = await requireDb();
+        const [link] = await db.select({ id: financialPlanLinks.id }).from(financialPlanLinks).where(and(eq(financialPlanLinks.financialPlanLevelId, input.id), eq(financialPlanLinks.userId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (link) throw new TRPCError({ code: "BAD_REQUEST", message: "Esta prioridad tiene referencias. Reasígnalas o elimínalas antes." });
+        await db.delete(financialPlanLevels).where(and(eq(financialPlanLevels.id, input.id), eq(financialPlanLevels.userId, ctx.workspaceAccess.ownerId)));
+        return { success: true };
+      }),
+      scenarioSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), financialPlanId: z.number().int().positive(), title: z.string().trim().min(2).max(120), incomeFloorCents: moneySchema.nullable().optional(), incomeCeilingCents: moneySchema.nullable().optional(), allocationThroughPosition: z.number().int().min(0).max(99), guidance: z.string().trim().max(3000).nullable().optional(), colorKey: z.enum(["rose", "amber", "sky", "emerald", "slate"]) })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar escenarios del plan." });
+        if (input.incomeFloorCents != null && input.incomeCeilingCents != null && input.incomeCeilingCents < input.incomeFloorCents) throw new TRPCError({ code: "BAD_REQUEST", message: "El límite superior no puede ser inferior al ingreso mínimo." });
+        const db = await requireDb();
+        const [plan] = await db.select({ id: financialPlans.id }).from(financialPlans).where(and(eq(financialPlans.id, input.financialPlanId), eq(financialPlans.userId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (!plan) throw new TRPCError({ code: "BAD_REQUEST", message: "El plan financiero no pertenece a tu espacio." });
+        const { id, ...payload } = input;
+        if (id) await db.update(financialPlanScenarios).set(payload).where(and(eq(financialPlanScenarios.id, id), eq(financialPlanScenarios.userId, ctx.workspaceAccess.ownerId), eq(financialPlanScenarios.financialPlanId, input.financialPlanId)));
+        else await db.insert(financialPlanScenarios).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+        return { success: true };
+      }),
+      scenarioRemove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar escenarios del plan." });
+        const db = await requireDb();
+        await db.delete(financialPlanScenarios).where(and(eq(financialPlanScenarios.id, input.id), eq(financialPlanScenarios.userId, ctx.workspaceAccess.ownerId)));
+        return { success: true };
+      }),
+      periodSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), financialPlanId: z.number().int().positive(), periodStart: z.number().int().positive(), expectedIncomeCents: moneySchema, plannedCommitmentsCents: moneySchema, plannedSavingsCents: moneySchema, status: z.enum(["draft", "in_review", "complete"]), notes: z.string().trim().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar meses del plan." });
+        const db = await requireDb();
+        const [plan] = await db.select({ id: financialPlans.id }).from(financialPlans).where(and(eq(financialPlans.id, input.financialPlanId), eq(financialPlans.userId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (!plan) throw new TRPCError({ code: "BAD_REQUEST", message: "El plan financiero no pertenece a tu espacio." });
+        const { id, periodStart, ...values } = input;
+        const payload = { ...values, financialPlanId: input.financialPlanId, periodStart: new Date(periodStart) };
+        if (id) await db.update(financialPlanPeriods).set(payload).where(and(eq(financialPlanPeriods.id, id), eq(financialPlanPeriods.userId, ctx.workspaceAccess.ownerId), eq(financialPlanPeriods.financialPlanId, input.financialPlanId)));
+        else await db.insert(financialPlanPeriods).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+        return { success: true };
+      }),
+      periodRemove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar meses del plan." });
+        const db = await requireDb();
+        const [link] = await db.select({ id: financialPlanLinks.id }).from(financialPlanLinks).where(and(eq(financialPlanLinks.financialPlanPeriodId, input.id), eq(financialPlanLinks.userId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (link) throw new TRPCError({ code: "BAD_REQUEST", message: "Este mes tiene referencias. Reasígnalas o elimínalas antes." });
+        await db.delete(financialPlanPeriods).where(and(eq(financialPlanPeriods.id, input.id), eq(financialPlanPeriods.userId, ctx.workspaceAccess.ownerId)));
+        return { success: true };
+      }),
+      linkSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), financialPlanId: z.number().int().positive(), financialPlanLevelId: z.number().int().positive().nullable().optional(), financialPlanPeriodId: z.number().int().positive().nullable().optional(), resourceType: z.enum(["budget", "debt", "credit_card", "payable", "receivable", "goal", "task", "calendar_event", "fiscal_review", "document"]), resourceId: z.number().int().positive(), notes: z.string().trim().max(2000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede vincular referencias del plan." });
+        const db = await requireDb();
+        const [plan] = await db.select({ id: financialPlans.id }).from(financialPlans).where(and(eq(financialPlans.id, input.financialPlanId), eq(financialPlans.userId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (!plan) throw new TRPCError({ code: "BAD_REQUEST", message: "El plan financiero no pertenece a tu espacio." });
+        if (input.financialPlanLevelId) { const [level] = await db.select({ id: financialPlanLevels.id }).from(financialPlanLevels).where(and(eq(financialPlanLevels.id, input.financialPlanLevelId), eq(financialPlanLevels.financialPlanId, input.financialPlanId), eq(financialPlanLevels.userId, ctx.workspaceAccess.ownerId))).limit(1); if (!level) throw new TRPCError({ code: "BAD_REQUEST", message: "La prioridad seleccionada no pertenece al plan." }); }
+        if (input.financialPlanPeriodId) { const [period] = await db.select({ id: financialPlanPeriods.id }).from(financialPlanPeriods).where(and(eq(financialPlanPeriods.id, input.financialPlanPeriodId), eq(financialPlanPeriods.financialPlanId, input.financialPlanId), eq(financialPlanPeriods.userId, ctx.workspaceAccess.ownerId))).limit(1); if (!period) throw new TRPCError({ code: "BAD_REQUEST", message: "El mes seleccionado no pertenece al plan." }); }
+        await assertFinancialPlanResourceOwnership(db, ctx.workspaceAccess.ownerId, input.resourceType, input.resourceId);
+        const { id, ...payload } = input;
+        if (id) await db.update(financialPlanLinks).set(payload).where(and(eq(financialPlanLinks.id, id), eq(financialPlanLinks.userId, ctx.workspaceAccess.ownerId), eq(financialPlanLinks.financialPlanId, input.financialPlanId)));
+        else await db.insert(financialPlanLinks).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+        return { success: true };
+      }),
+      linkRemove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar referencias del plan." });
+        const db = await requireDb();
+        await db.delete(financialPlanLinks).where(and(eq(financialPlanLinks.id, input.id), eq(financialPlanLinks.userId, ctx.workspaceAccess.ownerId)));
+        return { success: true };
+      }),
     }),
     projectMilestones: router({
       save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), projectId: z.number().int().positive(), title: z.string().trim().min(1).max(180), description: z.string().trim().max(3000).nullable().optional(), status: z.enum(["planned", "in_progress", "completed", "archived"]), startsAt: optionalDate, targetAt: optionalDate })).mutation(async ({ ctx, input }) => {
