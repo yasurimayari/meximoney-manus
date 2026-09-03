@@ -452,3 +452,7 @@
 - [x] Diseñar la estructura editable de prioridades, escenarios, meses, compromisos y reglas manuales de Plan Financiero.
 - [x] Implementar datos, relaciones protegidas, vistas mensuales y escenarios de ingresos dentro de Proyectos.
 - [x] Validar cálculos informativos, aislamiento, accesibilidad, móvil, pruebas, PWA y ausencia de movimientos o pagos automáticos.
+
+- [x] Auditar el diálogo de detalle de Proyectos y localizar desbordamiento horizontal, tarjetas recortadas y acciones mal agrupadas.
+- [x] Rediseñar el detalle con tarjetas apilables, navegación interna y acciones accesibles en web, móvil y PWA.
+- [x] Validar layout, teclado, foco, responsive, pruebas, compilación y ausencia de cambios en proyectos o tareas reales.
