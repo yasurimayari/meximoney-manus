@@ -508,3 +508,6 @@
 - [x] Añadir desglose por cuenta y categoría a Balance General, Flujo de caja, Estado de Resultado y Patrimonio neto.
 - [x] Implementar comparación visual entre dos o más periodos seleccionados con métricas comparables y variaciones.
 - [x] Añadir pruebas de agregación, filtros, comparación, exportaciones y responsive sin modificar datos financieros reales.
+
+- [x] Corregir el botón Nuevo estado para limpiar el modo edición y mostrar el formulario listo para crear.
+- [x] Confirmar y probar estados automáticos, edición, eliminación, archivado/restauración y exportaciones PDF/Excel sin históricos obsoletos.
