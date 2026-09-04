@@ -276,6 +276,7 @@ export const financialTransactions = mysqlTable("financialTransactions", {
   createdByUserId: int("createdByUserId"),
   reviewedByUserId: int("reviewedByUserId"),
   reviewedAt: timestamp("reviewedAt"),
+  bankReference: varchar("bankReference", { length: 160 }),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

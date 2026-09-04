@@ -3,7 +3,7 @@ import { inferImportMapping, inferImportType, parseImportAmount, parseImportDate
 
 describe("importación local de hojas de cálculo", () => {
   it("reconoce encabezados habituales en español", () => {
-    expect(inferImportMapping(["Fecha", "Concepto", "Importe", "Moneda"])).toMatchObject({ date: "Fecha", description: "Concepto", amount: "Importe", currency: "Moneda" });
+    expect(inferImportMapping(["Fecha", "Concepto", "Importe", "Moneda", "Referencia bancaria"])).toMatchObject({ date: "Fecha", description: "Concepto", amount: "Importe", currency: "Moneda", bankReference: "Referencia bancaria" });
   });
 
   it("normaliza importe, fecha y el signo como gasto", () => {

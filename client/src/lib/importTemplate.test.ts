@@ -4,7 +4,7 @@ import { createImportTemplateCsv, importTemplateFilename } from "./importTemplat
 describe("plantilla de importación", () => {
   it("mantiene las columnas que reconoce el importador y ejemplos revisables", () => {
     const [header, income, expense] = createImportTemplateCsv().trim().split("\n");
-    expect(header).toBe("Fecha,Descripción,Importe,Tipo,Moneda");
+    expect(header).toBe("Fecha,Descripción,Importe,Tipo,Moneda,Referencia bancaria");
     expect(income).toContain(",Ingreso,MXN");
     expect(expense).toContain(",Gasto,MXN");
     expect(importTemplateFilename).toMatch(/\.csv$/);

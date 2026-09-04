@@ -3,9 +3,10 @@ import { buildRecordSearchCsv, buildRecordSearchExportRows } from "./recordSearc
 
 describe("exportación de búsqueda en Registro", () => {
   it("exporta únicamente los resultados visibles con fecha, tipo, detalle e importe", () => {
-    const rows = buildRecordSearchExportRows([{ id: 7, key: "transaction-7", kind: "transaction", title: "Notion mensual", detail: "Gasto · Suscripciones", date: new Date("2026-08-04T12:00:00Z"), amountCents: 34900, currency: "MXN", href: "/movimientos#transaction-7" }]);
-    expect(rows).toEqual([{ Fecha: "2026-08-04", Tipo: "Movimiento", Resultado: "Notion mensual", Detalle: "Gasto · Suscripciones", Importe: 349, Moneda: "MXN", Destino: "/movimientos#transaction-7" }]);
+    const rows = buildRecordSearchExportRows([{ id: 7, key: "transaction-7", kind: "transaction", title: "Notion mensual", detail: "Gasto · Suscripciones", date: new Date("2026-08-04T12:00:00Z"), amountCents: 34900, currency: "MXN", bankReference: "REF-123", href: "/movimientos#transaction-7" }]);
+    expect(rows).toEqual([{ Fecha: "2026-08-04", Tipo: "Movimiento", Resultado: "Notion mensual", Detalle: "Gasto · Suscripciones", Importe: 349, Moneda: "MXN", Referencia: "REF-123", Destino: "/movimientos#transaction-7" }]);
     expect(buildRecordSearchCsv(rows)).toContain('"Resultado"');
     expect(buildRecordSearchCsv(rows)).toContain('"Notion mensual"');
+    expect(buildRecordSearchCsv(rows)).toContain('"REF-123"');
   });
 });

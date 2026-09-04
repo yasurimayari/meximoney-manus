@@ -456,3 +456,7 @@
 - [x] Auditar el diálogo de detalle de Proyectos y localizar desbordamiento horizontal, tarjetas recortadas y acciones mal agrupadas.
 - [x] Rediseñar el detalle con tarjetas apilables, navegación interna y acciones accesibles en web, móvil y PWA.
 - [x] Validar layout, teclado, foco, responsive, pruebas, compilación y ausencia de cambios en proyectos o tareas reales.
+
+- [x] Auditar el modelo, formulario, edición, búsqueda y exportaciones de movimientos para añadir referencia bancaria.
+- [x] Añadir y mostrar la referencia bancaria opcional, incluyendo búsqueda y exportación sin alterar importes ni saldos.
+- [x] Validar migración, aislamiento, formularios, pruebas, compilación y PWA sin modificar movimientos existentes.

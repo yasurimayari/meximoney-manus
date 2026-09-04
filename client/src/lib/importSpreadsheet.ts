@@ -1,15 +1,16 @@
 import * as XLSX from "xlsx";
 
-export type ImportColumn = "date" | "description" | "amount" | "type" | "currency";
+export type ImportColumn = "date" | "description" | "amount" | "type" | "currency" | "bankReference";
 export type ImportMapping = Partial<Record<ImportColumn, string>>;
 export type SpreadsheetRow = Record<string, string | number | Date | null>;
 
 const aliases: Record<ImportColumn, string[]> = {
   date: ["fecha", "date", "fecha de movimiento", "posted date"],
-  description: ["concepto", "descripción", "descripcion", "detalle", "description", "memo", "referencia"],
+  description: ["concepto", "descripción", "descripcion", "detalle", "description", "memo"],
   amount: ["importe", "monto", "cantidad", "amount", "importe mxn"],
   type: ["tipo", "type", "naturaleza"],
   currency: ["moneda", "currency", "divisa"],
+  bankReference: ["referencia bancaria", "referencia", "bank reference", "bankreference", "folio", "clave de rastreo"],
 };
 
 function normalized(value: unknown) {

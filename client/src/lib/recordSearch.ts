@@ -10,6 +10,7 @@ export type RecordSearchResult = {
   amountCents?: number | null;
   currency?: string | null;
   transactionType?: string;
+  bankReference?: string | null;
 
   href: string;
 };
@@ -34,7 +35,7 @@ const monthValue = (value: Date | string | null | undefined) => {
 
 function hasMatch(result: RecordSearchResult, query: string, month: string) {
   const terms = normalize(query).trim().split(/\s+/).filter(Boolean);
-  const searchable = normalize([result.title, result.detail, result.kind, periodText(result.date), result.date].join(" "));
+  const searchable = normalize([result.title, result.detail, result.kind, result.bankReference, periodText(result.date), result.date].join(" "));
   return (!month || monthValue(result.date) === month) && terms.every(term => searchable.includes(term));
 }
 
@@ -54,6 +55,7 @@ export function findRecordSearchResults(snapshot: any, options: SearchOptions = 
     amountCents: item.amountCents,
     currency: item.currency,
     transactionType: item.type,
+    bankReference: item.bankReference ?? null,
     href: `/movimientos#transaction-${item.id}`,
   }));
   const investments: RecordSearchResult[] = (snapshot?.investments ?? []).map((item: any) => ({

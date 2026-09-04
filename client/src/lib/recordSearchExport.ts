@@ -8,6 +8,7 @@ export type RecordSearchExportRow = {
   Detalle: string;
   Importe: number | "";
   Moneda: string;
+  Referencia: string;
   Destino: string;
 };
 
@@ -40,12 +41,13 @@ export function buildRecordSearchExportRows(results: RecordSearchResult[]): Reco
     Detalle: result.detail,
     Importe: result.amountCents == null ? "" : result.amountCents / 100,
     Moneda: result.currency ?? "",
+    Referencia: result.bankReference ?? "",
     Destino: result.href,
   }));
 }
 
 export function buildRecordSearchCsv(rows: RecordSearchExportRow[]) {
-  const headers: (keyof RecordSearchExportRow)[] = ["Fecha", "Tipo", "Resultado", "Detalle", "Importe", "Moneda", "Destino"];
+  const headers: (keyof RecordSearchExportRow)[] = ["Fecha", "Tipo", "Resultado", "Detalle", "Importe", "Moneda", "Referencia", "Destino"];
   return `\uFEFF${[headers, ...rows.map(row => headers.map(header => row[header]))].map(row => row.map(escapeCsv).join(",")).join("\n")}`;
 }
 
@@ -70,7 +72,7 @@ export function exportRecordSearchResults(kind: "csv" | "pdf", results: RecordSe
   if (!rows.length) { pdf.setTextColor(80, 96, 94); pdf.setFontSize(10); pdf.text("No hay resultados para exportar.", 42, y); }
   rows.forEach(row => {
     const titleLines = pdf.splitTextToSize(row.Resultado, width - 142) as string[];
-    const detailLines = pdf.splitTextToSize(row.Detalle, width - 142) as string[];
+    const detailLines = pdf.splitTextToSize([row.Detalle, row.Referencia ? `Referencia bancaria: ${row.Referencia}` : ""].filter(Boolean).join(" · "), width - 142) as string[];
     const amount = row.Importe === "" || !row.Moneda ? "" : new Intl.NumberFormat("es-MX", { style: "currency", currency: row.Moneda, minimumFractionDigits: 2 }).format(row.Importe);
     const rowHeight = Math.max(42, titleLines.length * 10 + detailLines.length * 9 + 17);
     if (y + rowHeight > height - 42) { pdf.addPage(); addHeader(true); }

@@ -302,6 +302,13 @@
       "when": 1788477706027,
       "tag": "0042_productive_human_torch",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "5",
+      "when": 1788479970104,
+      "tag": "0043_high_miss_america",
+      "breakpoints": true
     }
   ]
 }
