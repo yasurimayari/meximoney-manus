@@ -489,3 +489,7 @@
 - [x] Añadir pruebas y validar accesibilidad, responsive, aislamiento por usuaria y PWA sin modificar datos financieros reales.
 
 - [x] Corregir el espacio vacío residual visible en la tarjeta de utilización de Tarjetas y verificarlo en la versión publicada.
+
+- [x] Filtrar Evolución Manual para mostrar sólo cierres mensuales cerrados y permitir eliminar snapshots obsoletos sin modificar movimientos.
+- [x] Unificar el cálculo de los tres KPI superiores de Patrimonio con una fórmula filtrada por moneda y estado.
+- [x] Añadir pruebas y validar la actualización de Patrimonio en móvil y escritorio sin modificar datos financieros reales.
