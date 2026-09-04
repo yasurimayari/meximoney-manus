@@ -498,3 +498,9 @@
 - [x] Añadir archivado no destructivo para préstamos y deudas pagadas, con filtro de activas y archivadas.
 - [x] Mejorar la legibilidad de los títulos y etiquetas de métricas de deuda, incluida la vista responsive.
 - [x] Añadir pruebas y validar que no se modifiquen datos financieros reales durante QA.
+
+- [x] Eliminar del módulo Estados la presentación de cierres obsoletos y evitar que aparezcan periodos como diciembre o julio cuando ya no existan registros vigentes.
+- [x] Generar automáticamente Balance General, Flujo de caja, Estado de Resultado y Patrimonio neto a partir de la información actual filtrada por usuaria, periodo, moneda, entidad, proyecto y revisión.
+- [x] Añadir edición, eliminación y archivado no destructivo de estados, con restauración y separación clara entre activos, archivados y borradores.
+- [x] Añadir exportación de cada estado a PDF y Excel con periodo, moneda, fuente de datos y formato profesional.
+- [x] Añadir pruebas de cálculo, aislamiento, limpieza de históricos, exportaciones y UX responsive sin modificar datos financieros reales durante QA.

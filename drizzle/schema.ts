@@ -536,6 +536,7 @@ export const monthlyFinancialStatements = mysqlTable("monthlyFinancialStatements
   netWorthCents: int("netWorthCents").notNull().default(0),
   liquidCents: int("liquidCents").notNull().default(0),
   notes: text("notes"),
+  archivedAt: timestamp("archivedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

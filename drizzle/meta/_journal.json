@@ -330,6 +330,13 @@
       "when": 1788487475835,
       "tag": "0046_high_black_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "5",
+      "when": 1788493305709,
+      "tag": "0047_flippant_thundra",
+      "breakpoints": true
     }
   ]
 }

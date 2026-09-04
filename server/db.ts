@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   accounts,
@@ -193,7 +193,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(financeTasks).where(eq(financeTasks.userId, ownerId)),
     db.select().from(monthlyReviews).where(eq(monthlyReviews.userId, ownerId)),
     db.select().from(monthlyReviewControls).where(eq(monthlyReviewControls.userId, ownerId)),
-    db.select().from(monthlyFinancialStatements).where(eq(monthlyFinancialStatements.userId, ownerId)),
+    db.select().from(monthlyFinancialStatements).where(and(eq(monthlyFinancialStatements.userId, ownerId), isNull(monthlyFinancialStatements.archivedAt))),
     db.select().from(calendarColorPreferences).where(eq(calendarColorPreferences.userId, ownerId)),
     db.select().from(calendarEvents).where(eq(calendarEvents.userId, ownerId)),
     db.select().from(financeDocuments).where(eq(financeDocuments.userId, ownerId)),

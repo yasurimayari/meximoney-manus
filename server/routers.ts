@@ -1904,6 +1904,7 @@ export const appRouter = router({
       }),
     }),
     statements: router({
+      listAll: privateFinanceProcedure.query(async ({ ctx }) => { const db = await requireDb(); return db.select().from(monthlyFinancialStatements).where(eq(monthlyFinancialStatements.userId, ctx.user.id)).orderBy(desc(monthlyFinancialStatements.periodStart)); }),
       preview: privateFinanceProcedure.input(z.object({ periodStart: z.number().int().positive(), scope: scopeSchema, entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), currency: z.string().length(3).nullable().optional(), reviewStatus: z.enum(["draft", "pending_review", "approved"]).nullable().optional() })).query(async ({ ctx, input }) => {
         const snapshot = await getFinanceSnapshot(ctx.user.id);
         const { start, end } = monthBounds(new Date(input.periodStart));
@@ -1928,13 +1929,15 @@ export const appRouter = router({
         if (input.id) {
           await db.update(monthlyFinancialStatements).set(payload).where(and(eq(monthlyFinancialStatements.id, input.id), eq(monthlyFinancialStatements.userId, ctx.user.id)));
         } else {
-          const existing = await db.select({ id: monthlyFinancialStatements.id }).from(monthlyFinancialStatements).where(and(eq(monthlyFinancialStatements.userId, ctx.user.id), eq(monthlyFinancialStatements.scope, input.scope), eq(monthlyFinancialStatements.periodStart, start), input.entityId ? eq(monthlyFinancialStatements.entityId, input.entityId) : isNull(monthlyFinancialStatements.entityId), input.projectId ? eq(monthlyFinancialStatements.projectId, input.projectId) : isNull(monthlyFinancialStatements.projectId), input.currency ? eq(monthlyFinancialStatements.filterCurrency, input.currency) : isNull(monthlyFinancialStatements.filterCurrency), input.reviewStatus ? eq(monthlyFinancialStatements.filterReviewStatus, input.reviewStatus) : isNull(monthlyFinancialStatements.filterReviewStatus))).limit(1);
+          const existing = await db.select({ id: monthlyFinancialStatements.id }).from(monthlyFinancialStatements).where(and(eq(monthlyFinancialStatements.userId, ctx.user.id), eq(monthlyFinancialStatements.scope, input.scope), eq(monthlyFinancialStatements.periodStart, start), input.entityId ? eq(monthlyFinancialStatements.entityId, input.entityId) : isNull(monthlyFinancialStatements.entityId), input.projectId ? eq(monthlyFinancialStatements.projectId, input.projectId) : isNull(monthlyFinancialStatements.projectId), input.currency ? eq(monthlyFinancialStatements.filterCurrency, input.currency) : isNull(monthlyFinancialStatements.filterCurrency), input.reviewStatus ? eq(monthlyFinancialStatements.filterReviewStatus, input.reviewStatus) : isNull(monthlyFinancialStatements.filterReviewStatus), isNull(monthlyFinancialStatements.archivedAt))).limit(1);
           if (existing[0]) await db.update(monthlyFinancialStatements).set(payload).where(eq(monthlyFinancialStatements.id, existing[0].id));
           else await db.insert(monthlyFinancialStatements).values({ userId: ctx.user.id, ...payload });
         }
         return { success: true, statement: calculated };
       }),
       remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(monthlyFinancialStatements, input.id, ctx.user.id)),
+      archive: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { const db = await requireDb(); await db.update(monthlyFinancialStatements).set({ archivedAt: new Date() }).where(and(eq(monthlyFinancialStatements.id, input.id), eq(monthlyFinancialStatements.userId, ctx.user.id))); return { success: true }; }),
+      restore: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { const db = await requireDb(); await db.update(monthlyFinancialStatements).set({ archivedAt: null }).where(and(eq(monthlyFinancialStatements.id, input.id), eq(monthlyFinancialStatements.userId, ctx.user.id))); return { success: true }; }),
     }),
     travels: router({
       list: privateFinanceProcedure.query(async ({ ctx }) => {
