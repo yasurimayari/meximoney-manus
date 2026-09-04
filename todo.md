@@ -474,3 +474,7 @@
 - [x] Sustituir los indicadores secundarios de Tarjetas por Crédito disponible total y Límite total de crédito.
 - [x] Verificar que los totales agreguen correctamente todas las tarjetas activas y mantengan la semántica visual financiera.
 - [x] Añadir pruebas unitarias y validar la presentación responsive sin modificar datos financieros reales.
+
+- [x] Añadir porcentaje y barra visual de utilización total del crédito, con tratamiento especial para sobregiros y ausencia de límite.
+- [x] Crear desglose agregado por entidad financiera con límite, saldo por pagar, crédito disponible y porcentaje de utilización.
+- [x] Añadir pruebas unitarias y validar accesibilidad, colores semánticos y vista responsive sin modificar datos financieros reales.
