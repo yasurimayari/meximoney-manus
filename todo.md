@@ -523,3 +523,7 @@
 - [x] Añadir métrica mensual de gastos Presupuesto vs. Real con importe previsto, importe real, desviación y porcentaje.
 - [x] Mostrar una señal visual clara para indicar dentro del presupuesto, sin gasto real o sobrepresupuesto.
 - [x] Añadir pruebas y validar semántica financiera, responsive y ausencia de cambios en datos reales.
+
+- [x] Rediseñar la tarjeta Presupuesto vs. Real para priorizar estado, gasto real, presupuesto y desviación sin saturar una sola fila.
+- [x] Corregir la presentación de importes y etiquetas para evitar signos confusos y mejorar la lectura de estados sin gasto real.
+- [x] Añadir pruebas y validar accesibilidad, responsive, semántica financiera y ausencia de cambios en datos reales.
