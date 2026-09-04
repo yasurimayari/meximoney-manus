@@ -465,3 +465,8 @@
 - [x] Implementar captura y edición de saldo actualizado por retrasos, con desglose trazable y sin recalcular silenciosamente datos históricos.
 - [x] Integrar pagos, tabla de amortización, patrimonio, calendario, alertas y simulaciones con el saldo actualizado del préstamo.
 - [x] Añadir pruebas unitarias y validar UX responsive, colores semánticos y ausencia de modificaciones en datos financieros reales.
+
+- [x] Definir fórmula transparente de interés moratorio basada en días de atraso, tasa y base de cálculo configurables.
+- [x] Implementar cálculo previo y aplicación manual confirmada del interés moratorio, sin modificar el saldo automáticamente al abrir la vista.
+- [x] Integrar el resultado con amortización, desglose de deuda, patrimonio, calendario y exportaciones.
+- [x] Añadir pruebas de cálculo, validación de límites, aislamiento y UX responsive, sin alterar datos financieros reales durante QA.

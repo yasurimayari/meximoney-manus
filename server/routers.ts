@@ -59,6 +59,7 @@ import {
   travelCategories,
 } from "../drizzle/schema";
 import { calculateDebtReduction } from "../shared/debtReduction";
+import { calculateMoratoriumInterest } from "../shared/moratorium";
 import { financedAssetAmounts } from "../shared/financedAssetPricing";
 import { createPasswordResetToken, hashPassword, hashPasswordResetToken, verifyPassword } from "./credentials";
 import { sendPasswordResetEmail } from "./passwordResetEmail";
@@ -1542,15 +1543,15 @@ export const appRouter = router({
       remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(budgets, input.id, ctx.user.id)),
     }),
     debts: router({
-      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(140), creditor: z.string().trim().max(140).nullable().optional(), type: z.enum(["credit_card", "loan", "financed_purchase", "mortgage", "tax", "business", "family", "other"]), loanKind: z.enum(["not_specified", "personal", "automotive", "mortgage"]).default("not_specified"), scope: scopeSchema, balanceCents: moneySchema, originalAmountCents: moneySchema.nullable().optional(), installmentCents: moneySchema.nullable().optional(), installmentCount: z.number().int().positive().max(600).nullable().optional(), financedItem: z.string().trim().max(180).nullable().optional(), purchasedAt: optionalDate, currency: z.string().length(3), interestRateBps: z.number().int().min(0).nullable().optional(), minimumPaymentCents: moneySchema, nextDueAt: optionalDate, endDate: optionalDate, priority: z.enum(["critical", "high", "medium", "low"]), status: z.enum(["active", "paid", "review"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(140), creditor: z.string().trim().max(140).nullable().optional(), type: z.enum(["credit_card", "loan", "financed_purchase", "mortgage", "tax", "business", "family", "other"]), loanKind: z.enum(["not_specified", "personal", "automotive", "mortgage"]).default("not_specified"), scope: scopeSchema, balanceCents: moneySchema, originalAmountCents: moneySchema.nullable().optional(), installmentCents: moneySchema.nullable().optional(), installmentCount: z.number().int().positive().max(600).nullable().optional(), financedItem: z.string().trim().max(180).nullable().optional(), purchasedAt: optionalDate, currency: z.string().length(3), interestRateBps: z.number().int().min(0).nullable().optional(), moratoriumRateBps: z.number().int().min(0).max(100000).nullable().optional(), overdueSinceAt: optionalDate, minimumPaymentCents: moneySchema, nextDueAt: optionalDate, endDate: optionalDate, priority: z.enum(["critical", "high", "medium", "low"]), status: z.enum(["active", "paid", "review"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
         if (input.type === "financed_purchase" && input.originalAmountCents !== null && input.originalAmountCents !== undefined && input.originalAmountCents < input.balanceCents) throw new TRPCError({ code: "BAD_REQUEST", message: "El importe original no puede ser menor que el saldo pendiente registrado." });
         if (input.type === "financed_purchase" && input.installmentCents && !input.installmentCount) throw new TRPCError({ code: "BAD_REQUEST", message: "Indica cuántas mensualidades tiene la compra financiada." });
-        const { id, nextDueAt, endDate, purchasedAt, type, loanKind, originalAmountCents, installmentCents, installmentCount, financedItem, ...values } = input;
+        const { id, nextDueAt, endDate, purchasedAt, overdueSinceAt, type, loanKind, originalAmountCents, installmentCents, installmentCount, financedItem, ...values } = input;
         const financing = type === "financed_purchase"
           ? { originalAmountCents: originalAmountCents ?? null, installmentCents: installmentCents ?? null, installmentCount: installmentCount ?? null, financedItem: financedItem || null, purchasedAt: asDate(purchasedAt) }
           : { originalAmountCents: null, installmentCents: null, installmentCount: null, financedItem: null, purchasedAt: null };
-        const payload = { ...values, type, loanKind: normalizeLoanKind(type, loanKind), ...financing, nextDueAt: asDate(nextDueAt), endDate: asDate(endDate) };
+        const payload = { ...values, type, loanKind: normalizeLoanKind(type, loanKind), moratoriumRateBps: input.moratoriumRateBps ?? null, overdueSinceAt: asDate(overdueSinceAt), ...financing, nextDueAt: asDate(nextDueAt), endDate: asDate(endDate) };
         if (id) await db.update(debts).set(payload).where(and(eq(debts.id, id), eq(debts.userId, ctx.user.id)));
         else await db.insert(debts).values({ userId: ctx.user.id, ...payload });
         return { success: true };
@@ -1608,6 +1609,22 @@ export const appRouter = router({
           db.select().from(debtBalanceAdjustments).where(and(eq(debtBalanceAdjustments.debtId, debt.id), eq(debtBalanceAdjustments.userId, ctx.workspaceAccess.ownerId))),
         ]);
         return { debt, payments: payments.sort((left, right) => left.paidAt.getTime() - right.paidAt.getTime()), adjustments: adjustments.sort((left, right) => left.occurredAt.getTime() - right.occurredAt.getTime()), projection: buildManualAmortizationSchedule({ balanceCents: debt.balanceCents, annualRateBps: debt.interestRateBps, paymentCents: debt.installmentCents ?? debt.minimumPaymentCents, maxMonths: debt.installmentCount ?? 120 }) };
+      }),
+      moratoriumApply: privateFinanceProcedure.input(z.object({ debtId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        return db.transaction(async tx => {
+          const [debt] = await tx.select().from(debts).where(and(eq(debts.id, input.debtId), eq(debts.userId, ctx.user.id))).limit(1);
+          if (!debt) throw new TRPCError({ code: "NOT_FOUND", message: "La deuda no pertenece a tu espacio privado." });
+          const now = new Date();
+          const current = calculateMoratoriumInterest({ balanceCents: debt.balanceCents, annualRateBps: debt.moratoriumRateBps, overdueSinceAt: debt.overdueSinceAt, asOf: now, basisCents: debt.originalAmountCents ?? debt.balanceCents });
+          if (!current.isConfigured) throw new TRPCError({ code: "BAD_REQUEST", message: "Configura una tasa moratoria y una fecha de inicio del atraso antes de aplicar el cálculo." });
+          const previous = debt.moratoriumLastAppliedAt ? calculateMoratoriumInterest({ balanceCents: debt.balanceCents, annualRateBps: debt.moratoriumRateBps, overdueSinceAt: debt.overdueSinceAt, asOf: debt.moratoriumLastAppliedAt, basisCents: debt.originalAmountCents ?? debt.balanceCents }) : null;
+          const amountCents = Math.max(0, current.interestCents - (previous?.interestCents ?? 0));
+          if (amountCents === 0) return { applied: false, amountCents: 0, daysLate: current.daysLate, interestCents: current.interestCents, message: "No hay un nuevo periodo de atraso que aplicar." };
+          await tx.insert(debtBalanceAdjustments).values({ userId: ctx.user.id, debtId: debt.id, type: "late_interest", amountCents, currency: debt.currency, occurredAt: now, notes: `Cálculo automático revisable · ${current.daysLate} días de atraso · fórmula: saldo base × tasa anual × días / 365.` });
+          await tx.update(debts).set({ balanceCents: debt.balanceCents + amountCents, moratoriumLastAppliedAt: now, status: "active" }).where(and(eq(debts.id, debt.id), eq(debts.userId, ctx.user.id)));
+          return { applied: true, amountCents, daysLate: current.daysLate, interestCents: current.interestCents, message: "Interés moratorio aplicado como cargo revisable." };
+        });
       }),
       adjustmentSave: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), debtId: z.number().int().positive(), type: z.enum(["late_interest", "finance_charge", "other_charge", "correction"]), amountCents: z.number().int().refine(value => value !== 0, "El importe no puede ser cero."), currency: z.string().length(3), occurredAt: z.number().int().positive(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         if (input.type !== "correction" && input.amountCents < 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Los intereses y cargos se registran como importes positivos; usa corrección para un ajuste negativo confirmado." });
