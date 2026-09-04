@@ -460,3 +460,8 @@
 - [x] Auditar el modelo, formulario, edición, búsqueda y exportaciones de movimientos para añadir referencia bancaria.
 - [x] Añadir y mostrar la referencia bancaria opcional, incluyendo búsqueda y exportación sin alterar importes ni saldos.
 - [x] Validar migración, aislamiento, formularios, pruebas, compilación y PWA sin modificar movimientos existentes.
+
+- [x] Auditar la sección de préstamos para separar principal original, saldo vigente, intereses ordinarios, intereses moratorios y cargos por retraso.
+- [x] Implementar captura y edición de saldo actualizado por retrasos, con desglose trazable y sin recalcular silenciosamente datos históricos.
+- [x] Integrar pagos, tabla de amortización, patrimonio, calendario, alertas y simulaciones con el saldo actualizado del préstamo.
+- [x] Añadir pruebas unitarias y validar UX responsive, colores semánticos y ausencia de modificaciones en datos financieros reales.

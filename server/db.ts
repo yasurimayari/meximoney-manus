@@ -179,7 +179,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, creditCardRows, goalRows, taskRows, reviewRows, monthlyControlRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, financedAssetRows, milestoneRows, creditScoreRows, personalScoreRows, qualityAcknowledgementRows, surplusPolicyRows, travelPlanRows, financialPlanRows, financialPlanLevelRows, financialPlanScenarioRows, financialPlanPeriodRows, financialPlanLinkRows] = await Promise.all([
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, debtAdjustmentRows, creditCardRows, goalRows, taskRows, reviewRows, monthlyControlRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, financedAssetRows, milestoneRows, creditScoreRows, personalScoreRows, qualityAcknowledgementRows, surplusPolicyRows, travelPlanRows, financialPlanRows, financialPlanLevelRows, financialPlanScenarioRows, financialPlanPeriodRows, financialPlanLinkRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
@@ -187,6 +187,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(budgets).where(eq(budgets.userId, ownerId)),
     db.select().from(debts).where(eq(debts.userId, ownerId)),
     db.select().from(debtPayments).where(eq(debtPayments.userId, ownerId)),
+    db.select().from(debtBalanceAdjustments).where(eq(debtBalanceAdjustments.userId, ownerId)),
     db.select().from(creditCards).where(eq(creditCards.userId, ownerId)),
     db.select().from(financialGoals).where(eq(financialGoals.userId, ownerId)),
     db.select().from(financeTasks).where(eq(financeTasks.userId, ownerId)),
@@ -293,6 +294,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     budgets: budgetRows,
     debts: debtRows,
     debtPayments: debtPaymentRows,
+    debtBalanceAdjustments: debtAdjustmentRows,
     creditCards: creditCardRows,
     goals: goalRows,
     tasks: taskRows,
