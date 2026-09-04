@@ -265,3 +265,15 @@
 .budget-totalization-list b { @apply mt-1 text-sm tabular-nums; }
 .budget-totalization-list article > div:first-child { @apply rounded-lg bg-muted/45 p-2 sm:bg-transparent sm:p-0; }
 .budget-totalization-list article > div:first-child b { @apply text-base; }
+
+.budget-real-card { @apply col-span-full mt-1 grid gap-1 rounded-xl border p-3 sm:col-span-5 sm:grid-cols-[1.2fr_1fr_1.4fr_auto_auto] sm:items-center sm:gap-3; }
+.budget-real-card small, .budget-real-card strong, .budget-real-card span, .budget-real-card b, .budget-real-card em { @apply block; }
+.budget-real-card small { @apply text-[0.68rem] text-muted-foreground; }
+.budget-real-card strong { @apply text-sm; }
+.budget-real-card span, .budget-real-card em { @apply text-xs not-italic text-muted-foreground; }
+.budget-real-card b { @apply text-sm tabular-nums; }
+.budget-real-positive { @apply border-emerald-500/25 bg-emerald-500/5; }
+.budget-real-positive strong, .budget-real-positive b { @apply text-emerald-700 dark:text-emerald-300; }
+.budget-real-negative { @apply border-rose-500/25 bg-rose-500/5; }
+.budget-real-negative strong, .budget-real-negative b { @apply text-rose-700 dark:text-rose-300; }
+.budget-real-neutral { @apply border-border/70 bg-muted/30; }

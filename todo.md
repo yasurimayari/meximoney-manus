@@ -519,3 +519,7 @@
 - [x] Rediseñar la totalización mensual de Presupuesto para eliminar el espacio vacío y mejorar la jerarquía visual.
 - [x] Adaptar la totalización a una lectura compacta y responsive con necesidad total, ingresos y saldo claramente priorizados.
 - [x] Añadir pruebas y validar semántica de importes, accesibilidad y ausencia de cambios en datos reales.
+
+- [x] Añadir métrica mensual de gastos Presupuesto vs. Real con importe previsto, importe real, desviación y porcentaje.
+- [x] Mostrar una señal visual clara para indicar dentro del presupuesto, sin gasto real o sobrepresupuesto.
+- [x] Añadir pruebas y validar semántica financiera, responsive y ausencia de cambios en datos reales.
