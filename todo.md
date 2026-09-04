@@ -493,3 +493,8 @@
 - [x] Filtrar Evolución Manual para mostrar sólo cierres mensuales cerrados y permitir eliminar snapshots obsoletos sin modificar movimientos.
 - [x] Unificar el cálculo de los tres KPI superiores de Patrimonio con una fórmula filtrada por moneda y estado.
 - [x] Añadir pruebas y validar la actualización de Patrimonio en móvil y escritorio sin modificar datos financieros reales.
+
+- [x] Corregir la precarga del formulario de préstamos para conservar todos los campos al editar una deuda existente.
+- [x] Añadir archivado no destructivo para préstamos y deudas pagadas, con filtro de activas y archivadas.
+- [x] Mejorar la legibilidad de los títulos y etiquetas de métricas de deuda, incluida la vista responsive.
+- [x] Añadir pruebas y validar que no se modifiquen datos financieros reales durante QA.

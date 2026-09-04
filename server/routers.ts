@@ -1556,6 +1556,21 @@ export const appRouter = router({
         else await db.insert(debts).values({ userId: ctx.user.id, ...payload });
         return { success: true };
       }),
+      archive: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const [debt] = await db.select({ id: debts.id, balanceCents: debts.balanceCents }).from(debts).where(and(eq(debts.id, input.id), eq(debts.userId, ctx.user.id))).limit(1);
+        if (!debt) throw new TRPCError({ code: "NOT_FOUND", message: "La deuda no pertenece a tu espacio privado." });
+        if (debt.balanceCents !== 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Sólo puedes archivar una deuda con saldo cero. Registra el pago restante antes de archivarla." });
+        await db.update(debts).set({ status: "paid" }).where(and(eq(debts.id, input.id), eq(debts.userId, ctx.user.id)));
+        return { success: true };
+      }),
+      restore: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const [debt] = await db.select({ id: debts.id }).from(debts).where(and(eq(debts.id, input.id), eq(debts.userId, ctx.user.id))).limit(1);
+        if (!debt) throw new TRPCError({ code: "NOT_FOUND", message: "La deuda no pertenece a tu espacio privado." });
+        await db.update(debts).set({ status: "active" }).where(and(eq(debts.id, input.id), eq(debts.userId, ctx.user.id)));
+        return { success: true };
+      }),
       paymentSave: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), debtId: z.number().int().positive(), linkedTransactionId: z.number().int().positive().nullable().optional(), totalPaymentCents: z.number().int().positive(), principalCents: moneySchema, interestCents: moneySchema.optional(), lateInterestCents: moneySchema.optional(), feeCents: moneySchema.optional(), currency: z.string().length(3), paidAt: z.number().int().positive(), nextDueAt: optionalDate, notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const breakdown = { totalPaymentCents: input.totalPaymentCents, principalCents: input.principalCents, interestCents: input.interestCents ?? Math.max(0, input.totalPaymentCents - input.principalCents), lateInterestCents: input.lateInterestCents ?? 0, feeCents: input.feeCents ?? 0 };
         if (!debtPaymentBreakdownIsValid(breakdown)) throw new TRPCError({ code: "BAD_REQUEST", message: "El pago total debe coincidir con capital, interés ordinario, interés vencido y cargos." });
