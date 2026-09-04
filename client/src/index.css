@@ -280,3 +280,13 @@
 .budget-real-negative { @apply border-rose-500/25 bg-rose-500/5; }
 .budget-real-negative strong, .budget-real-negative b { @apply text-rose-700 dark:text-rose-300; }
 .budget-real-neutral { @apply border-border/70 bg-muted/30; }
+
+.range-control-periods { @apply flex w-full flex-col gap-3 rounded-2xl border border-border/70 bg-card p-3 shadow-sm sm:max-w-[39rem]; }
+.period-selector { @apply w-full; }
+.period-selector-label { @apply mb-2 block text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground; }
+.period-options { @apply grid grid-cols-3 gap-1.5 sm:grid-cols-6; }
+.period-options button { @apply min-w-0 whitespace-nowrap px-2 text-xs sm:px-2.5 sm:text-sm; }
+@media (max-width: 639px) {
+  .range-control-periods { @apply p-2.5; }
+  .period-options button { @apply h-9; }
+}

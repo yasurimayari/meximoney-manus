@@ -527,3 +527,7 @@
 - [x] Rediseñar la tarjeta Presupuesto vs. Real para priorizar estado, gasto real, presupuesto y desviación sin saturar una sola fila.
 - [x] Corregir la presentación de importes y etiquetas para evitar signos confusos y mejorar la lectura de estados sin gasto real.
 - [x] Añadir pruebas y validar accesibilidad, responsive, semántica financiera y ausencia de cambios en datos reales.
+
+- [x] Rediseñar el filtro de meses de Analítica para eliminar el desplazamiento oculto y mejorar la selección de periodos.
+- [x] Añadir controles accesibles y una presentación responsive clara para escritorio y móvil.
+- [x] Añadir pruebas y validar interacción, semántica visual y ausencia de cambios en datos reales.
