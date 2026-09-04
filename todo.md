@@ -470,3 +470,7 @@
 - [x] Implementar cálculo previo y aplicación manual confirmada del interés moratorio, sin modificar el saldo automáticamente al abrir la vista.
 - [x] Integrar el resultado con amortización, desglose de deuda, patrimonio, calendario y exportaciones.
 - [x] Añadir pruebas de cálculo, validación de límites, aislamiento y UX responsive, sin alterar datos financieros reales durante QA.
+
+- [x] Sustituir los indicadores secundarios de Tarjetas por Crédito disponible total y Límite total de crédito.
+- [x] Verificar que los totales agreguen correctamente todas las tarjetas activas y mantengan la semántica visual financiera.
+- [x] Añadir pruebas unitarias y validar la presentación responsive sin modificar datos financieros reales.
