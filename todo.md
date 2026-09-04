@@ -478,3 +478,7 @@
 - [x] Añadir porcentaje y barra visual de utilización total del crédito, con tratamiento especial para sobregiros y ausencia de límite.
 - [x] Crear desglose agregado por entidad financiera con límite, saldo por pagar, crédito disponible y porcentaje de utilización.
 - [x] Añadir pruebas unitarias y validar accesibilidad, colores semánticos y vista responsive sin modificar datos financieros reales.
+
+- [x] Rediseñar la barra de utilización total para representar con claridad el límite, el saldo utilizado y el sobregiro.
+- [x] Mostrar una alerta visual en el Panel cuando una tarjeta específica supere el 20% de utilización.
+- [x] Añadir una tendencia histórica de utilización de crédito de los últimos seis meses con validación responsive.

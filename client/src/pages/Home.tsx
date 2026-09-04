@@ -8,6 +8,7 @@ import { trpc } from "@/lib/trpc";
 import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { buildPfaePanelSummary } from "../../../shared/pfaePanelSummary";
+import { creditCardUtilizationAlerts } from "../../../shared/creditCardSummary";
 import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CalendarClock, CheckCircle2, CircleDollarSign, Landmark, ListTodo, Plus, ReceiptText, ShieldCheck, Target, WalletCards } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
@@ -53,6 +54,7 @@ export default function Home() {
   const hasData = data.accounts.length + data.transactions.length + data.debts.length + data.goals.length > 0;
   const closingPending = isMonthlyClosingPending(data.statements ?? [], data.dashboard.periodStart);
   const pfaeSummary = buildPfaePanelSummary({ records: data.fiscalRecords ?? [], fiscalReviews: data.fiscalPeriodReviews ?? [], calendarEvents: data.calendarEvents ?? [], periodStart: data.dashboard.periodStart, futureTaxDueAt: data.profile?.futureTaxDueAt });
+  const creditUtilizationAlerts = creditCardUtilizationAlerts(data.creditCards ?? [], currency, 20);
 
   return <div className="space-y-8">
     <section className="hero-panel">
@@ -63,6 +65,8 @@ export default function Home() {
     <WorkspaceFilterBar snapshot={data} filters={workspaceFilters} onChange={setWorkspaceFilters} />
 
     {closingPending ? <section className="flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-amber-950 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-3"><span className="mt-0.5 rounded-xl bg-amber-200 p-2 text-amber-800"><AlertTriangle className="size-4" /></span><div><p className="font-semibold">Cierre mensual pendiente</p><p className="mt-1 text-sm">Aún no hay un cierre guardado para {formatDate(data.dashboard.periodStart, { month: "long", year: "numeric" })}. Revisa pendientes y confirma el control mensual antes de guardar la fotografía histórica.</p></div></div><Link href="/control-mensual"><Button variant="outline" className="shrink-0 border-amber-400 bg-white text-amber-950 hover:bg-amber-100">Abrir control mensual</Button></Link></section> : null}
+
+    {creditUtilizationAlerts.length ? <section className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-950"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="flex items-start gap-3"><span className="mt-0.5 rounded-xl bg-rose-100 p-2 text-rose-700"><AlertTriangle className="size-4" /></span><div><p className="font-semibold">Utilización de crédito por encima del 20%</p><p className="mt-1 text-sm text-rose-900">Estas tarjetas ya superan el umbral configurado. Revisa su saldo antes de asumir nuevos cargos.</p></div></div><Link href="/tarjetas" className="shrink-0 text-sm font-semibold text-rose-800 underline-offset-4 hover:underline">Revisar tarjetas</Link></div><div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{creditUtilizationAlerts.slice(0, 6).map(card => <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-white/70 px-3 py-2.5" key={card.id}><div className="min-w-0"><p className="truncate text-sm font-semibold">{card.name || "Tarjeta sin nombre"}</p><p className="truncate text-xs text-rose-800">{card.issuer || "Entidad no especificada"} · Saldo {formatMoney(card.balanceCents, card.currency)}</p></div><span className="shrink-0 text-sm font-bold text-rose-700">{card.utilizationPercent?.toFixed(1)}%</span></div>)}</div>{creditUtilizationAlerts.length > 6 ? <p className="mt-3 text-xs text-rose-800">Hay {creditUtilizationAlerts.length - 6} tarjeta(s) adicional(es) por encima del umbral.</p> : null}</section> : null}
 
     {!hasData ? <section className="onboarding-card"><div><p className="eyebrow">Primeros pasos</p><h2>Construye una base fiable antes de analizar.</h2><p>Registra una cuenta, crea tus categorías y añade tus primeros movimientos. El panel calculará tu situación a partir de datos confirmados.</p></div><div className="onboarding-actions"><Link href="/movimientos"><Button className="btn-primary"><Plus className="size-4" /> Registrar una cuenta</Button></Link><Link href="/movimientos"><Button variant="outline">Añadir movimiento</Button></Link></div></section> : null}
 

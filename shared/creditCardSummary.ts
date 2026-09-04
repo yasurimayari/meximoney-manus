@@ -1,10 +1,51 @@
 export type CreditCardSummaryCard = {
+  id?: number;
+  name?: string;
   status: "active" | "paused" | "closed";
   currency: string;
   balanceCents: number;
   creditLimitCents: number;
   issuer?: string | null;
 };
+
+export type CreditCardMovement = {
+  creditCardId?: number | null;
+  type: "income" | "expense" | "transfer_out" | "transfer_in";
+  amountCents: number;
+  occurredAt: Date | string | number;
+};
+
+export function cardUtilizationPercent(card: Pick<CreditCardSummaryCard, "balanceCents" | "creditLimitCents">) {
+  return card.creditLimitCents > 0 ? (Math.max(0, card.balanceCents) / card.creditLimitCents) * 100 : null;
+}
+
+export function creditCardUtilizationAlerts(cards: CreditCardSummaryCard[], reportCurrency: string, thresholdPercent = 20) {
+  return cards.filter(card => card.status !== "closed" && card.currency === reportCurrency).map(card => ({ ...card, utilizationPercent: cardUtilizationPercent(card) })).filter(card => card.utilizationPercent !== null && card.utilizationPercent > thresholdPercent).sort((left, right) => (right.utilizationPercent ?? 0) - (left.utilizationPercent ?? 0));
+}
+
+function movementEffect(movement: CreditCardMovement) {
+  if (movement.type === "expense") return Math.max(0, movement.amountCents);
+  if (movement.type === "transfer_in") return -Math.max(0, movement.amountCents);
+  return 0;
+}
+
+export function buildCreditUtilizationHistory(cards: CreditCardSummaryCard[], transactions: CreditCardMovement[], reportCurrency: string, monthCount = 6, now = new Date()) {
+  const eligibleCards = cards.filter(card => card.id !== undefined && card.id !== null && card.status !== "closed" && card.currency === reportCurrency && card.creditLimitCents > 0);
+  const endNow = now.getTime();
+  const firstMonth = new Date(now.getFullYear(), now.getMonth() - Math.max(0, monthCount - 1), 1);
+  return Array.from({ length: Math.max(1, monthCount) }, (_, index) => {
+    const monthStart = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + index, 1);
+    const nextMonthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+    const monthEnd = Math.min(endNow, nextMonthStart.getTime() - 1);
+    const usedCents = eligibleCards.reduce((total, card) => {
+      const futureEffect = transactions.filter(movement => movement.creditCardId === card.id && new Date(movement.occurredAt).getTime() > monthEnd && new Date(movement.occurredAt).getTime() <= endNow).reduce((sum, movement) => sum + movementEffect(movement), 0);
+      return total + Math.max(0, card.balanceCents - futureEffect);
+    }, 0);
+    const limitCents = eligibleCards.reduce((total, card) => total + Math.max(0, card.creditLimitCents), 0);
+    return { monthStart, label: monthStart.toLocaleDateString("es-MX", { month: "short" }).replace(".", ""), usedCents, limitCents, utilizationPercent: limitCents > 0 ? (usedCents / limitCents) * 100 : null };
+  });
+}
+
 
 export function summarizeCreditCards(cards: CreditCardSummaryCard[], reportCurrency: string) {
   const sameCurrency = cards.filter(card => card.currency === reportCurrency && card.status !== "closed");
