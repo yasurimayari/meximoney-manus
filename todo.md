@@ -540,3 +540,8 @@
 - [x] Añadir filtros por rango de fechas y tipo de movimiento en Registro.
 - [x] Exportar únicamente los movimientos seleccionados a Excel y PDF.
 - [x] Añadir pruebas y validar aislamiento, accesibilidad, responsive y ausencia de cambios en datos financieros durante QA.
+
+- [x] Leer y estructurar el Plan Financiero de Notion manteniendo sus fechas originales, aunque ya hayan pasado.
+- [x] Mapear el plan con Proyecto Financiero, entidades, presupuestos, deudas, objetivos, tareas y movimientos de Meximoney.
+- [x] Implementar la integración editable, trazable y segura sin crear ni modificar datos financieros reales durante QA.
+- [x] Validar fechas históricas, relaciones, UX responsive, pruebas y PWA antes de publicar.

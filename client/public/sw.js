@@ -1,4 +1,4 @@
-const CACHE_NAME = "meximoney-personal-shell-v62";
+const CACHE_NAME = "meximoney-personal-shell-v63";
 const PWA_ICON_PATH = "/manus-storage/meximoney-pwa-icon_d935fd19.png";
 const APP_SHELL = ["/offline", "/manifest.webmanifest", PWA_ICON_PATH];
 

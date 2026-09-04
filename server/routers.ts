@@ -65,6 +65,7 @@ import { createPasswordResetToken, hashPassword, hashPasswordResetToken, verifyP
 import { sendPasswordResetEmail } from "./passwordResetEmail";
 import { passwordResetRequestResponse } from "./passwordResetResponse";
 import { normalizeLoanKind } from "../shared/manualObligations";
+import { financialPlanTemplate, dateAtNoonUtc } from "../shared/financialPlanTemplate";
 import { deleteAllFinancialData, deleteOwnedRow, getFinanceSnapshot, getProfile, requireDb, resolveWorkspaceAccess } from "./db";
 import { storagePut } from "./storage";
 import { requiresPersonalProfileConsent } from "./profilePrivacy";
@@ -1726,6 +1727,37 @@ export const appRouter = router({
         }
         const result = await db.insert(financialPlans).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
         return { success: true, id: Number(result[0].insertId) };
+      }),
+      importNotionTemplate: workspaceFinanceProcedure.input(z.object({ projectId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede importar un plan financiero." });
+        const db = await requireDb();
+        const [project] = await db.select({ id: financialProjects.id }).from(financialProjects).where(and(eq(financialProjects.id, input.projectId), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (!project) throw new TRPCError({ code: "BAD_REQUEST", message: "El proyecto seleccionado no pertenece a tu espacio." });
+        const [existing] = await db.select({ id: financialPlans.id }).from(financialPlans).where(and(eq(financialPlans.projectId, input.projectId), eq(financialPlans.userId, ctx.workspaceAccess.ownerId))).limit(1);
+        const planId = await db.transaction(async tx => {
+          let financialPlanId: number;
+          if (existing) {
+            financialPlanId = existing.id;
+            await tx.update(financialPlans).set({ title: financialPlanTemplate.title, currency: financialPlanTemplate.currency, status: financialPlanTemplate.status, startsAt: dateAtNoonUtc(financialPlanTemplate.startsAt), endsAt: dateAtNoonUtc(financialPlanTemplate.endsAt), guidingRule: financialPlanTemplate.guidingRule, notes: financialPlanTemplate.notes }).where(and(eq(financialPlans.id, financialPlanId), eq(financialPlans.userId, ctx.workspaceAccess.ownerId)));
+          } else {
+            const inserted = await tx.insert(financialPlans).values({ userId: ctx.workspaceAccess.ownerId, projectId: input.projectId, title: financialPlanTemplate.title, currency: financialPlanTemplate.currency, status: financialPlanTemplate.status, startsAt: dateAtNoonUtc(financialPlanTemplate.startsAt), endsAt: dateAtNoonUtc(financialPlanTemplate.endsAt), guidingRule: financialPlanTemplate.guidingRule, notes: financialPlanTemplate.notes });
+            financialPlanId = Number(inserted[0].insertId);
+          }
+          const existingLevels = await tx.select({ position: financialPlanLevels.position }).from(financialPlanLevels).where(and(eq(financialPlanLevels.financialPlanId, financialPlanId), eq(financialPlanLevels.userId, ctx.workspaceAccess.ownerId)));
+          const levelPositions = new Set(existingLevels.map(level => level.position));
+          const missingLevels = financialPlanTemplate.levels.filter(level => !levelPositions.has(level.position));
+          if (missingLevels.length) await tx.insert(financialPlanLevels).values(missingLevels.map(level => ({ userId: ctx.workspaceAccess.ownerId, financialPlanId, ...level })));
+          const existingScenarios = await tx.select({ title: financialPlanScenarios.title }).from(financialPlanScenarios).where(and(eq(financialPlanScenarios.financialPlanId, financialPlanId), eq(financialPlanScenarios.userId, ctx.workspaceAccess.ownerId)));
+          const scenarioTitles = new Set(existingScenarios.map(scenario => scenario.title));
+          const missingScenarios = financialPlanTemplate.scenarios.filter(scenario => !scenarioTitles.has(scenario.title));
+          if (missingScenarios.length) await tx.insert(financialPlanScenarios).values(missingScenarios.map(scenario => ({ userId: ctx.workspaceAccess.ownerId, financialPlanId, ...scenario })));
+          const existingPeriods = await tx.select({ periodStart: financialPlanPeriods.periodStart }).from(financialPlanPeriods).where(and(eq(financialPlanPeriods.financialPlanId, financialPlanId), eq(financialPlanPeriods.userId, ctx.workspaceAccess.ownerId)));
+          const periodKeys = new Set(existingPeriods.map(period => period.periodStart.toISOString().slice(0, 7)));
+          const missingPeriods = financialPlanTemplate.periods.filter(period => !periodKeys.has(period.periodStart));
+          if (missingPeriods.length) await tx.insert(financialPlanPeriods).values(missingPeriods.map(period => ({ userId: ctx.workspaceAccess.ownerId, financialPlanId, periodStart: dateAtNoonUtc(period.periodStart), expectedIncomeCents: period.expectedIncomeCents, plannedCommitmentsCents: period.plannedCommitmentsCents, plannedSavingsCents: period.plannedSavingsCents, status: period.status, notes: period.notes })));
+          return financialPlanId;
+        });
+        return { success: true, id: planId, sourceUrl: financialPlanTemplate.notes.split("\\n")[0].replace("Fuente: ", ""), merged: Boolean(existing) };
       }),
       remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar planes financieros." });
