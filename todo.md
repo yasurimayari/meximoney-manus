@@ -531,3 +531,7 @@
 - [x] Rediseñar el filtro de meses de Analítica para eliminar el desplazamiento oculto y mejorar la selección de periodos.
 - [x] Añadir controles accesibles y una presentación responsive clara para escritorio y móvil.
 - [x] Añadir pruebas y validar interacción, semántica visual y ausencia de cambios en datos reales.
+
+- [x] Añadir selección múltiple de movimientos y eliminación conjunta con confirmación explícita.
+- [x] Sustituir los filtros de Moneda y Revisión por Cuenta y Categoría en Registro.
+- [x] Validar aislamiento, actualización de resultados, accesibilidad, responsive y ausencia de cambios durante QA fuera de la acción confirmada.

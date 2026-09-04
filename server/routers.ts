@@ -1490,6 +1490,22 @@ export const appRouter = router({
         });
         return { success: true };
       }),
+      removeMany: privateFinanceProcedure.input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(100) })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const rows = await db.select().from(financialTransactions).where(and(eq(financialTransactions.userId, ctx.user.id), inArray(financialTransactions.id, input.ids)));
+        if (rows.some(row => row.transferGroupId)) throw new TRPCError({ code: "BAD_REQUEST", message: "Los traspasos deben eliminarse completos desde el flujo de traspasos." });
+        await db.transaction(async tx => {
+          for (const transaction of rows) {
+            if (transaction.creditCardId && transaction.type === "expense") {
+              const [card] = await tx.select().from(creditCards).where(and(eq(creditCards.id, transaction.creditCardId), eq(creditCards.userId, ctx.user.id))).limit(1);
+              if (card) await tx.update(creditCards).set({ balanceCents: Math.max(0, card.balanceCents - transaction.amountCents) }).where(and(eq(creditCards.id, card.id), eq(creditCards.userId, ctx.user.id)));
+            }
+            await tx.update(financeTasks).set({ linkedTransactionId: null }).where(and(eq(financeTasks.userId, ctx.user.id), eq(financeTasks.linkedTransactionId, transaction.id)));
+          }
+          if (rows.length) await tx.delete(financialTransactions).where(and(eq(financialTransactions.userId, ctx.user.id), inArray(financialTransactions.id, rows.map(row => row.id))));
+        });
+        return { success: true, deletedCount: rows.length };
+      }),
     }),
     documents: router({
       save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().min(1).max(180), type: z.enum(["statement", "invoice", "contract", "policy", "tax", "receipt", "other"]), documentClass: z.enum(["general", "identity_residency", "tax_residency", "tax_filing", "insurance", "will_estate", "property", "investment_instrument", "loan_credit", "legal_contract"]).default("general"), scope: scopeSchema, relatedEntityType: z.enum(["none", "asset", "debt", "insurance", "tax", "estate"]).default("none"), relatedEntityId: z.number().int().positive().nullable().optional(), jurisdiction: z.string().max(120).nullable().optional(), referenceUrl: z.string().url().nullable().optional(), referenceProvider: z.enum(["google_drive", "url", "other"]).default("url"), fileUpload: z.object({ fileName: z.string().min(1).max(240), mimeType: z.string().max(120), base64: z.string().min(8).max(14_000_000) }).nullable().optional(), removeStoredFile: z.boolean().optional(), issuedAt: optionalDate, expiresAt: optionalDate, reminderAt: optionalDate, verified: z.boolean(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
