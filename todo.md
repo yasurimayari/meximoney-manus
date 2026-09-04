@@ -487,3 +487,5 @@
 - [x] Añadir una preferencia privada para personalizar el porcentaje umbral de alerta de utilización de crédito.
 - [x] Hacer interactivas las alertas del Panel y dirigir cada una al detalle de su tarjeta específica.
 - [x] Añadir pruebas y validar accesibilidad, responsive, aislamiento por usuaria y PWA sin modificar datos financieros reales.
+
+- [x] Corregir el espacio vacío residual visible en la tarjeta de utilización de Tarjetas y verificarlo en la versión publicada.
