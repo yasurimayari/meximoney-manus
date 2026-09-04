@@ -253,3 +253,13 @@
 .statement-comparison-grid article > small { @apply mt-1 text-xs text-muted-foreground; }
 .comparison-bar { @apply mt-3 h-2 overflow-hidden rounded-full bg-border; }
 .comparison-bar span { @apply block h-full rounded-full bg-primary transition-all; }
+
+.budget-totalization { @apply mt-5 rounded-2xl border border-primary/15 bg-primary/5 p-4 md:p-5; }
+.budget-totalization h3 { @apply text-base font-semibold; }
+.budget-totalization-list { @apply mt-4 grid gap-3 xl:grid-cols-2; }
+.budget-totalization-list article { @apply grid gap-3 rounded-xl border border-border/70 bg-card p-4 sm:grid-cols-5 sm:items-center; }
+.budget-totalization-list article > div { @apply min-w-0; }
+.budget-totalization-list strong, .budget-totalization-list small, .budget-totalization-list b { @apply block; }
+.budget-totalization-list strong { @apply text-sm capitalize; }
+.budget-totalization-list small { @apply text-[0.68rem] text-muted-foreground; }
+.budget-totalization-list b { @apply mt-1 text-sm; }

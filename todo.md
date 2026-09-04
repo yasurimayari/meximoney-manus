@@ -511,3 +511,7 @@
 
 - [x] Corregir el botón Nuevo estado para limpiar el modo edición y mostrar el formulario listo para crear.
 - [x] Confirmar y probar estados automáticos, edición, eliminación, archivado/restauración y exportaciones PDF/Excel sin históricos obsoletos.
+
+- [x] Añadir totalización mensual de ingresos, gastos y saldo neto presupuestados en Planificación.
+- [x] Corregir la duplicación de botones idénticos para editar objetivos.
+- [x] Añadir pruebas y validar semántica financiera, responsive y ausencia de cambios en datos reales.
