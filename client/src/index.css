@@ -237,3 +237,19 @@
     .calendar-board-week .calendar-weekday-row, .calendar-board-week .calendar-grid { min-width: 0; grid-template-columns: repeat(7, minmax(0, 1fr)); }.calendar-board-week .calendar-weekday-row span { padding-inline: 0.15rem; font-size: 0.55rem; }.calendar-board-week .calendar-day { min-height: 8.25rem; padding: 0.35rem; }.calendar-board-week .calendar-day-number { width: 1.55rem; height: 1.55rem; font-size: 0.66rem; }.calendar-board-week .calendar-day-events { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-top: 0.45rem; }.calendar-board-week .calendar-day-event { width: 0.45rem; height: 0.45rem; padding: 0; border-radius: 9999px; font-size: 0; }.calendar-board-week .calendar-day-more { display: none; }
   }
 }
+
+.statement-breakdown, .statement-comparison { @apply mt-5 border rounded-2xl bg-card p-4 shadow-sm md:p-5; }
+.statement-breakdown-list { @apply mt-4 divide-y; }
+.statement-breakdown-row { @apply grid gap-2 py-3 sm:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(5rem,0.7fr))] sm:items-center; }
+.statement-breakdown-row > div { @apply min-w-0; }
+.statement-breakdown-row strong { @apply block truncate text-sm; }
+.statement-breakdown-row small { @apply mt-1 block text-xs text-muted-foreground; }
+.statement-breakdown-row > span, .statement-breakdown-row > strong { @apply text-right text-sm; }
+.statement-comparison-grid { @apply mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4; }
+.statement-comparison-grid article { @apply rounded-xl bg-muted/50 p-4; }
+.statement-comparison-grid article > span, .statement-comparison-grid article > strong, .statement-comparison-grid article > small { @apply block; }
+.statement-comparison-grid article > span { @apply text-xs font-semibold text-muted-foreground; }
+.statement-comparison-grid article > strong { @apply mt-2 text-lg; }
+.statement-comparison-grid article > small { @apply mt-1 text-xs text-muted-foreground; }
+.comparison-bar { @apply mt-3 h-2 overflow-hidden rounded-full bg-border; }
+.comparison-bar span { @apply block h-full rounded-full bg-primary transition-all; }

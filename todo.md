@@ -504,3 +504,7 @@
 - [x] Añadir edición, eliminación y archivado no destructivo de estados, con restauración y separación clara entre activos, archivados y borradores.
 - [x] Añadir exportación de cada estado a PDF y Excel con periodo, moneda, fuente de datos y formato profesional.
 - [x] Añadir pruebas de cálculo, aislamiento, limpieza de históricos, exportaciones y UX responsive sin modificar datos financieros reales durante QA.
+
+- [x] Añadir desglose por cuenta y categoría a Balance General, Flujo de caja, Estado de Resultado y Patrimonio neto.
+- [x] Implementar comparación visual entre dos o más periodos seleccionados con métricas comparables y variaciones.
+- [x] Añadir pruebas de agregación, filtros, comparación, exportaciones y responsive sin modificar datos financieros reales.
