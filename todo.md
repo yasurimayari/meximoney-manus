@@ -515,3 +515,7 @@
 - [x] Añadir totalización mensual de ingresos, gastos y saldo neto presupuestados en Planificación.
 - [x] Corregir la duplicación de botones idénticos para editar objetivos.
 - [x] Añadir pruebas y validar semántica financiera, responsive y ausencia de cambios en datos reales.
+
+- [x] Rediseñar la totalización mensual de Presupuesto para eliminar el espacio vacío y mejorar la jerarquía visual.
+- [x] Adaptar la totalización a una lectura compacta y responsive con necesidad total, ingresos y saldo claramente priorizados.
+- [x] Añadir pruebas y validar semántica de importes, accesibilidad y ausencia de cambios en datos reales.
