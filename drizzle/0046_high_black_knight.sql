@@ -1,0 +1,1 @@
+ALTER TABLE `notificationPreferences` ADD `creditUtilizationThresholdPercent` int DEFAULT 20 NOT NULL;

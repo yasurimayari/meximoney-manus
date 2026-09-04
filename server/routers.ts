@@ -225,9 +225,9 @@ function createManualSnapshotText(snapshot: Awaited<ReturnType<typeof getFinance
 }
 
 type NotificationCandidate = { type: string; title: string; message: string; relatedEntityType: string; relatedEntityId: number };
-type NotificationPreferenceState = { inAppEnabled: boolean; calendarEnabled: boolean; documentsEnabled: boolean; debtsEnabled: boolean; reviewsEnabled: boolean; budgetEnabled: boolean; taxReserveEnabled: boolean; travelsEnabled: boolean; reminderDays: number; telegramEnabled: boolean; telegramScheduleCronTaskUid: string | null; telegramLastDigestDate: string | null };
+type NotificationPreferenceState = { inAppEnabled: boolean; calendarEnabled: boolean; documentsEnabled: boolean; debtsEnabled: boolean; reviewsEnabled: boolean; budgetEnabled: boolean; taxReserveEnabled: boolean; travelsEnabled: boolean; reminderDays: number; creditUtilizationThresholdPercent: number; telegramEnabled: boolean; telegramScheduleCronTaskUid: string | null; telegramLastDigestDate: string | null };
 
-const defaultNotificationPreferences: NotificationPreferenceState = { inAppEnabled: true, calendarEnabled: true, documentsEnabled: true, debtsEnabled: true, reviewsEnabled: true, budgetEnabled: true, taxReserveEnabled: true, travelsEnabled: true, reminderDays: 7, telegramEnabled: false, telegramScheduleCronTaskUid: null, telegramLastDigestDate: null };
+const defaultNotificationPreferences: NotificationPreferenceState = { inAppEnabled: true, calendarEnabled: true, documentsEnabled: true, debtsEnabled: true, reviewsEnabled: true, budgetEnabled: true, taxReserveEnabled: true, travelsEnabled: true, reminderDays: 7, creditUtilizationThresholdPercent: 20, telegramEnabled: false, telegramScheduleCronTaskUid: null, telegramLastDigestDate: null };
 
 export function buildNotificationCandidates(snapshot: any, preferences: NotificationPreferenceState, now = new Date()): NotificationCandidate[] {
   if (!preferences.inAppEnabled) return [];
@@ -1337,7 +1337,7 @@ export const appRouter = router({
         if (pending.length) await db.insert(financeNotifications).values(pending.map(candidate => ({ userId: ctx.user.id, ...candidate })));
         return { createdCount: pending.length, skipped: null };
       }),
-      savePreferences: privateFinanceProcedure.input(z.object({ inAppEnabled: z.boolean(), calendarEnabled: z.boolean(), documentsEnabled: z.boolean(), debtsEnabled: z.boolean(), reviewsEnabled: z.boolean(), budgetEnabled: z.boolean(), taxReserveEnabled: z.boolean(), travelsEnabled: z.boolean(), reminderDays: z.number().int().min(1).max(30) })).mutation(async ({ ctx, input }) => {
+      savePreferences: privateFinanceProcedure.input(z.object({ inAppEnabled: z.boolean(), calendarEnabled: z.boolean(), documentsEnabled: z.boolean(), debtsEnabled: z.boolean(), reviewsEnabled: z.boolean(), budgetEnabled: z.boolean(), taxReserveEnabled: z.boolean(), travelsEnabled: z.boolean(), reminderDays: z.number().int().min(1).max(30), creditUtilizationThresholdPercent: z.number().int().min(1).max(100) })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
         await db.insert(notificationPreferences).values({ userId: ctx.user.id, ...input }).onDuplicateKeyUpdate({ set: input });
         return { success: true };

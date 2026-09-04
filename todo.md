@@ -482,3 +482,8 @@
 - [x] Rediseñar la barra de utilización total para representar con claridad el límite, el saldo utilizado y el sobregiro.
 - [x] Mostrar una alerta visual en el Panel cuando una tarjeta específica supere el 20% de utilización.
 - [x] Añadir una tendencia histórica de utilización de crédito de los últimos seis meses con validación responsive.
+
+- [x] Corregir el espacio vacío del bloque de utilización y ajustar su layout para que se adapte al contenido.
+- [x] Añadir una preferencia privada para personalizar el porcentaje umbral de alerta de utilización de crédito.
+- [x] Hacer interactivas las alertas del Panel y dirigir cada una al detalle de su tarjeta específica.
+- [x] Añadir pruebas y validar accesibilidad, responsive, aislamiento por usuaria y PWA sin modificar datos financieros reales.

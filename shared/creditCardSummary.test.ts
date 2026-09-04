@@ -32,6 +32,14 @@ describe("resumen agregado de tarjetas", () => {
     expect(result.utilizationBarPercent).toBe(100);
   });
 
+  it("respeta un umbral personalizado para las alertas", () => {
+    const cards = [
+      { id: 1, name: "Baja", status: "active" as const, currency: "MXN", balanceCents: 2_000, creditLimitCents: 10_000 },
+      { id: 2, name: "Alta", status: "active" as const, currency: "MXN", balanceCents: 8_000, creditLimitCents: 10_000 },
+    ];
+    expect(creditCardUtilizationAlerts(cards, "MXN", 75).map(card => card.name)).toEqual(["Alta"]);
+  });
+
   it("alerta sólo las tarjetas que superan estrictamente el 20%", () => {
     const result = creditCardUtilizationAlerts([
       { id: 1, name: "A", status: "active", currency: "MXN", balanceCents: 2_000, creditLimitCents: 10_000 },

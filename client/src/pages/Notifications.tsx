@@ -23,6 +23,7 @@ type NotificationPreferences = {
   taxReserveEnabled: boolean;
   travelsEnabled: boolean;
   reminderDays: number;
+  creditUtilizationThresholdPercent: number;
   telegramEnabled: boolean;
   telegramScheduleCronTaskUid?: string | null;
 };
@@ -39,6 +40,7 @@ const defaultPreferences: NotificationPreferences = {
   taxReserveEnabled: true,
   travelsEnabled: true,
   reminderDays: 7,
+  creditUtilizationThresholdPercent: 20,
   telegramEnabled: false,
   telegramScheduleCronTaskUid: null,
 };
@@ -83,7 +85,7 @@ export default function Notifications() {
   const refreshInbox = trpc.finance.notifications.refreshInbox.useMutation({ onError: error => toast.error(error.message) });
   const clearResolved = trpc.finance.notifications.clearResolved.useMutation({ onSuccess: async () => { await refresh(); toast.success("Avisos leídos o descartados eliminados."); }, onError: error => toast.error(error.message) });
 
-  const savePreferenceState = (next: NotificationPreferences) => savePreferences.mutate({ inAppEnabled: next.inAppEnabled, calendarEnabled: next.calendarEnabled, documentsEnabled: next.documentsEnabled, debtsEnabled: next.debtsEnabled, reviewsEnabled: next.reviewsEnabled, budgetEnabled: next.budgetEnabled, taxReserveEnabled: next.taxReserveEnabled, travelsEnabled: next.travelsEnabled, reminderDays: next.reminderDays });
+  const savePreferenceState = (next: NotificationPreferences) => savePreferences.mutate({ inAppEnabled: next.inAppEnabled, calendarEnabled: next.calendarEnabled, documentsEnabled: next.documentsEnabled, debtsEnabled: next.debtsEnabled, reviewsEnabled: next.reviewsEnabled, budgetEnabled: next.budgetEnabled, taxReserveEnabled: next.taxReserveEnabled, travelsEnabled: next.travelsEnabled, reminderDays: next.reminderDays, creditUtilizationThresholdPercent: next.creditUtilizationThresholdPercent });
   const updatePreference = (key: "inAppEnabled" | "calendarEnabled" | "documentsEnabled" | "debtsEnabled" | "reviewsEnabled" | "budgetEnabled" | "taxReserveEnabled" | "travelsEnabled", value: boolean) => {
     const next = { ...preferences, [key]: value };
     setPreferences(next);
@@ -91,6 +93,12 @@ export default function Notifications() {
   };
   const updateReminderDays = (reminderDays: number) => {
     const next = { ...preferences, reminderDays };
+    setPreferences(next);
+    savePreferenceState(next);
+  };
+  const updateCreditThreshold = (value: number) => {
+    const creditUtilizationThresholdPercent = Math.max(1, Math.min(100, value));
+    const next = { ...preferences, creditUtilizationThresholdPercent };
     setPreferences(next);
     savePreferenceState(next);
   };
@@ -170,6 +178,7 @@ export default function Notifications() {
           <NotificationToggle label="Reserva fiscal manual" description="Fecha de referencia de tu reserva; no calcula ni presenta impuestos." checked={preferences.taxReserveEnabled} onChange={value => updatePreference("taxReserveEnabled", value)} disabled={!preferences.inAppEnabled} />
           <NotificationToggle label="Revisión humana" description="Movimientos que esperan confirmación de una persona autorizada." checked={preferences.reviewsEnabled} onChange={value => updatePreference("reviewsEnabled", value)} disabled={!preferences.inAppEnabled} />
           <div className="rounded-xl border bg-muted/25 p-4"><Label htmlFor="reminder-days" className="text-sm font-semibold">Anticipación</Label><p className="mt-1 text-xs leading-5 text-muted-foreground">Define con cuántos días de margen se revisan viajes, pagos, tarjetas, documentos y calendario.</p><select id="reminder-days" className="mt-3 w-full" value={preferences.reminderDays} onChange={event => updateReminderDays(Number(event.target.value))}>{[1, 3, 7, 14, 30].map(days => <option key={days} value={days}>{days} día{days === 1 ? "" : "s"} antes</option>)}</select></div>
+          <div className="rounded-xl border bg-muted/25 p-4"><Label htmlFor="credit-threshold" className="text-sm font-semibold">Alerta de utilización de crédito</Label><p className="mt-1 text-xs leading-5 text-muted-foreground">Muestra una alerta en el Panel cuando una tarjeta supere este porcentaje de su límite.</p><div className="mt-3 flex items-center gap-2"><input id="credit-threshold" className="w-24" type="number" min={1} max={100} step={1} value={preferences.creditUtilizationThresholdPercent} onChange={event => updateCreditThreshold(Number(event.target.value))} /><span className="text-sm font-semibold text-muted-foreground">%</span></div><p className="mt-2 text-xs text-muted-foreground">Usa un valor entre 1% y 100%. Se guarda sólo para tu perfil.</p></div>
         </div>
         <div className="mt-5 rounded-xl border border-primary/15 bg-primary/[0.035] p-4">
           <div className="flex items-start gap-3">
