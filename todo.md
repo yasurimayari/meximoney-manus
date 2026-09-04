@@ -535,3 +535,8 @@
 - [x] Añadir selección múltiple de movimientos y eliminación conjunta con confirmación explícita.
 - [x] Sustituir los filtros de Moneda y Revisión por Cuenta y Categoría en Registro.
 - [x] Validar aislamiento, actualización de resultados, accesibilidad, responsive y ausencia de cambios durante QA fuera de la acción confirmada.
+
+- [x] Mantener la selección de movimientos al cambiar de página y conservarla al ajustar filtros de forma controlada.
+- [x] Añadir filtros por rango de fechas y tipo de movimiento en Registro.
+- [x] Exportar únicamente los movimientos seleccionados a Excel y PDF.
+- [x] Añadir pruebas y validar aislamiento, accesibilidad, responsive y ausencia de cambios en datos financieros durante QA.
