@@ -585,3 +585,7 @@
 - [x] Implementar conciliación automática conservadora por referencia y por importe exacto, sin modificar movimientos sin confirmación.
 - [x] Añadir un panel de diferencias por cuenta con movimientos emparejados, faltantes y acciones de ajuste o edición.
 - [x] Añadir pruebas de importación, emparejamiento, aislamiento y ajustes; validar migración, UX responsive y PWA.
+
+- [x] Añadir el campo Ref. bancaria al formulario de traspasos de Registro.
+- [x] Conservar la referencia en ambas partes del traspaso y hacerla visible para conciliación y edición.
+- [x] Añadir pruebas y validar tipos, conciliación, responsive y PWA.

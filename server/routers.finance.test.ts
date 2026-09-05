@@ -481,6 +481,28 @@ describe("finance.dashboard", () => {
     })).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
+  it("persiste la referencia bancaria en las dos partes de un traspaso", async () => {
+    const inserted = vi.fn();
+    const answers = [
+      [{ accepted: true }],
+      [{ id: 11, userId: 27, name: "Santander", currency: "MXN", status: "active", entityId: null, projectId: null, scope: "personal" }],
+      [{ id: 12, userId: 27, name: "Efectivo Caja", currency: "MXN", status: "active", entityId: null, projectId: null, scope: "personal" }],
+    ];
+    const select = vi.fn(() => ({ from: () => ({ where: () => ({ limit: async () => answers.shift() ?? [] }) }) }));
+    mocks.requireDb.mockResolvedValue({ select, transaction: async (callback: any) => callback({ insert: () => ({ values: inserted }) }) });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await caller.finance.workspace.transferSave({
+      sourceAccountId: 11, destinationAccountId: 12, investmentId: null, amountCents: 1_500_00,
+      occurredAt: Date.parse("2026-09-05T12:00:00Z"), status: "confirmed", bankReference: " SPEI-TRASPASO-123 ", notes: "Fondeo de caja",
+    });
+
+    expect(inserted).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ type: "transfer_out", bankReference: "SPEI-TRASPASO-123" }),
+      expect.objectContaining({ type: "transfer_in", bankReference: "SPEI-TRASPASO-123" }),
+    ]));
+  });
+
   it("archiva un objetivo sin borrar su saldo manual ni tocar inversiones vinculadas", async () => {
     const set = vi.fn(() => ({ where: vi.fn() }));
     mocks.requireDb.mockResolvedValue({
