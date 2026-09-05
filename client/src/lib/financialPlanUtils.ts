@@ -1,12 +1,14 @@
 export type FinancialPlanTransaction = {
   projectId: number | null;
-  type: "income" | "expense" | "transfer";
+  type: "income" | "expense" | "transfer_in" | "transfer_out" | "transfer";
   status: "confirmed" | "estimated" | "needs_review";
   currency: string;
   reportCurrency?: string | null;
   amountCents: number;
   reportAmountCents?: number | null;
   occurredAt: Date | string;
+  goalId?: number | null;
+  investmentId?: number | null;
 };
 
 export type FinancialPlanScenario = {
@@ -30,12 +32,17 @@ export function actualsForFinancialPlanMonth(transactions: FinancialPlanTransact
     if (transaction.projectId !== projectId || transaction.status !== "confirmed" || amountCents === null || occurredAt < monthStart || occurredAt >= monthEnd) return totals;
     if (transaction.type === "income") totals.incomeCents += amountCents;
     if (transaction.type === "expense") totals.expenseCents += amountCents;
+    if (transaction.type === "transfer_in" && (transaction.goalId != null || transaction.investmentId != null)) totals.savingsCents += amountCents;
     return totals;
-  }, { incomeCents: 0, expenseCents: 0 });
+  }, { incomeCents: 0, expenseCents: 0, savingsCents: 0 });
 }
 
 export function financialPlanScenarioForIncome<T extends FinancialPlanScenario>(scenarios: T[], incomeCents: number) {
   return scenarios.find(scenario => (scenario.incomeFloorCents == null || incomeCents >= scenario.incomeFloorCents) && (scenario.incomeCeilingCents == null || incomeCents <= scenario.incomeCeilingCents)) ?? null;
+}
+
+export function financialPlanVarianceCents(actualCents: number, plannedCents: number) {
+  return actualCents - plannedCents;
 }
 
 export function financialPlanAvailableCents(expectedIncomeCents: number, plannedCommitmentsCents: number, plannedSavingsCents: number) {

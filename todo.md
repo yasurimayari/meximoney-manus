@@ -589,3 +589,8 @@
 - [x] Añadir el campo Ref. bancaria al formulario de traspasos de Registro.
 - [x] Conservar la referencia en ambas partes del traspaso y hacerla visible para conciliación y edición.
 - [x] Añadir pruebas y validar tipos, conciliación, responsive y PWA.
+
+- [x] Vincular cada mes del Plan Financiero con uno o varios objetivos concretos.
+- [x] Añadir comparación visual entre importes planificados y resultados reales por mes.
+- [x] Añadir calendario interactivo del Plan Financiero con fechas, tareas y prioridades.
+- [x] Añadir pruebas de relaciones mensuales, métricas planificado-real, calendario, sincronización y UX responsive; validar PWA.
