@@ -555,3 +555,8 @@
 - [x] Guardar y mostrar el número de Score asociado a cada informe.
 - [x] Incorporar vista en lista y etiquetas visuales distintas para Buró y Círculo de Crédito.
 - [x] Añadir recordatorio visual de la próxima consulta trimestral y validar privacidad, responsive y pruebas.
+
+- [x] Añadir en Registro un flujo específico "Pagar TDC" que permita elegir cuenta bancaria de origen y tarjeta de crédito de destino.
+- [x] Registrar el pago de TDC como traspaso, reducir el saldo de la tarjeta y la cuenta de origen sin duplicar el gasto original.
+- [x] Mejorar la UX del formulario de traspasos para distinguir pagos de TDC, traspasos entre cuentas y aportaciones a ahorro/inversión.
+- [x] Añadir pruebas de pago parcial/total, aislamiento por usuaria, saldos y prevención de duplicados; validar responsive y PWA.
