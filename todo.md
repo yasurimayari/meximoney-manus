@@ -550,3 +550,8 @@
 - [x] Implementar carga, listado, descarga, edición, archivado y eliminación de informes del Buró y Círculo de Crédito.
 - [x] Añadir control de hasta cuatro consultas anuales y trazabilidad sin interpretar automáticamente los informes.
 - [x] Validar consentimiento, aislamiento por usuaria, almacenamiento S3, UX responsive y borrado completo.
+
+- [x] Añadir edición de metadatos y vista segura del documento crediticio.
+- [x] Guardar y mostrar el número de Score asociado a cada informe.
+- [x] Incorporar vista en lista y etiquetas visuales distintas para Buró y Círculo de Crédito.
+- [x] Añadir recordatorio visual de la próxima consulta trimestral y validar privacidad, responsive y pruebas.

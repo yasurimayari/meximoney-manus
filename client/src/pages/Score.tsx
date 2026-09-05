@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { creditScoreRange, creditScoreRanges, creditScoreSourceUrl } from "@/lib/creditScoreRange";
 import { trpc } from "@/lib/trpc";
-import { Archive, Award, CalendarClock, ChartNoAxesCombined, CircleDollarSign, CreditCard, Download, ExternalLink, FileText, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { latestActiveCreditReport, nextCreditReportDueDate } from "@shared/creditReportUtils";
+import { Archive, Award, CalendarClock, ChartNoAxesCombined, CircleDollarSign, CreditCard, Download, ExternalLink, FileText, Grid2X2, List, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -38,6 +39,7 @@ export default function Score() {
   const [creditOpen, setCreditOpen] = useState(false);
   const [snapshotOpen, setSnapshotOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [editingReport, setEditingReport] = useState<CreditReportRow | null>(null);
   const saveCredit = trpc.finance.score.saveCreditRecord.useMutation({
     onSuccess: async () => {
       await utils.finance.score.overview.invalidate();
@@ -54,7 +56,7 @@ export default function Score() {
     onError: error => toast.error(error.message),
   });
   const saveReport = trpc.finance.score.saveCreditReport.useMutation({
-    onSuccess: async () => { await utils.finance.score.overview.invalidate(); setReportOpen(false); toast.success("Informe crediticio guardado de forma privada."); },
+    onSuccess: async () => { await utils.finance.score.overview.invalidate(); setReportOpen(false); setEditingReport(null); toast.success("Informe crediticio guardado de forma privada."); },
     onError: error => toast.error(error.message),
   });
   const archiveReport = trpc.finance.score.archiveCreditReport.useMutation({ onSuccess: async () => { await utils.finance.score.overview.invalidate(); toast.success("Informe archivado."); }, onError: error => toast.error(error.message) });
@@ -155,7 +157,7 @@ export default function Score() {
       </Card>
     </div>
 
-    <CreditReportSection reports={data.creditReports ?? []} saving={saveReport.isPending} onAdd={() => setReportOpen(true)} onArchive={id => archiveReport.mutate({ id })} onRestore={id => restoreReport.mutate({ id })} onRemove={id => removeReport.mutate({ id })} />
+    <CreditReportSection reports={data.creditReports ?? []} saving={saveReport.isPending} onAdd={() => { setEditingReport(null); setReportOpen(true); }} onEdit={report => { setEditingReport(report); setReportOpen(true); }} onArchive={id => archiveReport.mutate({ id })} onRestore={id => restoreReport.mutate({ id })} onRemove={id => removeReport.mutate({ id })} />
 
     <Card className="surface-card">
       <CardHeader>
@@ -166,7 +168,7 @@ export default function Score() {
     </Card>
 
     <Dialog open={creditOpen} onOpenChange={setCreditOpen}><CreditScoreForm saving={saveCredit.isPending} onSubmit={input => saveCredit.mutate(input)}/></Dialog>
-    <Dialog open={reportOpen} onOpenChange={setReportOpen}><CreditReportForm saving={saveReport.isPending} onSubmit={input => saveReport.mutate(input)}/></Dialog>
+    <Dialog open={reportOpen} onOpenChange={open => { setReportOpen(open); if (!open) setEditingReport(null); }}><CreditReportForm key={editingReport?.id ?? "new"} report={editingReport} saving={saveReport.isPending} onSubmit={input => saveReport.mutate(input)}/></Dialog>
     <Dialog open={snapshotOpen} onOpenChange={setSnapshotOpen}><SnapshotForm saving={saveSnapshot.isPending} onSubmit={input => saveSnapshot.mutate(input)}/></Dialog>
   </section>;
 }
@@ -232,44 +234,51 @@ function SnapshotForm({ saving, onSubmit }: { saving: boolean; onSubmit: (input:
 }
 
 
-type CreditReportRow = { id: number; provider: "buro" | "circulo"; consultedAt: Date | string; periodLabel?: string | null; fileName: string; fileUrl?: string | null; fileSizeBytes: number; notes?: string | null; status: "active" | "archived"; archivedAt?: Date | string | null };
+type CreditReportRow = { id: number; provider: "buro" | "circulo"; consultedAt: Date | string; reportedScore?: number | null; periodLabel?: string | null; fileName: string; fileUrl?: string | null; fileSizeBytes: number; notes?: string | null; status: "active" | "archived"; archivedAt?: Date | string | null };
 
-type CreditReportInput = { provider: "buro" | "circulo"; consultedAt: number; periodLabel: string | null; notes: string | null; fileUpload: { fileName: string; mimeType: string; base64: string } };
+type CreditReportInput = { id?: number; provider: "buro" | "circulo"; consultedAt: number; reportedScore: number | null; periodLabel: string | null; notes: string | null; fileUpload?: { fileName: string; mimeType: string; base64: string } | null };
 
-function CreditReportSection({ reports, saving, onAdd, onArchive, onRestore, onRemove }: { reports: CreditReportRow[]; saving: boolean; onAdd: () => void; onArchive: (id: number) => void; onRestore: (id: number) => void; onRemove: (id: number) => void }) {
+function CreditReportSection({ reports, saving, onAdd, onEdit, onArchive, onRestore, onRemove }: { reports: CreditReportRow[]; saving: boolean; onAdd: () => void; onEdit: (report: CreditReportRow) => void; onArchive: (id: number) => void; onRestore: (id: number) => void; onRemove: (id: number) => void }) {
   const activeReports = reports.filter(report => report.status === "active");
   const archivedReports = reports.filter(report => report.status === "archived");
   const currentYear = new Date().getFullYear();
   const currentYearCount = activeReports.filter(report => new Date(report.consultedAt).getFullYear() === currentYear).length;
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const latestReport = latestActiveCreditReport(activeReports);
+  const nextConsultation = latestReport ? nextCreditReportDueDate(latestReport.consultedAt) : null;
+  const isConsultationDue = nextConsultation ? nextConsultation.getTime() <= Date.now() : true;
   return <Card className="surface-card">
     <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div><CardTitle className="flex items-center gap-2 text-base"><FileText className="size-4 text-primary"/>Informes crediticios</CardTitle><CardDescription>Guarda tus informes PDF del Buró de Crédito y Círculo de Crédito. Meximoney sólo almacena el archivo y sus metadatos; no interpreta su contenido.</CardDescription></div>
-      <Button className="btn-primary shrink-0" onClick={onAdd}><Plus className="mr-2 size-4"/>Subir informe</Button>
+      <div className="flex flex-wrap items-center gap-2"><div className="inline-flex rounded-lg border bg-background p-1" aria-label="Vista de informes"><Button type="button" size="icon" variant={viewMode === "cards" ? "secondary" : "ghost"} aria-label="Vista de tarjetas" title="Vista de tarjetas" onClick={() => setViewMode("cards")}><Grid2X2 className="size-4"/></Button><Button type="button" size="icon" variant={viewMode === "list" ? "secondary" : "ghost"} aria-label="Vista de lista" title="Vista de lista" onClick={() => setViewMode("list")}><List className="size-4"/></Button></div><Button className="btn-primary shrink-0" onClick={onAdd}><Plus className="mr-2 size-4"/>Subir informe</Button></div>
     </CardHeader>
-    <CardContent className="space-y-4">
+      <CardContent className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Consultas este año</p><strong className="text-xl tabular-nums">{currentYearCount}<span className="text-sm font-normal text-muted-foreground">/4 recomendadas</span></strong></div><div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Informes activos</p><strong className="text-xl tabular-nums">{activeReports.length}</strong></div><div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Instituciones</p><strong className="text-xl">{new Set(activeReports.map(report => report.provider)).size}</strong></div></div>
-      {reports.length === 0 ? <div className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">Aún no has subido informes. Puedes guardar hasta cuatro consultas anuales como referencia de tu seguimiento.</div> : <div className="grid gap-3 md:grid-cols-2">{reports.map(report => <CreditReportCard key={report.id} report={report} onArchive={onArchive} onRestore={onRestore} onRemove={onRemove}/>)}</div>}
-      {saving ? <p className="text-xs text-muted-foreground">Subiendo el informe de forma segura…</p> : null}
+      <div className={`rounded-xl border p-4 ${isConsultationDue ? "border-amber-300 bg-amber-50/70 text-amber-950" : "border-emerald-200 bg-emerald-50/70 text-emerald-950"}`}><div className="flex items-start gap-3"><CalendarClock className="mt-0.5 size-5 shrink-0"/><div><p className="font-semibold">{isConsultationDue ? "Consulta trimestral pendiente" : "Próxima consulta trimestral"}</p><p className="mt-1 text-sm">{nextConsultation ? `Programa tu siguiente consulta para el ${nextConsultation.toLocaleDateString("es-MX")}.` : "Sube tu primer informe para comenzar el seguimiento trimestral."}</p></div></div></div>
+      {reports.length === 0 ? <div className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">Aún no has subido informes. Puedes guardar hasta cuatro consultas anuales como referencia de tu seguimiento.</div> : <div className={viewMode === "list" ? "space-y-2" : "grid gap-3 md:grid-cols-2"}>{reports.map(report => <CreditReportCard key={report.id} report={report} list={viewMode === "list"} onEdit={onEdit} onArchive={onArchive} onRestore={onRestore} onRemove={onRemove}/>)}</div>}
+      {saving ? <p className="text-xs text-muted-foreground">Guardando el informe de forma segura…</p> : null}
       {archivedReports.length ? <p className="text-xs text-muted-foreground">{archivedReports.length} informe(s) archivado(s) se conserva(n) separado(s) de los activos.</p> : null}
     </CardContent>
   </Card>;
 }
 
-function CreditReportCard({ report, onArchive, onRestore, onRemove }: { report: CreditReportRow; onArchive: (id: number) => void; onRestore: (id: number) => void; onRemove: (id: number) => void }) {
+function CreditReportCard({ report, list, onEdit, onArchive, onRestore, onRemove }: { report: CreditReportRow; list: boolean; onEdit: (report: CreditReportRow) => void; onArchive: (id: number) => void; onRestore: (id: number) => void; onRemove: (id: number) => void }) {
   const provider = report.provider === "buro" ? "Buró de Crédito" : "Círculo de Crédito";
   const size = `${Math.max(1, Math.round(report.fileSizeBytes / 1024))} KB`;
-  return <article className={`rounded-xl border p-4 ${report.status === "archived" ? "bg-muted/30 opacity-80" : "bg-background"}`}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-semibold">{provider}</p><p className="truncate text-xs text-muted-foreground">{report.fileName} · {size}</p></div><Badge variant={report.status === "active" ? "secondary" : "outline"}>{report.status === "active" ? "Activo" : "Archivado"}</Badge></div><div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><p className="text-xs text-muted-foreground">Fecha de consulta</p><p className="font-medium">{new Date(report.consultedAt).toLocaleDateString("es-MX")}</p></div><div><p className="text-xs text-muted-foreground">Periodo</p><p className="font-medium">{report.periodLabel || "Sin especificar"}</p></div></div>{report.notes ? <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">{report.notes}</p> : null}<div className="mt-4 flex flex-wrap items-center gap-2">{report.fileUrl ? <a className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline" href={report.fileUrl} target="_blank" rel="noreferrer"><Download className="size-3.5"/>Descargar PDF</a> : null}<span className="flex-1"/>{report.status === "active" ? <Button size="icon" variant="ghost" aria-label={`Archivar informe de ${provider}`} title="Archivar" onClick={() => onArchive(report.id)}><Archive className="size-4"/></Button> : <Button size="icon" variant="ghost" aria-label={`Restaurar informe de ${provider}`} title="Restaurar" onClick={() => onRestore(report.id)}><RotateCcw className="size-4"/></Button>}<Button size="icon" variant="ghost" aria-label={`Eliminar informe de ${provider}`} title="Eliminar" onClick={() => { if (window.confirm("¿Eliminar definitivamente este informe?")) onRemove(report.id); }}><Trash2 className="size-4 text-muted-foreground"/></Button></div></article>;
+  const badgeClass = report.provider === "buro" ? "border-sky-200 bg-sky-50 text-sky-800" : "border-violet-200 bg-violet-50 text-violet-800";
+  return <article className={`${list ? "flex flex-wrap items-center gap-4" : ""} rounded-xl border p-4 ${report.status === "archived" ? "bg-muted/30 opacity-80" : "bg-background"}`}><div className="flex min-w-0 flex-1 items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${badgeClass}`}>{provider}</span><Badge variant={report.status === "active" ? "secondary" : "outline"}>{report.status === "active" ? "Activo" : "Archivado"}</Badge></div><p className="mt-2 truncate text-xs text-muted-foreground">{report.fileName} · {size}</p></div></div><div className={`${list ? "flex-1" : "mt-3"} grid grid-cols-2 gap-3 text-sm sm:grid-cols-3`}><div><p className="text-xs text-muted-foreground">Fecha de consulta</p><p className="font-medium">{new Date(report.consultedAt).toLocaleDateString("es-MX")}</p></div><div><p className="text-xs text-muted-foreground">Periodo</p><p className="font-medium">{report.periodLabel || "Sin especificar"}</p></div><div><p className="text-xs text-muted-foreground">Score del informe</p><p className="font-semibold tabular-nums">{report.reportedScore ?? "No registrado"}</p></div></div>{report.notes ? <p className={`${list ? "flex-1" : "mt-3"} line-clamp-2 text-xs text-muted-foreground`}>{report.notes}</p> : null}<div className={`${list ? "ml-auto" : "mt-4"} flex flex-wrap items-center gap-2`}>{report.fileUrl ? <a className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline" href={report.fileUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-3.5"/>Ver documento</a> : null}<Button size="icon" variant="ghost" aria-label={`Editar informe de ${provider}`} title="Editar" onClick={() => onEdit(report)}><Pencil className="size-4"/></Button>{report.status === "active" ? <Button size="icon" variant="ghost" aria-label={`Archivar informe de ${provider}`} title="Archivar" onClick={() => onArchive(report.id)}><Archive className="size-4"/></Button> : <Button size="icon" variant="ghost" aria-label={`Restaurar informe de ${provider}`} title="Restaurar" onClick={() => onRestore(report.id)}><RotateCcw className="size-4"/></Button>}<Button size="icon" variant="ghost" aria-label={`Eliminar informe de ${provider}`} title="Eliminar" onClick={() => { if (window.confirm("¿Eliminar definitivamente este informe?")) onRemove(report.id); }}><Trash2 className="size-4 text-muted-foreground"/></Button></div></article>;
 }
 
-function CreditReportForm({ saving, onSubmit }: { saving: boolean; onSubmit: (input: CreditReportInput) => void }) {
-  const [provider, setProvider] = useState<CreditReportInput["provider"]>("buro");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [periodLabel, setPeriodLabel] = useState("");
-  const [notes, setNotes] = useState("");
+function CreditReportForm({ report, saving, onSubmit }: { report: CreditReportRow | null; saving: boolean; onSubmit: (input: CreditReportInput) => void }) {
+  const [provider, setProvider] = useState<CreditReportInput["provider"]>(report?.provider ?? "buro");
+  const [date, setDate] = useState(report ? new Date(report.consultedAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
+  const [reportedScore, setReportedScore] = useState(report?.reportedScore == null ? "" : String(report.reportedScore));
+  const [periodLabel, setPeriodLabel] = useState(report?.periodLabel ?? "");
+  const [notes, setNotes] = useState(report?.notes ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
-  const submit = async (event: FormEvent) => { event.preventDefault(); setError(""); if (!file) { setError("Selecciona un informe PDF."); return; } if (file.type !== "application/pdf") { setError("Sólo se admiten archivos PDF."); return; } if (file.size > 10 * 1024 * 1024) { setError("El PDF no puede superar 10 MB."); return; } const base64 = await fileToBase64(file); onSubmit({ provider, consultedAt: new Date(`${date}T12:00:00`).getTime(), periodLabel: periodLabel.trim() || null, notes: notes.trim() || null, fileUpload: { fileName: file.name, mimeType: file.type, base64 } }); };
-  return <DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Subir informe crediticio</DialogTitle><DialogDescription>PDF privado, máximo 10 MB. Registra la fecha real de consulta para conservar tu histórico trimestral.</DialogDescription></DialogHeader><form className="grid gap-4 py-2" onSubmit={submit}><div className="grid gap-2"><Label>Institución</Label><select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={provider} onChange={event => setProvider(event.target.value as CreditReportInput["provider"])}><option value="buro">Buró de Crédito</option><option value="circulo">Círculo de Crédito</option></select></div><div className="grid gap-2"><Label>Fecha de consulta</Label><Input required type="date" value={date} onChange={event => setDate(event.target.value)}/></div><div className="grid gap-2"><Label>Periodo o trimestre (opcional)</Label><Input value={periodLabel} onChange={event => setPeriodLabel(event.target.value)} placeholder="Ej. T3 2026" maxLength={80}/></div><div className="grid gap-2"><Label>Informe PDF</Label><Input required type="file" accept="application/pdf,.pdf" onChange={event => setFile(event.target.files?.[0] ?? null)}/></div><div className="grid gap-2"><Label>Notas privadas (opcional)</Label><Textarea value={notes} onChange={event => setNotes(event.target.value)} maxLength={3000}/></div>{error ? <p className="text-sm text-destructive">{error}</p> : null}<Button className="btn-primary" type="submit" disabled={saving}>{saving ? "Subiendo…" : "Guardar informe"}</Button></form></DialogContent>;
+  const submit = async (event: FormEvent) => { event.preventDefault(); setError(""); const score = reportedScore.trim() ? Number(reportedScore) : null; if (score !== null && (!Number.isInteger(score) || score < 0 || score > 1000)) { setError("El Score debe ser un número entero entre 0 y 1,000."); return; } if (!file && !report) { setError("Selecciona un informe PDF."); return; } if (file && file.type !== "application/pdf") { setError("Sólo se admiten archivos PDF."); return; } if (file && file.size > 10 * 1024 * 1024) { setError("El PDF no puede superar 10 MB."); return; } const fileUpload = file ? { fileName: file.name, mimeType: file.type, base64: await fileToBase64(file) } : null; onSubmit({ id: report?.id, provider, consultedAt: new Date(`${date}T12:00:00`).getTime(), reportedScore: score, periodLabel: periodLabel.trim() || null, notes: notes.trim() || null, fileUpload }); };
+  return <DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{report ? "Editar informe crediticio" : "Subir informe crediticio"}</DialogTitle><DialogDescription>PDF privado, máximo 10 MB. Registra la fecha real de consulta y el Score que aparece en tu informe.</DialogDescription></DialogHeader><form className="grid gap-4 py-2" onSubmit={submit}><div className="grid gap-2"><Label>Institución</Label><select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={provider} onChange={event => setProvider(event.target.value as CreditReportInput["provider"])}><option value="buro">Buró de Crédito</option><option value="circulo">Círculo de Crédito</option></select></div><div className="grid gap-2"><Label>Fecha de consulta</Label><Input required type="date" value={date} onChange={event => setDate(event.target.value)}/></div><div className="grid gap-2"><Label>Score del informe (opcional)</Label><Input type="number" min="0" max="1000" step="1" value={reportedScore} onChange={event => setReportedScore(event.target.value)} placeholder="Ej. 720"/></div><div className="grid gap-2"><Label>Periodo o trimestre (opcional)</Label><Input value={periodLabel} onChange={event => setPeriodLabel(event.target.value)} placeholder="Ej. T3 2026" maxLength={80}/></div><div className="grid gap-2"><Label>{report ? "Reemplazar informe PDF (opcional)" : "Informe PDF"}</Label><Input required={!report} type="file" accept="application/pdf,.pdf" onChange={event => setFile(event.target.files?.[0] ?? null)}/></div><div className="grid gap-2"><Label>Notas privadas (opcional)</Label><Textarea value={notes} onChange={event => setNotes(event.target.value)} maxLength={3000}/></div>{error ? <p className="text-sm text-destructive">{error}</p> : null}<Button className="btn-primary" type="submit" disabled={saving}>{saving ? "Guardando…" : report ? "Guardar cambios" : "Guardar informe"}</Button></form></DialogContent>;
 }
 
 function fileToBase64(file: File): Promise<string> { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => { const result = String(reader.result ?? ""); resolve(result.includes(",") ? result.split(",", 2)[1] : result); }; reader.onerror = () => reject(reader.error ?? new Error("No se pudo leer el archivo.")); reader.readAsDataURL(file); }); }

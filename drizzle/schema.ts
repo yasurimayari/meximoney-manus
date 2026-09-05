@@ -707,6 +707,7 @@ export const creditReports = mysqlTable("creditReports", {
   provider: mysqlEnum("provider", ["buro", "circulo"]).notNull(),
   consultedAt: timestamp("consultedAt").notNull(),
   periodLabel: varchar("periodLabel", { length: 80 }),
+  reportedScore: int("reportedScore"),
   fileKey: varchar("fileKey", { length: 500 }),
   fileUrl: text("fileUrl"),
   fileName: varchar("fileName", { length: 240 }).notNull(),
