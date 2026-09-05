@@ -11,6 +11,7 @@ import {
   categories,
   collaborationInvites,
   creditCards,
+  creditReports,
   creditScoreRecords,
   debts,
   debtBalanceAdjustments,
@@ -1443,7 +1444,9 @@ export const appRouter = router({
       overview: workspaceFinanceProcedure.input(dashboardPeriodInput).query(async ({ ctx, input }) => {
         const referenceDate = input?.referenceDate ? new Date(`${input.referenceDate}T12:00:00.000Z`) : new Date();
         const snapshot = await getFinanceSnapshot(ctx.user.id, referenceDate);
-        return { ...scoreFromSnapshot(snapshot, referenceDate), reportCurrency: snapshot.dashboard.reportCurrency, referenceDate, creditRecords: snapshot.creditScoreRecords, snapshots: snapshot.personalScoreSnapshots };
+        const db = await requireDb();
+        const creditReportRows = await db.select().from(creditReports).where(eq(creditReports.userId, ctx.workspaceAccess.ownerId)).orderBy(desc(creditReports.consultedAt));
+        return { ...scoreFromSnapshot(snapshot, referenceDate), reportCurrency: snapshot.dashboard.reportCurrency, referenceDate, creditRecords: snapshot.creditScoreRecords, snapshots: snapshot.personalScoreSnapshots, creditReports: creditReportRows };
       }),
       saveCreditRecord: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), score: z.number().int().min(0).max(1000), source: z.string().trim().max(120).nullable().optional(), reportedAt: z.number().int().positive(), notes: z.string().trim().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede guardar el score crediticio manual." });
@@ -1456,6 +1459,15 @@ export const appRouter = router({
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar el score crediticio manual." });
         const db = await requireDb(); await db.delete(creditScoreRecords).where(and(eq(creditScoreRecords.id, input.id), eq(creditScoreRecords.userId, ctx.workspaceAccess.ownerId))); return { success: true };
       }),
+      saveCreditReport: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), provider: z.enum(["buro", "circulo"]), consultedAt: z.number().int().positive(), periodLabel: z.string().trim().max(80).nullable().optional(), notes: z.string().trim().max(3000).nullable().optional(), fileUpload: z.object({ fileName: z.string().min(1).max(240), mimeType: z.string().max(120), base64: z.string().min(8).max(14_000_000) }) })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede guardar informes crediticios." });
+        const db = await requireDb(); const { id, fileUpload, consultedAt, ...values } = input; const { bytes, safeFileName } = decodePdfUpload(fileUpload); const { key, url } = await storagePut(`credit-reports/${ctx.workspaceAccess.ownerId}/${randomUUID()}-${safeFileName}`, bytes, "application/pdf");
+        const payload = { ...values, consultedAt: new Date(consultedAt), fileKey: key, fileUrl: url, fileName: safeFileName, fileMimeType: "application/pdf", fileSizeBytes: bytes.byteLength, status: "active" as const, archivedAt: null };
+        if (id) await db.update(creditReports).set(payload).where(and(eq(creditReports.id, id), eq(creditReports.userId, ctx.workspaceAccess.ownerId))); else await db.insert(creditReports).values({ userId: ctx.workspaceAccess.ownerId, ...payload }); return { success: true };
+      }),
+      archiveCreditReport: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede archivar informes crediticios." }); const db = await requireDb(); await db.update(creditReports).set({ status: "archived", archivedAt: new Date() }).where(and(eq(creditReports.id, input.id), eq(creditReports.userId, ctx.workspaceAccess.ownerId))); return { success: true }; }),
+      restoreCreditReport: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede restaurar informes crediticios." }); const db = await requireDb(); await db.update(creditReports).set({ status: "active", archivedAt: null }).where(and(eq(creditReports.id, input.id), eq(creditReports.userId, ctx.workspaceAccess.ownerId))); return { success: true }; }),
+      removeCreditReport: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar informes crediticios." }); const db = await requireDb(); await db.delete(creditReports).where(and(eq(creditReports.id, input.id), eq(creditReports.userId, ctx.workspaceAccess.ownerId))); return { success: true }; }),
       saveSnapshot: workspaceFinanceProcedure.input(z.object({ referenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), notes: z.string().trim().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede guardar un corte de score." });
         const referenceDate = input.referenceDate ? new Date(`${input.referenceDate}T12:00:00.000Z`) : new Date();

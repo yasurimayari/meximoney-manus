@@ -8,6 +8,7 @@ import {
   categories,
   collaborationInvites,
   creditCards,
+  creditReports,
   creditScoreRecords,
   debts,
   debtBalanceAdjustments,
@@ -355,6 +356,7 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(payablePayments).where(eq(payablePayments.userId, userId));
     await tx.delete(payables).where(eq(payables.userId, userId));
     await tx.delete(personalScoreSnapshots).where(eq(personalScoreSnapshots.userId, userId));
+    await tx.delete(creditReports).where(eq(creditReports.userId, userId));
     await tx.delete(creditScoreRecords).where(eq(creditScoreRecords.userId, userId));
     await tx.delete(investmentOperations).where(eq(investmentOperations.userId, userId));
     await tx.delete(financedAssetPurchases).where(eq(financedAssetPurchases.userId, userId));

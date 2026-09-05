@@ -701,6 +701,24 @@ export const creditScoreRecords = mysqlTable("creditScoreRecords", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const creditReports = mysqlTable("creditReports", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  provider: mysqlEnum("provider", ["buro", "circulo"]).notNull(),
+  consultedAt: timestamp("consultedAt").notNull(),
+  periodLabel: varchar("periodLabel", { length: 80 }),
+  fileKey: varchar("fileKey", { length: 500 }),
+  fileUrl: text("fileUrl"),
+  fileName: varchar("fileName", { length: 240 }).notNull(),
+  fileMimeType: varchar("fileMimeType", { length: 120 }).notNull().default("application/pdf"),
+  fileSizeBytes: int("fileSizeBytes").notNull(),
+  notes: text("notes"),
+  status: mysqlEnum("status", ["active", "archived"]).notNull().default("active"),
+  archivedAt: timestamp("archivedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const personalScoreSnapshots = mysqlTable("personalScoreSnapshots", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

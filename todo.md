@@ -545,3 +545,8 @@
 - [x] Mapear el plan con Proyecto Financiero, entidades, presupuestos, deudas, objetivos, tareas y movimientos de Meximoney.
 - [x] Implementar la integración editable, trazable y segura sin crear ni modificar datos financieros reales durante QA.
 - [x] Validar fechas históricas, relaciones, UX responsive, pruebas y PWA antes de publicar.
+
+- [x] Diseñar el modelo privado de informes crediticios con institución, fecha, periodo, notas y referencia segura al archivo.
+- [x] Implementar carga, listado, descarga, edición, archivado y eliminación de informes del Buró y Círculo de Crédito.
+- [x] Añadir control de hasta cuatro consultas anuales y trazabilidad sin interpretar automáticamente los informes.
+- [x] Validar consentimiento, aislamiento por usuaria, almacenamiento S3, UX responsive y borrado completo.

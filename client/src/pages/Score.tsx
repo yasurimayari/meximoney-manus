@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { creditScoreRange, creditScoreRanges, creditScoreSourceUrl } from "@/lib/creditScoreRange";
 import { trpc } from "@/lib/trpc";
-import { Award, CalendarClock, ChartNoAxesCombined, CircleDollarSign, CreditCard, ExternalLink, Plus, Trash2 } from "lucide-react";
+import { Archive, Award, CalendarClock, ChartNoAxesCombined, CircleDollarSign, CreditCard, Download, ExternalLink, FileText, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -37,6 +37,7 @@ export default function Score() {
   const { data, isLoading } = trpc.finance.score.overview.useQuery();
   const [creditOpen, setCreditOpen] = useState(false);
   const [snapshotOpen, setSnapshotOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const saveCredit = trpc.finance.score.saveCreditRecord.useMutation({
     onSuccess: async () => {
       await utils.finance.score.overview.invalidate();
@@ -52,6 +53,13 @@ export default function Score() {
     },
     onError: error => toast.error(error.message),
   });
+  const saveReport = trpc.finance.score.saveCreditReport.useMutation({
+    onSuccess: async () => { await utils.finance.score.overview.invalidate(); setReportOpen(false); toast.success("Informe crediticio guardado de forma privada."); },
+    onError: error => toast.error(error.message),
+  });
+  const archiveReport = trpc.finance.score.archiveCreditReport.useMutation({ onSuccess: async () => { await utils.finance.score.overview.invalidate(); toast.success("Informe archivado."); }, onError: error => toast.error(error.message) });
+  const restoreReport = trpc.finance.score.restoreCreditReport.useMutation({ onSuccess: async () => { await utils.finance.score.overview.invalidate(); toast.success("Informe restaurado."); }, onError: error => toast.error(error.message) });
+  const removeReport = trpc.finance.score.removeCreditReport.useMutation({ onSuccess: async () => { await utils.finance.score.overview.invalidate(); toast.success("Informe eliminado."); }, onError: error => toast.error(error.message) });
   const saveSnapshot = trpc.finance.score.saveSnapshot.useMutation({
     onSuccess: async () => {
       await utils.finance.score.overview.invalidate();
@@ -147,6 +155,8 @@ export default function Score() {
       </Card>
     </div>
 
+    <CreditReportSection reports={data.creditReports ?? []} saving={saveReport.isPending} onAdd={() => setReportOpen(true)} onArchive={id => archiveReport.mutate({ id })} onRestore={id => restoreReport.mutate({ id })} onRemove={id => removeReport.mutate({ id })} />
+
     <Card className="surface-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base"><ChartNoAxesCombined className="size-4 text-primary"/>Evolución de progreso y crédito</CardTitle>
@@ -156,6 +166,7 @@ export default function Score() {
     </Card>
 
     <Dialog open={creditOpen} onOpenChange={setCreditOpen}><CreditScoreForm saving={saveCredit.isPending} onSubmit={input => saveCredit.mutate(input)}/></Dialog>
+    <Dialog open={reportOpen} onOpenChange={setReportOpen}><CreditReportForm saving={saveReport.isPending} onSubmit={input => saveReport.mutate(input)}/></Dialog>
     <Dialog open={snapshotOpen} onOpenChange={setSnapshotOpen}><SnapshotForm saving={saveSnapshot.isPending} onSubmit={input => saveSnapshot.mutate(input)}/></Dialog>
   </section>;
 }
@@ -219,3 +230,46 @@ function SnapshotForm({ saving, onSubmit }: { saving: boolean; onSubmit: (input:
   const [notes, setNotes] = useState("");
   return <DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Guardar corte SPF</DialogTitle><DialogDescription>Se conserva el cálculo actual y los siete factores como historial. Esta acción no genera movimientos ni notificaciones.</DialogDescription></DialogHeader><div className="grid gap-4 py-2"><div className="grid gap-2"><Label>Observación del corte</Label><Textarea value={notes} onChange={event => setNotes(event.target.value)} placeholder="Opcional" maxLength={3000}/></div><Button className="btn-primary" onClick={() => onSubmit({ notes: notes || null })} disabled={saving}>{saving ? "Guardando…" : "Confirmar corte manual"}</Button></div></DialogContent>;
 }
+
+
+type CreditReportRow = { id: number; provider: "buro" | "circulo"; consultedAt: Date | string; periodLabel?: string | null; fileName: string; fileUrl?: string | null; fileSizeBytes: number; notes?: string | null; status: "active" | "archived"; archivedAt?: Date | string | null };
+
+type CreditReportInput = { provider: "buro" | "circulo"; consultedAt: number; periodLabel: string | null; notes: string | null; fileUpload: { fileName: string; mimeType: string; base64: string } };
+
+function CreditReportSection({ reports, saving, onAdd, onArchive, onRestore, onRemove }: { reports: CreditReportRow[]; saving: boolean; onAdd: () => void; onArchive: (id: number) => void; onRestore: (id: number) => void; onRemove: (id: number) => void }) {
+  const activeReports = reports.filter(report => report.status === "active");
+  const archivedReports = reports.filter(report => report.status === "archived");
+  const currentYear = new Date().getFullYear();
+  const currentYearCount = activeReports.filter(report => new Date(report.consultedAt).getFullYear() === currentYear).length;
+  return <Card className="surface-card">
+    <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div><CardTitle className="flex items-center gap-2 text-base"><FileText className="size-4 text-primary"/>Informes crediticios</CardTitle><CardDescription>Guarda tus informes PDF del Buró de Crédito y Círculo de Crédito. Meximoney sólo almacena el archivo y sus metadatos; no interpreta su contenido.</CardDescription></div>
+      <Button className="btn-primary shrink-0" onClick={onAdd}><Plus className="mr-2 size-4"/>Subir informe</Button>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Consultas este año</p><strong className="text-xl tabular-nums">{currentYearCount}<span className="text-sm font-normal text-muted-foreground">/4 recomendadas</span></strong></div><div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Informes activos</p><strong className="text-xl tabular-nums">{activeReports.length}</strong></div><div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Instituciones</p><strong className="text-xl">{new Set(activeReports.map(report => report.provider)).size}</strong></div></div>
+      {reports.length === 0 ? <div className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">Aún no has subido informes. Puedes guardar hasta cuatro consultas anuales como referencia de tu seguimiento.</div> : <div className="grid gap-3 md:grid-cols-2">{reports.map(report => <CreditReportCard key={report.id} report={report} onArchive={onArchive} onRestore={onRestore} onRemove={onRemove}/>)}</div>}
+      {saving ? <p className="text-xs text-muted-foreground">Subiendo el informe de forma segura…</p> : null}
+      {archivedReports.length ? <p className="text-xs text-muted-foreground">{archivedReports.length} informe(s) archivado(s) se conserva(n) separado(s) de los activos.</p> : null}
+    </CardContent>
+  </Card>;
+}
+
+function CreditReportCard({ report, onArchive, onRestore, onRemove }: { report: CreditReportRow; onArchive: (id: number) => void; onRestore: (id: number) => void; onRemove: (id: number) => void }) {
+  const provider = report.provider === "buro" ? "Buró de Crédito" : "Círculo de Crédito";
+  const size = `${Math.max(1, Math.round(report.fileSizeBytes / 1024))} KB`;
+  return <article className={`rounded-xl border p-4 ${report.status === "archived" ? "bg-muted/30 opacity-80" : "bg-background"}`}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-semibold">{provider}</p><p className="truncate text-xs text-muted-foreground">{report.fileName} · {size}</p></div><Badge variant={report.status === "active" ? "secondary" : "outline"}>{report.status === "active" ? "Activo" : "Archivado"}</Badge></div><div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><p className="text-xs text-muted-foreground">Fecha de consulta</p><p className="font-medium">{new Date(report.consultedAt).toLocaleDateString("es-MX")}</p></div><div><p className="text-xs text-muted-foreground">Periodo</p><p className="font-medium">{report.periodLabel || "Sin especificar"}</p></div></div>{report.notes ? <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">{report.notes}</p> : null}<div className="mt-4 flex flex-wrap items-center gap-2">{report.fileUrl ? <a className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline" href={report.fileUrl} target="_blank" rel="noreferrer"><Download className="size-3.5"/>Descargar PDF</a> : null}<span className="flex-1"/>{report.status === "active" ? <Button size="icon" variant="ghost" aria-label={`Archivar informe de ${provider}`} title="Archivar" onClick={() => onArchive(report.id)}><Archive className="size-4"/></Button> : <Button size="icon" variant="ghost" aria-label={`Restaurar informe de ${provider}`} title="Restaurar" onClick={() => onRestore(report.id)}><RotateCcw className="size-4"/></Button>}<Button size="icon" variant="ghost" aria-label={`Eliminar informe de ${provider}`} title="Eliminar" onClick={() => { if (window.confirm("¿Eliminar definitivamente este informe?")) onRemove(report.id); }}><Trash2 className="size-4 text-muted-foreground"/></Button></div></article>;
+}
+
+function CreditReportForm({ saving, onSubmit }: { saving: boolean; onSubmit: (input: CreditReportInput) => void }) {
+  const [provider, setProvider] = useState<CreditReportInput["provider"]>("buro");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [periodLabel, setPeriodLabel] = useState("");
+  const [notes, setNotes] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState("");
+  const submit = async (event: FormEvent) => { event.preventDefault(); setError(""); if (!file) { setError("Selecciona un informe PDF."); return; } if (file.type !== "application/pdf") { setError("Sólo se admiten archivos PDF."); return; } if (file.size > 10 * 1024 * 1024) { setError("El PDF no puede superar 10 MB."); return; } const base64 = await fileToBase64(file); onSubmit({ provider, consultedAt: new Date(`${date}T12:00:00`).getTime(), periodLabel: periodLabel.trim() || null, notes: notes.trim() || null, fileUpload: { fileName: file.name, mimeType: file.type, base64 } }); };
+  return <DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Subir informe crediticio</DialogTitle><DialogDescription>PDF privado, máximo 10 MB. Registra la fecha real de consulta para conservar tu histórico trimestral.</DialogDescription></DialogHeader><form className="grid gap-4 py-2" onSubmit={submit}><div className="grid gap-2"><Label>Institución</Label><select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={provider} onChange={event => setProvider(event.target.value as CreditReportInput["provider"])}><option value="buro">Buró de Crédito</option><option value="circulo">Círculo de Crédito</option></select></div><div className="grid gap-2"><Label>Fecha de consulta</Label><Input required type="date" value={date} onChange={event => setDate(event.target.value)}/></div><div className="grid gap-2"><Label>Periodo o trimestre (opcional)</Label><Input value={periodLabel} onChange={event => setPeriodLabel(event.target.value)} placeholder="Ej. T3 2026" maxLength={80}/></div><div className="grid gap-2"><Label>Informe PDF</Label><Input required type="file" accept="application/pdf,.pdf" onChange={event => setFile(event.target.files?.[0] ?? null)}/></div><div className="grid gap-2"><Label>Notas privadas (opcional)</Label><Textarea value={notes} onChange={event => setNotes(event.target.value)} maxLength={3000}/></div>{error ? <p className="text-sm text-destructive">{error}</p> : null}<Button className="btn-primary" type="submit" disabled={saving}>{saving ? "Subiendo…" : "Guardar informe"}</Button></form></DialogContent>;
+}
+
+function fileToBase64(file: File): Promise<string> { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => { const result = String(reader.result ?? ""); resolve(result.includes(",") ? result.split(",", 2)[1] : result); }; reader.onerror = () => reject(reader.error ?? new Error("No se pudo leer el archivo.")); reader.readAsDataURL(file); }); }
