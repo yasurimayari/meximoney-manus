@@ -634,7 +634,7 @@ export const appRouter = router({
           for (const card of cards) {
             const priorEffect = previous?.creditCardId === card.id && previous.type === "expense" ? previous.amountCents : 0;
             const nextEffect = payload.creditCardId === card.id && payload.type === "expense" ? payload.amountCents : 0;
-            const nextBalance = Math.max(0, card.balanceCents - priorEffect + nextEffect);
+            const nextBalance = card.balanceCents - priorEffect + nextEffect;
             await tx.update(creditCards).set({ balanceCents: nextBalance }).where(and(eq(creditCards.id, card.id), eq(creditCards.userId, ctx.workspaceAccess.ownerId)));
           }
         });

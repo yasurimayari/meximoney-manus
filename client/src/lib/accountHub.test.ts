@@ -27,7 +27,7 @@ describe("movimientos del centro de cuentas", () => {
     expect(paginateAccountHistory(history, 2, 1)).toMatchObject({ page: 2, totalPages: 2, start: 1, end: 2, items: [history[1]] });
   });
 
-  it("deriva el saldo actual desde la valoración manual y sólo movimientos confirmados posteriores", () => {
+  it("deriva el saldo actual desde la valoración manual e incluye movimientos confirmados de la fecha de referencia", () => {
     const balance = deriveAccountBalance({ id: 5, currentValueCents: 10000, valuationDate: new Date("2026-08-01T12:00:00Z") }, [
       { id: 1, accountId: 5, type: "income", amountCents: 2500, occurredAt: new Date("2026-08-02T12:00:00Z"), status: "confirmed" },
       { id: 2, accountId: 5, type: "transfer_out", amountCents: 700, occurredAt: new Date("2026-08-03T12:00:00Z"), status: "confirmed" },
@@ -35,7 +35,15 @@ describe("movimientos del centro de cuentas", () => {
       { id: 4, accountId: 5, type: "income", amountCents: 9999, occurredAt: new Date("2026-08-04T12:00:00Z"), reviewStatus: "pending_review" },
       { id: 5, accountId: 5, type: "income", amountCents: 9999, occurredAt: new Date("2026-08-01T12:00:00Z"), status: "confirmed" },
     ]);
-    expect(balance).toMatchObject({ referenceBalanceCents: 10000, movementDeltaCents: 1800, currentBalanceCents: 11800, includedMovementCount: 2 });
+    expect(balance).toMatchObject({ referenceBalanceCents: 10000, movementDeltaCents: 11799, currentBalanceCents: 21799, includedMovementCount: 3 });
+  });
+
+  it("incluye movimientos confirmados exactamente en la fecha de valoración", () => {
+    const balance = deriveAccountBalance({ id: 9, currentValueCents: 50000, valuationDate: new Date("2026-09-05T12:00:00Z") }, [
+      { id: 10, accountId: 9, type: "income", amountCents: 12500, occurredAt: new Date("2026-09-05T12:00:00Z"), status: "confirmed" },
+      { id: 11, accountId: 9, type: "expense", amountCents: 2500, occurredAt: new Date("2026-09-05T12:00:00Z"), reviewStatus: "approved" },
+    ]);
+    expect(balance).toMatchObject({ movementDeltaCents: 10000, currentBalanceCents: 60000, includedMovementCount: 2 });
   });
 
   it("distingue con una señal visible los saldos favorables de cuentas y obligaciones", () => {

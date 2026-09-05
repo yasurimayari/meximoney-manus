@@ -565,3 +565,8 @@
 - [x] Añadir un campo específico de referencia bancaria al pago de TDC y conservarlo en el movimiento generado.
 - [x] Añadir un filtro de Registro para mostrar únicamente pagos de tarjetas de crédito.
 - [x] Añadir pruebas y validar la UX responsive, saldos, referencias y filtro de pagos TDC.
+
+- [x] Diagnosticar el fallo de despliegue por cuota de Cloud Run ServicesPerProject en us-east1 y confirmar si el código está sano.
+
+- [x] Corregir los bloques del módulo Cuentas para que sus saldos se actualicen correctamente después de registrar o editar movimientos.
+- [x] Añadir pruebas y validar la actualización de saldos, colores semánticos y UX responsive del módulo Cuentas.

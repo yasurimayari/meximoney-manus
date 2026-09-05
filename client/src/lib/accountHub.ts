@@ -25,7 +25,7 @@ function movementAmountDelta(transaction: any) {
 export function deriveAccountBalance(account: { id: number; currentValueCents: number; valuationDate?: Date | string | null }, transactions: any[]): DerivedAccountBalance {
   const referenceDate = account.valuationDate ?? null;
   const referenceTime = referenceDate ? new Date(referenceDate).getTime() : Number.NaN;
-  const movements = Number.isNaN(referenceTime) ? [] : transactions.filter(transaction => transaction.accountId === account.id && isConfirmedMovement(transaction) && new Date(transaction.occurredAt).getTime() > referenceTime);
+  const movements = Number.isNaN(referenceTime) ? [] : transactions.filter(transaction => transaction.accountId === account.id && isConfirmedMovement(transaction) && new Date(transaction.occurredAt).getTime() >= referenceTime);
   const movementDeltaCents = movements.reduce((sum, transaction) => sum + movementAmountDelta(transaction), 0);
   return { referenceBalanceCents: account.currentValueCents, movementDeltaCents, currentBalanceCents: account.currentValueCents + movementDeltaCents, includedMovementCount: movements.length, referenceDate };
 }
