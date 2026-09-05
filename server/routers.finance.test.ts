@@ -77,6 +77,39 @@ describe("finance.dashboard", () => {
     expect(mocks.getFinanceSnapshot).toHaveBeenCalledWith(27, new Date("2026-08-26T12:00:00.000Z"));
   });
 
+  it("marca un movimiento aprobado como conciliado y conserva una nota de estado de cuenta", async () => {
+    const limit = vi.fn().mockResolvedValue([{ id: 91, status: "confirmed", reviewStatus: "approved" }]);
+    const where = vi.fn(() => ({ limit }));
+    const from = vi.fn(() => ({ where }));
+    const updateWhere = vi.fn().mockResolvedValue([]);
+    const set = vi.fn(() => ({ where: updateWhere }));
+    const select = vi.fn()
+      .mockImplementationOnce(() => ({ from: () => ({ where: () => ({ limit: vi.fn().mockResolvedValue([{ accepted: true }]) }) }) }))
+      .mockImplementationOnce(() => ({ from }));
+    mocks.requireDb.mockResolvedValue({ select, update: vi.fn(() => ({ set })) });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.workspace.reconcileMovement({ id: 91, reconciled: true, note: "Estado de cuenta Santander · junio" })).resolves.toMatchObject({ success: true, reconciled: true });
+    expect(set).toHaveBeenCalledWith(expect.objectContaining({ reconciledByUserId: 27, reconciliationNote: "Estado de cuenta Santander · junio", reconciledAt: expect.any(Date) }));
+    expect(updateWhere).toHaveBeenCalledTimes(1);
+  });
+
+  it("retira la conciliación sin afectar movimientos de otra usuaria", async () => {
+    const limit = vi.fn().mockResolvedValue([{ id: 92, status: "confirmed", reviewStatus: "approved" }]);
+    const where = vi.fn(() => ({ limit }));
+    const from = vi.fn(() => ({ where }));
+    const updateWhere = vi.fn().mockResolvedValue([]);
+    const set = vi.fn(() => ({ where: updateWhere }));
+    const select = vi.fn()
+      .mockImplementationOnce(() => ({ from: () => ({ where: () => ({ limit: vi.fn().mockResolvedValue([{ accepted: true }]) }) }) }))
+      .mockImplementationOnce(() => ({ from }));
+    mocks.requireDb.mockResolvedValue({ select, update: vi.fn(() => ({ set })) });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.workspace.reconcileMovement({ id: 92, reconciled: false, note: null })).resolves.toMatchObject({ success: true, reconciled: false });
+    expect(set).toHaveBeenCalledWith({ reconciledAt: null, reconciledByUserId: null, reconciliationNote: null });
+  });
+
   it("bloquea el asistente si no existe consentimiento de almacenamiento manual", async () => {
     mocks.requireDb.mockResolvedValue({
       select: () => ({

@@ -16,4 +16,10 @@ describe("filterRecords", () => {
     expect(filterRecords(records, { type: "expense" }).map(record => record.id)).toEqual([1, 3]);
     expect(filterRecords(records, {}).length).toBe(3);
   });
+
+  it("separa movimientos conciliados de los pendientes", () => {
+    const withReconciliation = records.map((record, index) => ({ ...record, reconciledAt: index === 0 ? "2026-09-06T12:00:00.000Z" : null }));
+    expect(filterRecords(withReconciliation, { reconciliation: "reconciled" }).map(record => record.id)).toEqual([1]);
+    expect(filterRecords(withReconciliation, { reconciliation: "unreconciled" }).map(record => record.id)).toEqual([2, 3]);
+  });
 });

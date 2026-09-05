@@ -575,3 +575,8 @@
 - [x] Corregir el saldo actual total de Santander y su suma de movimientos vinculados.
 - [x] Representar los pagos excedentes de Klar como saldo a favor, no como deuda pendiente.
 - [x] Añadir pruebas de regresión con cuentas, traspasos, pagos de TDC y saldos a favor; validar la UX responsive.
+
+- [x] Añadir conciliación por cuenta para marcar movimientos verificados contra el estado de cuenta bancario.
+- [x] Crear en Registro una vista rápida para filtrar y gestionar traspasos históricos de Efectivo Caja.
+- [x] Añadir un desplegable por cuenta con historial y desglose transparente del cálculo del saldo actual.
+- [x] Añadir pruebas de aislamiento, conciliación, filtros, cálculo y UX responsive; validar migración y PWA.

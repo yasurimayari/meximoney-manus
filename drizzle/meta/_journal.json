@@ -351,6 +351,13 @@
       "when": 1788567337744,
       "tag": "0049_luxuriant_union_jack",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "5",
+      "when": 1788583468755,
+      "tag": "0050_harsh_jack_power",
+      "breakpoints": true
     }
   ]
 }

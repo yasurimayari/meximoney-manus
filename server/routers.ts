@@ -640,6 +640,22 @@ export const appRouter = router({
         });
         return { success: true };
       }),
+      reconcileMovement: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive(), reconciled: z.boolean(), note: z.string().trim().max(1000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede conciliar movimientos." });
+        const db = await requireDb();
+        const [movement] = await db.select({ id: financialTransactions.id, status: financialTransactions.status, reviewStatus: financialTransactions.reviewStatus })
+          .from(financialTransactions)
+          .where(and(eq(financialTransactions.id, input.id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId)))
+          .limit(1);
+        if (!movement) throw new TRPCError({ code: "NOT_FOUND", message: "El movimiento no pertenece a tu espacio privado." });
+        if (input.reconciled && (movement.status !== "confirmed" || movement.reviewStatus !== "approved")) throw new TRPCError({ code: "BAD_REQUEST", message: "Sólo puedes conciliar movimientos confirmados y aprobados." });
+        await db.update(financialTransactions).set({
+          reconciledAt: input.reconciled ? new Date() : null,
+          reconciledByUserId: input.reconciled ? ctx.user.id : null,
+          reconciliationNote: input.reconciled ? (input.note?.trim() || null) : null,
+        }).where(and(eq(financialTransactions.id, input.id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId)));
+        return { success: true, reconciled: input.reconciled };
+      }),
       creditCards: router({
         save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(140), issuer: z.string().trim().max(140).nullable().optional(), cardKind: z.enum(["bank_credit", "departmental"]).default("bank_credit"), scope: creditCardScopeSchema, currency: z.string().length(3), creditLimitCents: moneySchema, balanceCents: z.number().int(), interestRateBps: z.number().int().min(0).nullable().optional(), minimumPaymentCents: moneySchema, statementClosingDay: z.number().int().min(1).max(31).nullable().optional(), paymentDueDay: z.number().int().min(1).max(31).nullable().optional(), status: z.enum(["active", "paused", "closed"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar tarjetas de crédito." });
