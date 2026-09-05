@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balanceSignal, buildAccountHistory, deriveAccountBalance, paginateAccountHistory, relatedMovements } from "./accountHub";
+import { balanceSignal, buildAccountHistory, deriveAccountBalance, displayBalanceCents, paginateAccountHistory, relatedMovements } from "./accountHub";
 
 describe("movimientos del centro de cuentas", () => {
   const transactions = [
@@ -44,6 +44,21 @@ describe("movimientos del centro de cuentas", () => {
       { id: 11, accountId: 9, type: "expense", amountCents: 2500, occurredAt: new Date("2026-09-05T12:00:00Z"), reviewStatus: "approved" },
     ]);
     expect(balance).toMatchObject({ movementDeltaCents: 10000, currentBalanceCents: 60000, includedMovementCount: 2 });
+  });
+
+  it("mantiene la semántica visual de deuda y saldo a favor en tarjetas", () => {
+    expect(displayBalanceCents(1326181, true)).toBe(-1326181);
+    expect(displayBalanceCents(-1326181, true)).toBe(1326181);
+    expect(balanceSignal(-1326181, true)).toEqual({ tone: "positive", label: "Saldo a favor" });
+  });
+
+  it("reconstruye desde todo el historial cuando la base manual es cero", () => {
+    const balance = deriveAccountBalance({ id: 12, currentValueCents: "0", valuationDate: new Date("2026-08-28T12:00:00Z") }, [
+      { id: 20, accountId: 12, type: "transfer_in", amountCents: "100000", occurredAt: new Date("2024-06-10T12:00:00Z"), status: "confirmed", reviewStatus: "approved" },
+      { id: 21, accountId: 12, type: "income", amountCents: "50000", occurredAt: new Date("2026-08-03T12:00:00Z"), status: "confirmed", reviewStatus: "approved" },
+      { id: 22, accountId: 12, type: "expense", amountCents: "25000", occurredAt: new Date("2026-08-29T12:00:00Z"), status: "confirmed", reviewStatus: "approved" },
+    ]);
+    expect(balance).toMatchObject({ referenceBalanceCents: 0, movementDeltaCents: 125000, currentBalanceCents: 125000, includedMovementCount: 3, reconstructedFromHistory: true });
   });
 
   it("distingue con una señal visible los saldos favorables de cuentas y obligaciones", () => {

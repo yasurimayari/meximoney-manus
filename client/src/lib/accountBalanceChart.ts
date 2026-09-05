@@ -9,13 +9,15 @@ export function buildAccountBalanceChart(accounts: Array<{ currency: string; cur
   };
   accounts.forEach(account => {
     const row = rowFor(account.currency);
-    if (account.currentBalanceCents >= 0) row.positiveCents += account.currentBalanceCents;
-    else row.negativeCents += Math.abs(account.currentBalanceCents);
+    const balanceCents = Number(account.currentBalanceCents ?? 0);
+    if (balanceCents >= 0) row.positiveCents += balanceCents;
+    else row.negativeCents += Math.abs(balanceCents);
   });
   liabilities.forEach(liability => {
     const row = rowFor(liability.currency);
-    if (liability.balanceCents >= 0) row.negativeCents += liability.balanceCents;
-    else row.positiveCents += Math.abs(liability.balanceCents);
+    const balanceCents = Number(liability.balanceCents ?? 0);
+    if (balanceCents >= 0) row.negativeCents += balanceCents;
+    else row.positiveCents += Math.abs(balanceCents);
   });
   return Array.from(byCurrency.values()).sort((left, right) => left.currency.localeCompare(right.currency));
 }

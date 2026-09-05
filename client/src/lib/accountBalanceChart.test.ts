@@ -15,4 +15,10 @@ describe("comparativo de saldos de Cuentas", () => {
       { currency: "USD", positiveCents: 45000, negativeCents: 0 },
     ]);
   });
+
+  it("trata un saldo negativo de tarjeta como saldo a favor y no como obligación", () => {
+    expect(buildAccountBalanceChart([], [{ currency: "MXN", balanceCents: -1326181 }])).toEqual([
+      { currency: "MXN", positiveCents: 1326181, negativeCents: 0 },
+    ]);
+  });
 });

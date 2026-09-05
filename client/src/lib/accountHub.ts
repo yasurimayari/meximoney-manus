@@ -12,6 +12,7 @@ export type DerivedAccountBalance = {
   currentBalanceCents: number;
   includedMovementCount: number;
   referenceDate: Date | string | null;
+  reconstructedFromHistory: boolean;
 };
 
 function isConfirmedMovement(transaction: any) {
@@ -19,21 +20,32 @@ function isConfirmedMovement(transaction: any) {
 }
 
 function movementAmountDelta(transaction: any) {
-  return transaction.type === "income" || transaction.type === "transfer_in" ? transaction.amountCents : transaction.type === "expense" || transaction.type === "transfer_out" ? -transaction.amountCents : 0;
+  const amountCents = Number(transaction.amountCents ?? 0);
+  return transaction.type === "income" || transaction.type === "transfer_in" ? amountCents : transaction.type === "expense" || transaction.type === "transfer_out" ? -amountCents : 0;
 }
 
-export function deriveAccountBalance(account: { id: number; currentValueCents: number; valuationDate?: Date | string | null }, transactions: any[]): DerivedAccountBalance {
+export function deriveAccountBalance(account: { id: number; currentValueCents: number | string; valuationDate?: Date | string | null }, transactions: any[]): DerivedAccountBalance {
   const referenceDate = account.valuationDate ?? null;
   const referenceTime = referenceDate ? new Date(referenceDate).getTime() : Number.NaN;
-  const movements = Number.isNaN(referenceTime) ? [] : transactions.filter(transaction => transaction.accountId === account.id && isConfirmedMovement(transaction) && new Date(transaction.occurredAt).getTime() >= referenceTime);
+  const referenceBalanceCents = Number(account.currentValueCents ?? 0);
+  const accountMovements = transactions.filter(transaction => transaction.accountId === account.id && isConfirmedMovement(transaction));
+  const reconstructedFromHistory = referenceBalanceCents === 0 && accountMovements.length > 0;
+  const movements = accountMovements.filter(transaction => reconstructedFromHistory || Number.isNaN(referenceTime) || new Date(transaction.occurredAt).getTime() >= referenceTime);
   const movementDeltaCents = movements.reduce((sum, transaction) => sum + movementAmountDelta(transaction), 0);
-  return { referenceBalanceCents: account.currentValueCents, movementDeltaCents, currentBalanceCents: account.currentValueCents + movementDeltaCents, includedMovementCount: movements.length, referenceDate };
+  return { referenceBalanceCents, movementDeltaCents, currentBalanceCents: referenceBalanceCents + movementDeltaCents, includedMovementCount: movements.length, referenceDate, reconstructedFromHistory };
 }
 
-export function balanceSignal(valueCents: number, isLiability = false) {
-  if (valueCents === 0) return { tone: "neutral" as const, label: isLiability ? "Sin saldo pendiente" : "Saldo en cero" };
-  const isPositive = isLiability ? valueCents < 0 : valueCents > 0;
+export function balanceSignal(valueCents: number | string, isLiability = false) {
+  const numericValue = Number(valueCents ?? 0);
+  if (numericValue === 0) return { tone: "neutral" as const, label: isLiability ? "Sin saldo pendiente" : "Saldo en cero" };
+  const isPositive = isLiability ? numericValue < 0 : numericValue > 0;
   return isPositive ? { tone: "positive" as const, label: isLiability ? "Saldo a favor" : "Saldo positivo" } : { tone: "negative" as const, label: isLiability ? "Saldo pendiente" : "Saldo negativo" };
+}
+
+export function displayBalanceCents(valueCents: number | string, isLiability = false) {
+  const numericValue = Number(valueCents ?? 0);
+  if (!isLiability) return numericValue;
+  return numericValue > 0 ? -numericValue : Math.abs(numericValue);
 }
 
 export type AccountHistoryResource = { id: number; name: string; type: "account" | "creditCard" | "debt" };

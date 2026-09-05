@@ -570,3 +570,8 @@
 
 - [x] Corregir los bloques del módulo Cuentas para que sus saldos se actualicen correctamente después de registrar o editar movimientos.
 - [x] Añadir pruebas y validar la actualización de saldos, colores semánticos y UX responsive del módulo Cuentas.
+
+- [x] Auditar y corregir el saldo actual de Efectivo Caja para que refleje los $1,500 registrados.
+- [x] Corregir el saldo actual total de Santander y su suma de movimientos vinculados.
+- [x] Representar los pagos excedentes de Klar como saldo a favor, no como deuda pendiente.
+- [x] Añadir pruebas de regresión con cuentas, traspasos, pagos de TDC y saldos a favor; validar la UX responsive.
