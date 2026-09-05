@@ -211,6 +211,23 @@ describe("finance.dashboard", () => {
     expect(set).toHaveBeenCalledWith({ balanceCents: 600_00 });
   });
 
+  it("permite pagar más que el saldo actual y conserva la referencia bancaria", async () => {
+    const inserted = vi.fn();
+    const set = vi.fn(() => ({ where: vi.fn() }));
+    const answers = [[{ accepted: true }], [{ id: 92, userId: 27, name: "Tarjeta con saldo cero", currency: "MXN", balanceCents: 0, status: "active", entityId: null, projectId: null, scope: "personal" }], [{ id: 13, userId: 27, name: "Cuenta de fondeo", currency: "MXN", status: "active", entityId: null, projectId: null, scope: "personal" }]];
+    const select = () => ({ from: () => ({ where: () => ({ limit: async () => answers.shift() ?? [] }) }) });
+    mocks.requireDb.mockResolvedValue({ select, transaction: async (callback: any) => callback({ insert: () => ({ values: inserted }), update: () => ({ set }) }) });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await caller.finance.workspace.creditCards.paymentSave({ creditCardId: 92, sourceAccountId: 13, amountCents: 746_281, occurredAt: Date.parse("2026-08-24T12:00:00Z"), status: "confirmed", bankReference: "SPEI-5900463", notes: "Aporte para ampliar crédito" });
+
+    expect(inserted).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ type: "transfer_out", bankReference: "SPEI-5900463", amountCents: 746_281 }),
+      expect.objectContaining({ type: "transfer_in", bankReference: "SPEI-5900463", amountCents: 746_281 }),
+    ]));
+    expect(set).toHaveBeenCalledWith({ balanceCents: -746_281 });
+  });
+
   it("registra un pago de préstamo de contacto desde una cuenta como transferencia conciliada y reduce sólo esa deuda", async () => {
     const inserted = vi.fn();
     const updates: unknown[] = [];

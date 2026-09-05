@@ -560,3 +560,8 @@
 - [x] Registrar el pago de TDC como traspaso, reducir el saldo de la tarjeta y la cuenta de origen sin duplicar el gasto original.
 - [x] Mejorar la UX del formulario de traspasos para distinguir pagos de TDC, traspasos entre cuentas y aportaciones a ahorro/inversión.
 - [x] Añadir pruebas de pago parcial/total, aislamiento por usuaria, saldos y prevención de duplicados; validar responsive y PWA.
+
+- [x] Permitir registrar pagos de TDC aunque el saldo actual sea cero o aunque el importe supere el límite de crédito otorgado.
+- [x] Añadir un campo específico de referencia bancaria al pago de TDC y conservarlo en el movimiento generado.
+- [x] Añadir un filtro de Registro para mostrar únicamente pagos de tarjetas de crédito.
+- [x] Añadir pruebas y validar la UX responsive, saldos, referencias y filtro de pagos TDC.
