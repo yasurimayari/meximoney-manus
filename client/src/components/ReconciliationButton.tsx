@@ -12,7 +12,7 @@ export function ReconciliationButton({ movement, compact = false }: Props) {
   const mutation = trpc.finance.workspace.reconcileMovement.useMutation({
     onSuccess: result => {
       toast.success(result.reconciled ? "Movimiento conciliado" : "Conciliación retirada");
-      void utils.finance.dashboard.invalidate();
+      void Promise.all([utils.finance.dashboard.invalidate(), utils.finance.workspace.bankStatements.summary.invalidate()]);
     },
     onError: error => toast.error(error.message),
   });

@@ -5,6 +5,8 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   accounts,
+  bankStatementImports,
+  bankStatementRows,
   budgets,
   calendarColorPreferences,
   calendarEvents,
@@ -81,6 +83,7 @@ import { extractQuickCaptureDraft } from "./quickCapture";
 import { askClaudeForMexi } from "./claude";
 import { mexicoCityReferenceMonth } from "./monthReference";
 import { calculatePersonalScore } from "./personalScore";
+import { matchStatementLines } from "../shared/bankReconciliation";
 import { buildManualAmortizationSchedule, debtPaymentBreakdownIsValid } from "./debtAmortization";
 import { decodePdfUpload } from "./documentUpload";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -97,6 +100,7 @@ const dashboardPeriodInput = z.object({ referenceDate: z.string().regex(/^\d{4}-
 const calendarColorCategorySchema = z.enum(["tax", "credit_card_cutoff", "credit_card_payment", "loan_payment", "document_expiry", "insurance_renewal", "review", "other", "debt_due", "document_due", "task_due", "fiscal_reserve"]);
 const calendarColorKeySchema = z.enum(["teal", "emerald", "sky", "indigo", "violet", "amber", "orange", "rose", "slate"]);
 const importRowSchema = z.object({ accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), type: z.enum(["income", "expense"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), reportCurrency: z.string().length(3).nullable().optional(), reportAmountCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), occurredAt: z.number().int().positive(), isEssential: z.boolean().default(false), status: z.enum(["confirmed", "estimated", "needs_review"]).default("confirmed"), bankReference: z.string().trim().max(160).nullable().optional(), notes: z.string().max(3000).nullable().optional(), allowPossibleDuplicate: z.boolean().default(false) });
+const statementRowSchema = z.object({ rowNumber: z.number().int().positive(), occurredAt: z.number().int().positive(), type: z.enum(["income", "expense"]), amountCents: z.number().int().positive(), currency: z.string().length(3), bankReference: z.string().trim().max(160).nullable().optional(), description: z.string().trim().max(500).nullable().optional(), rawData: z.string().max(4000).nullable().optional() });
 const manualOnlyNotice = "Meximoney trabaja solo con tus registros manuales. No tiene acceso a bancos ni puede ejecutar acciones financieras.";
 const credentialInput = z.object({
   email: z.string().trim().email().max(320).transform(value => value.toLowerCase()),
@@ -655,6 +659,82 @@ export const appRouter = router({
           reconciliationNote: input.reconciled ? (input.note?.trim() || null) : null,
         }).where(and(eq(financialTransactions.id, input.id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId)));
         return { success: true, reconciled: input.reconciled };
+      }),
+      bankStatements: router({
+        summary: workspaceFinanceProcedure.input(z.object({ accountId: z.number().int().positive().optional() }).optional()).query(async ({ ctx, input }) => {
+          const db = await requireDb();
+          const rowCondition = input?.accountId ? and(eq(bankStatementRows.userId, ctx.workspaceAccess.ownerId), eq(bankStatementRows.accountId, input.accountId)) : eq(bankStatementRows.userId, ctx.workspaceAccess.ownerId);
+          const [statementImports, rows, ownedAccounts] = await Promise.all([
+            db.select().from(bankStatementImports).where(and(eq(bankStatementImports.userId, ctx.workspaceAccess.ownerId), eq(bankStatementImports.status, "active"))),
+            db.select().from(bankStatementRows).where(rowCondition),
+            db.select({ id: accounts.id, name: accounts.name, currency: accounts.currency, currentValueCents: accounts.currentValueCents }).from(accounts).where(eq(accounts.userId, ctx.workspaceAccess.ownerId)),
+          ]);
+          const accountIds = new Set(statementImports.filter(item => !input?.accountId || item.accountId === input.accountId).map(item => item.accountId));
+          const filteredRows = rows.filter(row => !input?.accountId || row.accountId === input.accountId);
+          const transactions = await db.select({ id: financialTransactions.id, accountId: financialTransactions.accountId, type: financialTransactions.type, amountCents: financialTransactions.amountCents, currency: financialTransactions.currency, bankReference: financialTransactions.bankReference, notes: financialTransactions.notes, occurredAt: financialTransactions.occurredAt, reconciledAt: financialTransactions.reconciledAt }).from(financialTransactions).where(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId));
+          const accountSummaries = ownedAccounts.filter(account => accountIds.has(account.id)).map(account => {
+            const accountRows = filteredRows.filter(row => row.accountId === account.id);
+            return { ...account, rowCount: accountRows.length, unmatchedCount: accountRows.filter(row => row.matchStatus === "unmatched" || row.matchStatus === "ignored").length, autoMatchedCount: accountRows.filter(row => row.matchStatus === "auto_matched").length, pendingCount: accountRows.filter(row => row.matchStatus !== "reconciled").length, reconciledCount: accountRows.filter(row => row.matchStatus === "reconciled").length, differenceCents: accountRows.filter(row => row.matchStatus === "unmatched" || row.matchStatus === "ignored").reduce((sum, row) => sum + row.amountCents, 0) };
+          });
+          return { imports: statementImports.filter(item => !input?.accountId || item.accountId === input.accountId), rows: filteredRows.map(row => ({ ...row, rawData: undefined })), accounts: accountSummaries, transactions };
+        }),
+        importCsv: workspaceFinanceProcedure.input(z.object({ accountId: z.number().int().positive(), fileName: z.string().trim().min(1).max(255), currency: z.string().length(3), periodStart: optionalDate, periodEnd: optionalDate, rows: z.array(statementRowSchema).min(1).max(2000) })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede importar estados de cuenta." });
+          const db = await requireDb();
+          const [account] = await db.select().from(accounts).where(and(eq(accounts.id, input.accountId), eq(accounts.userId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!account || account.status !== "active") throw new TRPCError({ code: "BAD_REQUEST", message: "La cuenta seleccionada debe estar activa y pertenecer a tu espacio." });
+          if (account.currency !== input.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "La moneda del estado de cuenta debe coincidir con la cuenta seleccionada." });
+          const existing = await db.select({ id: financialTransactions.id, accountId: financialTransactions.accountId, type: financialTransactions.type, amountCents: financialTransactions.amountCents, currency: financialTransactions.currency, bankReference: financialTransactions.bankReference, occurredAt: financialTransactions.occurredAt }).from(financialTransactions).where(and(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId), eq(financialTransactions.accountId, input.accountId)));
+          const statementLines = input.rows.map(row => ({ ...row, occurredAt: new Date(row.occurredAt), bankReference: row.bankReference ?? null, description: row.description ?? null }));
+          const matches = matchStatementLines(statementLines, existing, input.accountId);
+          const result = await db.transaction(async tx => {
+            const insertedImport = await tx.insert(bankStatementImports).values({ userId: ctx.workspaceAccess.ownerId, accountId: input.accountId, fileName: input.fileName, currency: input.currency, periodStart: asDate(input.periodStart), periodEnd: asDate(input.periodEnd), rowCount: input.rows.length });
+            const importId = Number((insertedImport as any)?.[0]?.insertId ?? 0);
+            if (!importId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No fue posible crear la importación." });
+            await tx.insert(bankStatementRows).values(input.rows.map((row, index) => { const match = matches[index]; return { userId: ctx.workspaceAccess.ownerId, importId, accountId: input.accountId, rowNumber: row.rowNumber, occurredAt: new Date(row.occurredAt), type: row.type, amountCents: row.amountCents, currency: row.currency, bankReference: row.bankReference?.trim() || null, description: row.description?.trim() || null, matchStatus: match.status === "auto_matched" ? "auto_matched" as const : "unmatched" as const, matchedTransactionId: match.transactionId, matchedAt: null, matchedByUserId: null, resolutionNote: null, rawData: row.rawData ?? null }; }));
+            return { importId, rowCount: input.rows.length, autoMatchedCount: matches.filter(match => match.status === "auto_matched").length, unmatchedCount: matches.filter(match => match.status !== "auto_matched").length };
+          });
+          return { success: true, ...result };
+        }),
+        autoMatch: workspaceFinanceProcedure.input(z.object({ importId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede ejecutar la conciliación automática." });
+          const db = await requireDb();
+          const [statementImport] = await db.select().from(bankStatementImports).where(and(eq(bankStatementImports.id, input.importId), eq(bankStatementImports.userId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!statementImport) throw new TRPCError({ code: "NOT_FOUND", message: "La importación no pertenece a tu espacio." });
+          const rows = await db.select().from(bankStatementRows).where(and(eq(bankStatementRows.importId, input.importId), eq(bankStatementRows.userId, ctx.workspaceAccess.ownerId)));
+          const existing = await db.select({ id: financialTransactions.id, accountId: financialTransactions.accountId, type: financialTransactions.type, amountCents: financialTransactions.amountCents, currency: financialTransactions.currency, bankReference: financialTransactions.bankReference, occurredAt: financialTransactions.occurredAt }).from(financialTransactions).where(and(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId), eq(financialTransactions.accountId, statementImport.accountId)));
+          const pendingRows = rows.filter(row => row.matchStatus !== "reconciled" && row.matchStatus !== "ignored");
+          const matches = matchStatementLines(pendingRows, existing, statementImport.accountId);
+          await db.transaction(async tx => {
+            for (let index = 0; index < pendingRows.length; index += 1) {
+              const row = pendingRows[index];
+              const match = matches[index];
+              await tx.update(bankStatementRows).set({ matchStatus: match.status === "auto_matched" ? "auto_matched" : "unmatched", matchedTransactionId: match.transactionId, matchedAt: null, matchedByUserId: null }).where(and(eq(bankStatementRows.id, row.id), eq(bankStatementRows.userId, ctx.workspaceAccess.ownerId)));
+            }
+          });
+          return { success: true, autoMatchedCount: matches.filter(match => match.status === "auto_matched").length, unmatchedCount: matches.filter(match => match.status !== "auto_matched").length };
+        }),
+        resolveRow: workspaceFinanceProcedure.input(z.object({ rowId: z.number().int().positive(), action: z.enum(["confirm", "ignore", "unmatch"]), transactionId: z.number().int().positive().nullable().optional(), note: z.string().trim().max(1000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede resolver diferencias de estados de cuenta." });
+          const db = await requireDb();
+          const [row] = await db.select().from(bankStatementRows).where(and(eq(bankStatementRows.id, input.rowId), eq(bankStatementRows.userId, ctx.workspaceAccess.ownerId))).limit(1);
+          if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "La fila importada no pertenece a tu espacio." });
+          const transactionId = input.transactionId ?? row.matchedTransactionId;
+          if (input.action === "confirm") {
+            if (!transactionId) throw new TRPCError({ code: "BAD_REQUEST", message: "Selecciona un movimiento para confirmar la conciliación." });
+            const [transaction] = await db.select().from(financialTransactions).where(and(eq(financialTransactions.id, transactionId), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId), eq(financialTransactions.accountId, row.accountId))).limit(1);
+            if (!transaction || transaction.amountCents !== row.amountCents || transaction.currency !== row.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "El movimiento elegido no coincide exactamente en cuenta, moneda e importe." });
+            await db.transaction(async tx => {
+              await tx.update(bankStatementRows).set({ matchStatus: "reconciled", matchedTransactionId: transaction.id, matchedAt: new Date(), matchedByUserId: ctx.user.id, resolutionNote: input.note?.trim() || null }).where(and(eq(bankStatementRows.id, row.id), eq(bankStatementRows.userId, ctx.workspaceAccess.ownerId)));
+              await tx.update(financialTransactions).set({ reconciledAt: new Date(), reconciledByUserId: ctx.user.id, reconciliationNote: input.note?.trim() || `Conciliado desde ${row.description || "estado de cuenta"}` }).where(and(eq(financialTransactions.id, transaction.id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId)));
+            });
+          } else if (input.action === "ignore") {
+            await db.update(bankStatementRows).set({ matchStatus: "ignored", matchedTransactionId: null, matchedAt: null, matchedByUserId: null, resolutionNote: input.note?.trim() || null }).where(and(eq(bankStatementRows.id, row.id), eq(bankStatementRows.userId, ctx.workspaceAccess.ownerId)));
+          } else {
+            await db.update(bankStatementRows).set({ matchStatus: "unmatched", matchedTransactionId: null, matchedAt: null, matchedByUserId: null, resolutionNote: input.note?.trim() || null }).where(and(eq(bankStatementRows.id, row.id), eq(bankStatementRows.userId, ctx.workspaceAccess.ownerId)));
+          }
+          return { success: true, action: input.action };
+        }),
       }),
       creditCards: router({
         save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(1).max(140), issuer: z.string().trim().max(140).nullable().optional(), cardKind: z.enum(["bank_credit", "departmental"]).default("bank_credit"), scope: creditCardScopeSchema, currency: z.string().length(3), creditLimitCents: moneySchema, balanceCents: z.number().int(), interestRateBps: z.number().int().min(0).nullable().optional(), minimumPaymentCents: moneySchema, statementClosingDay: z.number().int().min(1).max(31).nullable().optional(), paymentDueDay: z.number().int().min(1).max(31).nullable().optional(), status: z.enum(["active", "paused", "closed"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {

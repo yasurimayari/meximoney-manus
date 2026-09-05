@@ -2,6 +2,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   accounts,
+  bankStatementImports,
+  bankStatementRows,
   budgets,
   calendarColorPreferences,
   calendarEvents,
@@ -346,6 +348,8 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(travelItems).where(eq(travelItems.userId, userId));
     await tx.delete(travelCategories).where(eq(travelCategories.userId, userId));
     await tx.delete(travelPlans).where(eq(travelPlans.userId, userId));
+    await tx.delete(bankStatementRows).where(eq(bankStatementRows.userId, userId));
+    await tx.delete(bankStatementImports).where(eq(bankStatementImports.userId, userId));
     await tx.delete(financialTransactions).where(eq(financialTransactions.userId, userId));
     await tx.delete(debtPayments).where(eq(debtPayments.userId, userId));
     await tx.delete(debtBalanceAdjustments).where(eq(debtBalanceAdjustments.userId, userId));

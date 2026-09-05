@@ -580,3 +580,8 @@
 - [x] Crear en Registro una vista rápida para filtrar y gestionar traspasos históricos de Efectivo Caja.
 - [x] Añadir un desplegable por cuenta con historial y desglose transparente del cálculo del saldo actual.
 - [x] Añadir pruebas de aislamiento, conciliación, filtros, cálculo y UX responsive; validar migración y PWA.
+
+- [x] Permitir importar estados de cuenta bancarios en CSV con mapeo y revisión previa.
+- [x] Implementar conciliación automática conservadora por referencia y por importe exacto, sin modificar movimientos sin confirmación.
+- [x] Añadir un panel de diferencias por cuenta con movimientos emparejados, faltantes y acciones de ajuste o edición.
+- [x] Añadir pruebas de importación, emparejamiento, aislamiento y ajustes; validar migración, UX responsive y PWA.

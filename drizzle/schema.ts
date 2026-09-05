@@ -286,6 +286,42 @@ export const financialTransactions = mysqlTable("financialTransactions", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const bankStatementImports = mysqlTable("bankStatementImports", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  accountId: int("accountId").notNull(),
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  currency: varchar("currency", { length: 3 }).notNull(),
+  periodStart: timestamp("periodStart"),
+  periodEnd: timestamp("periodEnd"),
+  rowCount: int("rowCount").notNull().default(0),
+  status: mysqlEnum("status", ["active", "archived"]).notNull().default("active"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const bankStatementRows = mysqlTable("bankStatementRows", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  importId: int("importId").notNull(),
+  accountId: int("accountId").notNull(),
+  rowNumber: int("rowNumber").notNull(),
+  occurredAt: timestamp("occurredAt").notNull(),
+  type: mysqlEnum("type", ["income", "expense"]).notNull(),
+  amountCents: int("amountCents").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull(),
+  bankReference: varchar("bankReference", { length: 160 }),
+  description: varchar("description", { length: 500 }),
+  matchStatus: mysqlEnum("matchStatus", ["unmatched", "auto_matched", "reconciled", "ignored"]).notNull().default("unmatched"),
+  matchedTransactionId: int("matchedTransactionId"),
+  matchedAt: timestamp("matchedAt"),
+  matchedByUserId: int("matchedByUserId"),
+  resolutionNote: text("resolutionNote"),
+  rawData: text("rawData"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const receivables = mysqlTable("receivables", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
