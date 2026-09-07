@@ -594,3 +594,16 @@
 - [x] Añadir comparación visual entre importes planificados y resultados reales por mes.
 - [x] Añadir calendario interactivo del Plan Financiero con fechas, tareas y prioridades.
 - [x] Añadir pruebas de relaciones mensuales, métricas planificado-real, calendario, sincronización y UX responsive; validar PWA.
+
+# Roadmap de mejora futura
+
+- [ ] Fase 0: establecer línea base de uso, criterios de éxito, inventario de datos y política de privacidad.
+- [ ] Fase 1: perfeccionar control financiero, saldos conciliados, proyecciones, alertas y calidad de datos.
+- [ ] Fase 2: completar experiencia móvil y cobertura offline de la PWA.
+- [ ] Fase 3: fortalecer Mexi como IA explicable y trazable.
+- [ ] Fase 4: completar colaboración con gestor o contador, permisos y auditoría.
+- [ ] Fase 5: completar OCR, análisis de estacionalidad y hábitos opt-in; mantener voz fuera del alcance salvo nueva aprobación.
+- [ ] Fase 6: evaluar automatización bancaria e integraciones externas después de validar las fases anteriores con uso real.
+
+- [x] Corregir que los gastos de la sección Presupuesto en Simulaciones se muestren en rojo y no en verde.
+- [x] Añadir pruebas y validar la semántica de colores en Simulaciones, Presupuesto y vistas relacionadas.

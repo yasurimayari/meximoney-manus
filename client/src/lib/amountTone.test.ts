@@ -30,3 +30,12 @@ describe("amountTone", () => {
     expect(signedTransactionCents("transfer_in", 200)).toBe(200);
   });
 });
+
+  it("pinta los gastos presupuestados en rojo sin cambiar los ingresos", () => {
+    const expenseDisplay = displayAmountCents(120000, "expense");
+    const incomeDisplay = displayAmountCents(120000, "income");
+    expect(expenseDisplay).toBe(-120000);
+    expect(amountToneClass(expenseDisplay)).toContain("rose");
+    expect(incomeDisplay).toBe(120000);
+    expect(amountToneClass(incomeDisplay)).toContain("emerald");
+  });
