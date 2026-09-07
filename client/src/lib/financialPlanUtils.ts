@@ -49,6 +49,38 @@ export function financialPlanAvailableCents(expectedIncomeCents: number, planned
   return expectedIncomeCents - plannedCommitmentsCents - plannedSavingsCents;
 }
 
+export type FinancialPlanCoverage = {
+  projectedIncomeCents: number;
+  commitmentsCents: number;
+  coveredCents: number;
+  shortfallCents: number;
+  coveragePercent: number;
+  isCovered: boolean;
+};
+
+export function financialPlanCoverage(projectedIncomeCents: number, commitmentsCents: number): FinancialPlanCoverage {
+  const projected = Math.max(0, projectedIncomeCents);
+  const commitments = Math.max(0, commitmentsCents);
+  const covered = Math.min(projected, commitments);
+  return {
+    projectedIncomeCents: projected,
+    commitmentsCents: commitments,
+    coveredCents: covered,
+    shortfallCents: Math.max(0, commitments - projected),
+    coveragePercent: commitments === 0 ? 100 : Math.min(100, Math.round((covered / commitments) * 100)),
+    isCovered: projected >= commitments,
+  };
+}
+
+export function financialPlanScenarioProjectedIncomeCents(scenario: FinancialPlanScenario, fallbackIncomeCents: number) {
+  if (scenario.incomeFloorCents != null) return Math.max(0, scenario.incomeFloorCents);
+  return Math.max(0, fallbackIncomeCents);
+}
+
+export function financialPlanScenarioCoverage(scenario: FinancialPlanScenario, commitmentsCents: number, fallbackIncomeCents: number) {
+  return financialPlanCoverage(financialPlanScenarioProjectedIncomeCents(scenario, fallbackIncomeCents), commitmentsCents);
+}
+
 export function monthInputValue(value: Date | string | null | undefined) {
   if (!value) return "";
   const date = new Date(value);

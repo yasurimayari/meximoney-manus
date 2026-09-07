@@ -612,3 +612,8 @@
 - [x] Permitir editar y quitar participantes, mostrando su nombre, categoría y rol opcional.
 - [x] Mostrar participantes en las vistas de lista, detalle, calendario y exportaciones relevantes del viaje.
 - [x] Añadir pruebas de aislamiento, sincronización con Contactos y UX responsive; validar PWA.
+
+- [x] Añadir un gráfico visual de cobertura mensual de obligaciones por escenario de ingresos irregulares.
+- [x] Exportar el Plan Financiero a PDF con escenarios, compromisos y seguimiento detallado.
+- [x] Mostrar alertas visuales cuando los ingresos proyectados no cubran los compromisos mensuales.
+- [x] Añadir pruebas de cobertura, alertas, exportación y UX responsive; validar PWA.

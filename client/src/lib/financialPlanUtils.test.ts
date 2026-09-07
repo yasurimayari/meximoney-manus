@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { actualsForFinancialPlanMonth, financialPlanAvailableCents, financialPlanScenarioForIncome, financialPlanVarianceCents } from "./financialPlanUtils";
+import { actualsForFinancialPlanMonth, financialPlanAvailableCents, financialPlanCoverage, financialPlanScenarioCoverage, financialPlanScenarioForIncome, financialPlanVarianceCents } from "./financialPlanUtils";
 
 describe("Plan Financiero", () => {
   const transactions = [
@@ -28,5 +28,14 @@ describe("Plan Financiero", () => {
 
   it("muestra el disponible planeado sin ejecutar asignaciones", () => {
     expect(financialPlanAvailableCents(3000000, 2200000, 300000)).toBe(500000);
+  });
+
+  it("calcula cobertura completa y déficit de compromisos", () => {
+    expect(financialPlanCoverage(300000, 200000)).toMatchObject({ coveragePercent: 100, shortfallCents: 0, isCovered: true });
+    expect(financialPlanCoverage(150000, 200000)).toMatchObject({ coveragePercent: 75, shortfallCents: 50000, isCovered: false });
+  });
+
+  it("usa el ingreso mínimo del escenario para alertar cobertura insuficiente", () => {
+    expect(financialPlanScenarioCoverage({ incomeFloorCents: 100000, incomeCeilingCents: 250000 }, 180000, 300000)).toMatchObject({ coveragePercent: 56, shortfallCents: 80000, isCovered: false });
   });
 });
