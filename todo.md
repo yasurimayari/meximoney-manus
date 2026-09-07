@@ -617,3 +617,6 @@
 - [x] Exportar el Plan Financiero a PDF con escenarios, compromisos y seguimiento detallado.
 - [x] Mostrar alertas visuales cuando los ingresos proyectados no cubran los compromisos mensuales.
 - [x] Añadir pruebas de cobertura, alertas, exportación y UX responsive; validar PWA.
+
+- [x] Eliminar el botón «Completar desde Notion» y dejar el llenado del Plan Financiero exclusivamente manual.
+- [x] Validar que los datos existentes y la edición manual del Plan Financiero se conserven sin el flujo de Notion.
