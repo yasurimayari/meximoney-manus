@@ -626,3 +626,7 @@
 
 - [x] Ajustar el espaciado, la alineación y la cuadrícula del formulario de Registro en todas sus secciones.
 - [x] Validar la legibilidad y adaptación responsive del formulario tras el rediseño visual.
+
+- [x] Eliminar las descripciones explicativas redundantes de los formularios de Tarjetas y Libro PFAE.
+- [x] Optimizar el espaciado, alineación y adaptación móvil de ambos formularios.
+- [x] Validar que etiquetas, cálculos, validaciones y ayudas imprescindibles sigan funcionando correctamente.

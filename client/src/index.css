@@ -292,3 +292,51 @@
   .range-control-periods { @apply p-2.5; }
   .period-options button { @apply h-9; }
 }
+
+/* Formularios compactos de Tarjetas y Libro PFAE */
+.credit-card-form-dialog .form-grid,
+.credit-card-payment-dialog .form-grid,
+.fiscal-form-dialog .form-grid {
+  gap: 0.9rem;
+}
+
+.credit-card-form-dialog .form-field,
+.credit-card-payment-dialog .form-field,
+.fiscal-form-dialog .form-field {
+  min-width: 0;
+}
+
+.credit-card-form-dialog .form-actions,
+.credit-card-payment-dialog .form-actions,
+.fiscal-form-dialog .form-actions {
+  margin-top: 0.15rem;
+  padding-top: 0.35rem;
+}
+
+.credit-card-payment-form .form-field:first-child {
+  margin-bottom: 0.15rem;
+}
+
+@media (max-width: 640px) {
+  .credit-card-form-dialog,
+  .credit-card-payment-dialog,
+  .fiscal-form-dialog {
+    padding: 1rem;
+  }
+
+  .credit-card-form-dialog .form-grid,
+  .credit-card-payment-dialog .form-grid,
+  .fiscal-form-dialog .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .credit-card-form-dialog .form-field.span-2,
+  .credit-card-payment-dialog .form-field.span-2,
+  .fiscal-form-dialog .form-field.span-2,
+  .credit-card-form-dialog .form-actions.span-2,
+  .credit-card-payment-dialog .form-actions.span-2,
+  .fiscal-form-dialog .form-actions.span-2 {
+    grid-column: auto;
+  }
+}
