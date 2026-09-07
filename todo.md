@@ -600,7 +600,7 @@
 - [ ] Fase 0: establecer línea base de uso, criterios de éxito, inventario de datos y política de privacidad.
 - [ ] Fase 1: perfeccionar control financiero, saldos conciliados, proyecciones, alertas y calidad de datos.
 - [ ] Fase 2: completar experiencia móvil y cobertura offline de la PWA.
-- [ ] Fase 3: fortalecer Mexi como IA explicable y trazable.
+- [x] Fase 3: fortalecer Mexi como IA explicable y trazable.
 - [ ] Fase 4: completar colaboración con gestor o contador, permisos y auditoría.
 - [ ] Fase 5: completar OCR, análisis de estacionalidad y hábitos opt-in; mantener voz fuera del alcance salvo nueva aprobación.
 - [ ] Fase 6: evaluar automatización bancaria e integraciones externas después de validar las fases anteriores con uso real.
@@ -630,3 +630,15 @@
 - [x] Eliminar las descripciones explicativas redundantes de los formularios de Tarjetas y Libro PFAE.
 - [x] Optimizar el espaciado, alineación y adaptación móvil de ambos formularios.
 - [x] Validar que etiquetas, cálculos, validaciones y ayudas imprescindibles sigan funcionando correctamente.
+
+# Mexi IA — evolución del asistente
+
+- [x] Auditar el asistente actual, sus procedimientos tRPC y el modelo de contexto financiero.
+- [x] Definir contrato de respuesta explicable: datos usados, fórmulas, supuestos, fuentes, recomendaciones y límites.
+- [x] Implementar contexto financiero privado y de solo lectura, sin incluir datos de otras usuarias.
+- [x] Integrar Claude exclusivamente en servidor con salida estructurada y validación de esquema.
+- [x] Bloquear herramientas de escritura, pagos, borrado, transferencias y cualquier ejecución financiera.
+- [x] Mostrar en la interfaz cálculos, fuentes internas, advertencias de calidad y recomendaciones separadas de los hechos.
+- [x] Añadir pruebas unitarias y de seguridad para aislamiento, fórmulas, salida estructurada y prohibición de acciones.
+- [x] Validar TypeScript, pruebas, compilación y experiencia responsive de Mexi IA.
+- [x] Documentar el alcance, limitaciones y publicar la versión estable de Mexi IA.

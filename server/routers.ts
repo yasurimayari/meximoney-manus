@@ -80,7 +80,7 @@ import { getOpenFiscalReviewReminder } from "../shared/fiscalReview";
 import { creditCardAlertCandidates } from "./creditCardAlerts";
 import { payableAlertCandidates, upcomingTravelAlertCandidates } from "./scheduledAlertCandidates";
 import { extractQuickCaptureDraft } from "./quickCapture";
-import { askClaudeForMexi } from "./claude";
+import { askClaudeForMexiAnalysis, formatMexiAnalysis } from "./claude";
 import { mexicoCityReferenceMonth } from "./monthReference";
 import { calculatePersonalScore } from "./personalScore";
 import { matchStatementLines } from "../shared/bankReconciliation";
@@ -2150,11 +2150,11 @@ export const appRouter = router({
       chat: privateFinanceProcedure.input(z.object({ message: z.string().min(1).max(1600) })).mutation(async ({ ctx, input }) => {
         const snapshot = await getFinanceSnapshot(ctx.user.id);
         try {
-          const content = await askClaudeForMexi({
+          const analysis = await askClaudeForMexiAnalysis({
             system: `Eres Mexi, el asistente privado y explicable de Meximoney. ${manualOnlyNotice} Usa exclusivamente el JSON de registros manuales suministrado en este mensaje y la pregunta de la usuaria. No uses búsqueda web, conocimientos externos, precios de mercado, normas fiscales actuales ni herramientas. No inventes datos. Si falta información, dilo de forma explícita y propone qué registro manual se debe crear o actualizar. No des instrucciones para transferir, pagar, comprar, vender, contratar ni cancelar productos financieros. Ofrece análisis educativo, explica cálculos y distingue entre datos, supuestos, riesgos y próximos pasos. Responde siempre en español y usa importes en centavos solo si explicas el formato. Cierra con la frase: "Sin conexiones bancarias ni acciones financieras ejecutadas."`,
             prompt: `REGISTROS MANUALES DE MEXIMONEY:\n${createManualSnapshotText(snapshot)}\n\nPREGUNTA DE LA USUARIA:\n${input.message}`,
           });
-          return { content, notice: manualOnlyNotice };
+          return { content: formatMexiAnalysis(analysis), analysis, notice: manualOnlyNotice };
         } catch (error) {
           console.error("[Mexi] Claude unavailable:", error instanceof Error ? error.message : "Error no identificable");
           return { content: "Mexi no pudo obtener una respuesta de Claude en este momento. Tus datos no se han modificado. Puedes reintentar la consulta; si el problema continúa, revisa que la clave privada de Claude siga activa.", notice: manualOnlyNotice };

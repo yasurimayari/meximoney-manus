@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { askClaudeForMexi, MEXI_CLAUDE_MODEL } from "./claude";
+import { askClaudeForMexi, askClaudeForMexiAnalysis, formatMexiAnalysis, MEXI_CLAUDE_MODEL } from "./claude";
 
 describe("askClaudeForMexi", () => {
   afterEach(() => {
@@ -19,6 +19,23 @@ describe("askClaudeForMexi", () => {
     }));
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(String(request.body))).toMatchObject({ model: MEXI_CLAUDE_MODEL, system: "Instrucciones", messages: [{ role: "user", content: "Datos manuales" }] });
+  });
+
+  it("parsea una respuesta estructurada y siempre conserva canExecute en false", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "clave-de-prueba-no-publica");
+    const structured = { answer: "Tu flujo neto es positivo.", facts: [{ label: "Ingresos", value: "$10,000 MXN", source: "Panel de Meximoney" }], calculations: [{ name: "Flujo neto", formula: "ingresos - gastos", substitution: "10,000 - 7,000", result: "3,000 MXN", source: "Panel de Meximoney" }], assumptions: ["Se usan movimientos confirmados."], recommendations: [{ title: "Revisar presupuesto", rationale: "Hay una desviación.", priority: "media", nextStep: "Abrir Presupuesto y confirmar manualmente." }], warnings: [], sources: [{ label: "Registros internos", type: "internal", detail: "Snapshot privado de la usuaria." }], canExecute: true };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: [{ type: "text", text: JSON.stringify(structured) }] }), { status: 200 })));
+
+    const analysis = await askClaudeForMexiAnalysis({ system: "Instrucciones", prompt: "Datos manuales" });
+    expect(analysis.canExecute).toBe(false);
+    expect(formatMexiAnalysis(analysis)).toContain("Fórmula: `ingresos - gastos`");
+    expect(formatMexiAnalysis(analysis)).toContain("Recomendaciones (sin ejecutar)");
+  });
+
+  it("rechaza respuestas no estructuradas", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "clave-de-prueba-no-publica");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: [{ type: "text", text: "respuesta libre" }] }), { status: 200 })));
+    await expect(askClaudeForMexiAnalysis({ system: "Instrucciones", prompt: "Datos manuales" })).rejects.toThrow("estructurada válida");
   });
 
   it("falla sin revelar la clave cuando Claude rechaza la petición", async () => {
