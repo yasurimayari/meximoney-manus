@@ -623,3 +623,6 @@
 
 - [x] Eliminar las descripciones explicativas redundantes de Movimiento, Traspaso, Pagar TDC, Cuenta, Categoría y Documento en Registro.
 - [x] Validar que etiquetas, ayudas imprescindibles, errores y campos sigan siendo claros tras la simplificación.
+
+- [x] Ajustar el espaciado, la alineación y la cuadrícula del formulario de Registro en todas sus secciones.
+- [x] Validar la legibilidad y adaptación responsive del formulario tras el rediseño visual.

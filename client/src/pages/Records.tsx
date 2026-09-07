@@ -183,7 +183,7 @@ export default function Records() {
           <DialogTrigger asChild>
             <Button className="btn-primary" onClick={() => openCreate("movement")}><Plus className="size-4" /> Nuevo registro</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="records-form-dialog max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingMovement ? "Editar movimiento" : editingTransfer ? "Editar traspaso" : editingAccount ? "Editar cuenta o activo" : editingCategory ? "Editar categoría" : editingDocument ? "Editar documento" : "Crear un registro"}</DialogTitle>
               
