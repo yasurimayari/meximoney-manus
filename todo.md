@@ -620,3 +620,6 @@
 
 - [x] Eliminar el botón «Completar desde Notion» y dejar el llenado del Plan Financiero exclusivamente manual.
 - [x] Validar que los datos existentes y la edición manual del Plan Financiero se conserven sin el flujo de Notion.
+
+- [x] Eliminar las descripciones explicativas redundantes de Movimiento, Traspaso, Pagar TDC, Cuenta, Categoría y Documento en Registro.
+- [x] Validar que etiquetas, ayudas imprescindibles, errores y campos sigan siendo claros tras la simplificación.
