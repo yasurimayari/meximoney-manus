@@ -869,6 +869,17 @@ export const travelPlans = mysqlTable("travelPlans", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => [index("travel_plans_user_status_idx").on(table.userId, table.status)]);
 
+export const travelParticipants = mysqlTable("travelParticipants", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  travelPlanId: int("travelPlanId").notNull(),
+  contactId: int("contactId").notNull(),
+  role: varchar("role", { length: 80 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [uniqueIndex("travel_participants_user_plan_contact_unique").on(table.userId, table.travelPlanId, table.contactId), index("travel_participants_user_plan_idx").on(table.userId, table.travelPlanId)]);
+
 export const travelItems = mysqlTable("travelItems", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

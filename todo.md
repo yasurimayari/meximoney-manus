@@ -607,3 +607,8 @@
 
 - [x] Corregir que los gastos de la sección Presupuesto en Simulaciones se muestren en rojo y no en verde.
 - [x] Añadir pruebas y validar la semántica de colores en Simulaciones, Presupuesto y vistas relacionadas.
+
+- [x] Permitir asociar varios contactos como participantes de un viaje.
+- [x] Permitir editar y quitar participantes, mostrando su nombre, categoría y rol opcional.
+- [x] Mostrar participantes en las vistas de lista, detalle, calendario y exportaciones relevantes del viaje.
+- [x] Añadir pruebas de aislamiento, sincronización con Contactos y UX responsive; validar PWA.

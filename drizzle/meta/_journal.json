@@ -365,6 +365,13 @@
       "when": 1788585008299,
       "tag": "0051_spicy_ulik",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "5",
+      "when": 1788745126520,
+      "tag": "0052_easy_alice",
+      "breakpoints": true
     }
   ]
 }

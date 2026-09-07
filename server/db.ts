@@ -55,6 +55,7 @@ import {
   users,
   workspaceEntities,
   travelPlans,
+  travelParticipants,
   travelItems,
   travelCategories,
 } from "./../drizzle/schema";
@@ -345,6 +346,7 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(financialPlanScenarios).where(eq(financialPlanScenarios.userId, userId));
     await tx.delete(financialPlanLevels).where(eq(financialPlanLevels.userId, userId));
     await tx.delete(financialPlans).where(eq(financialPlans.userId, userId));
+    await tx.delete(travelParticipants).where(eq(travelParticipants.userId, userId));
     await tx.delete(travelItems).where(eq(travelItems.userId, userId));
     await tx.delete(travelCategories).where(eq(travelCategories.userId, userId));
     await tx.delete(travelPlans).where(eq(travelPlans.userId, userId));

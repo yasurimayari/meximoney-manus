@@ -58,6 +58,7 @@ import {
   users,
   workspaceEntities,
   travelPlans,
+  travelParticipants,
   travelItems,
   travelCategories,
 } from "../drizzle/schema";
@@ -84,6 +85,7 @@ import { askClaudeForMexi } from "./claude";
 import { mexicoCityReferenceMonth } from "./monthReference";
 import { calculatePersonalScore } from "./personalScore";
 import { matchStatementLines } from "../shared/bankReconciliation";
+import { normalizeParticipantIds } from "../shared/travelParticipants";
 import { buildManualAmortizationSchedule, debtPaymentBreakdownIsValid } from "./debtAmortization";
 import { decodePdfUpload } from "./documentUpload";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -2103,8 +2105,9 @@ export const appRouter = router({
         const plans = await db.select().from(travelPlans).where(eq(travelPlans.userId, ctx.user.id)).orderBy(desc(travelPlans.startsAt));
         const planIds = plans.map(plan => plan.id);
         const items = planIds.length ? await db.select().from(travelItems).where(and(eq(travelItems.userId, ctx.user.id), inArray(travelItems.travelPlanId, planIds))).orderBy(desc(travelItems.startsAt)) : [];
+        const participants = planIds.length ? await db.select().from(travelParticipants).where(and(eq(travelParticipants.userId, ctx.user.id), inArray(travelParticipants.travelPlanId, planIds))).orderBy(asc(travelParticipants.createdAt)) : [];
         const categories = await db.select().from(travelCategories).where(and(eq(travelCategories.userId, ctx.user.id), eq(travelCategories.isActive, true))).orderBy(asc(travelCategories.name));
-        return { plans, items, categories };
+        return { plans, items, participants, categories };
       }),
       categorySave: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(1).max(100), colorKey: z.enum(["teal", "emerald", "sky", "indigo", "violet", "amber", "orange", "rose", "slate"]) })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
@@ -2117,12 +2120,32 @@ export const appRouter = router({
         await db.update(travelCategories).set({ isActive: false }).where(and(eq(travelCategories.id, input.id), eq(travelCategories.userId, ctx.user.id)));
         return { success: true };
       }),
-      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(1).max(180), origin: z.string().trim().max(140).nullable().optional(), destination: z.string().trim().max(140).nullable().optional(), purpose: z.string().trim().max(240).nullable().optional(), scope: scopeSchema, status: z.enum(["planned", "in_progress", "completed", "cancelled", "archived"]), startsAt: z.string().min(1), endsAt: z.string().nullable().optional(), budgetCents: z.number().int().min(0), currency: z.string().length(3), timeZone: timeZoneSchema.default("America/Mexico_City"), projectId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), notes: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(1).max(180), origin: z.string().trim().max(140).nullable().optional(), destination: z.string().trim().max(140).nullable().optional(), purpose: z.string().trim().max(240).nullable().optional(), scope: scopeSchema, status: z.enum(["planned", "in_progress", "completed", "cancelled", "archived"]), startsAt: z.string().min(1), endsAt: z.string().nullable().optional(), budgetCents: z.number().int().min(0), currency: z.string().length(3), timeZone: timeZoneSchema.default("America/Mexico_City"), projectId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), participantIds: z.array(z.number().int().positive()).max(100).optional(), notes: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
+        const participantIds = normalizeParticipantIds(input.participantIds);
+        if (participantIds?.length) {
+          const contacts = await db.select({ id: financialContacts.id, status: financialContacts.status }).from(financialContacts).where(and(eq(financialContacts.userId, ctx.user.id), inArray(financialContacts.id, participantIds)));
+          const availableIds = new Set(contacts.filter(contact => contact.status !== "archived").map(contact => contact.id));
+          if (availableIds.size !== participantIds.length) throw new TRPCError({ code: "BAD_REQUEST", message: "Uno o más participantes no pertenecen a tus contactos activos." });
+        }
         const payload = { name: input.name, origin: input.origin ?? null, destination: input.destination ?? null, purpose: input.purpose ?? null, scope: input.scope, status: input.status, startsAt: new Date(input.startsAt), endsAt: input.endsAt ? new Date(input.endsAt) : null, budgetCents: input.budgetCents, currency: input.currency.toUpperCase(), timeZone: input.timeZone, projectId: input.projectId ?? null, entityId: input.entityId ?? null, goalId: input.goalId ?? null, contactId: input.contactId ?? null, notes: input.notes ?? null };
-        if (input.id) await db.update(travelPlans).set(payload).where(and(eq(travelPlans.id, input.id), eq(travelPlans.userId, ctx.user.id)));
-        else await db.insert(travelPlans).values({ userId: ctx.user.id, ...payload });
-        return { success: true };
+        const planId = await db.transaction(async tx => {
+          let savedPlanId = input.id;
+          if (savedPlanId) {
+            const [existing] = await tx.select({ id: travelPlans.id }).from(travelPlans).where(and(eq(travelPlans.id, savedPlanId), eq(travelPlans.userId, ctx.user.id))).limit(1);
+            if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "El viaje no pertenece a tu espacio privado." });
+            await tx.update(travelPlans).set(payload).where(and(eq(travelPlans.id, savedPlanId), eq(travelPlans.userId, ctx.user.id)));
+          } else {
+            const inserted = await tx.insert(travelPlans).values({ userId: ctx.user.id, ...payload });
+            savedPlanId = Number(inserted[0].insertId);
+          }
+          if (participantIds !== undefined && savedPlanId) {
+            await tx.delete(travelParticipants).where(and(eq(travelParticipants.travelPlanId, savedPlanId), eq(travelParticipants.userId, ctx.user.id)));
+            if (participantIds.length) await tx.insert(travelParticipants).values(participantIds.map(contactId => ({ userId: ctx.user.id, travelPlanId: savedPlanId!, contactId, role: null, notes: null })));
+          }
+          return savedPlanId;
+        });
+        return { success: true, id: planId };
       }),
       itemSave: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), travelPlanId: z.number().int().positive(), itemType: z.enum(["flight", "train", "car_rental", "ride", "hotel", "airbnb", "exhibition", "meal", "other"]), title: z.string().trim().min(1).max(180), provider: z.string().trim().max(180).nullable().optional(), location: z.string().trim().max(180).nullable().optional(), startsAt: z.string().nullable().optional(), endsAt: z.string().nullable().optional(), amountCents: z.number().int().min(0), currency: z.string().length(3), status: z.enum(["planned", "booked", "paid", "completed", "cancelled"]), transactionId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), taskId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), documentId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), notes: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
@@ -2141,6 +2164,7 @@ export const appRouter = router({
         const db = await requireDb();
         const linked = await db.select({ id: travelItems.id }).from(travelItems).where(and(eq(travelItems.travelPlanId, input.id), eq(travelItems.userId, ctx.user.id))).limit(1);
         if (linked[0]) throw new TRPCError({ code: "CONFLICT", message: "Archiva el viaje si conserva itinerarios; no se elimina para proteger su trazabilidad." });
+        await db.delete(travelParticipants).where(and(eq(travelParticipants.travelPlanId, input.id), eq(travelParticipants.userId, ctx.user.id)));
         await db.delete(travelPlans).where(and(eq(travelPlans.id, input.id), eq(travelPlans.userId, ctx.user.id)));
         return { success: true };
       }),
