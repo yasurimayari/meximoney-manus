@@ -39,6 +39,7 @@ export default function Assistant() {
   const [selectedNoteTag, setSelectedNoteTag] = useState<NoteTag | "all">("all");
   const [noteListFilter, setNoteListFilter] = useState<NoteTag | "all">("all");
   const [noteSearch, setNoteSearch] = useState("");
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [note, setNote] = useState<NoteDraft>({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate", isPinned: false });
   const [previewNote, setPreviewNote] = useState(false);
   const chat = trpc.finance.assistant.chat.useMutation({
@@ -55,6 +56,7 @@ export default function Assistant() {
     onSuccess: response => {
       toast.success("Nota guardada");
       setNote(current => ({ ...current, id: response.id }));
+      setIsCreatingNote(false);
       void utils.finance.assistant.notes.list.invalidate();
     },
     onError: error => toast.error(error.message),
@@ -64,12 +66,13 @@ export default function Assistant() {
     onError: error => toast.error(error.message),
   });
   const archiveNote = trpc.finance.assistant.notes.archive.useMutation({
-    onSuccess: () => { toast.success("Nota archivada"); setNote({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate", isPinned: false }); void utils.finance.assistant.notes.list.invalidate(); },
+    onSuccess: () => {       toast.success("Nota archivada"); setIsCreatingNote(true); setNote({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate", isPinned: false }); void utils.finance.assistant.notes.list.invalidate(); },
     onError: error => toast.error(error.message),
   });
   const removeNote = trpc.finance.assistant.notes.remove.useMutation({
     onSuccess: () => {
       toast.success("Nota eliminada");
+      setIsCreatingNote(true);
       setNote({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate", isPinned: false });
       void utils.finance.assistant.notes.list.invalidate();
     },
@@ -77,11 +80,11 @@ export default function Assistant() {
   });
 
   useEffect(() => {
-    if (!note.id && notes.data?.[0]) {
+    if (!isCreatingNote && !note.id && notes.data?.[0]) {
       const first = notes.data[0];
       setNote({ id: first.id, title: first.title, content: first.content, tag: (first.tag as NoteTag) || "general", tagColor: (first.tagColor as NoteColor) || "slate", isPinned: Boolean(first.isPinned) });
     }
-  }, [notes.data, note.id]);
+  }, [notes.data, note.id, isCreatingNote]);
 
   const send = (content: string) => {
     setMessages(previous => [...previous, { role: "user", content }]);
@@ -89,6 +92,7 @@ export default function Assistant() {
   };
 
   const selectNote = (selected: NoteDraft) => {
+    setIsCreatingNote(false);
     setNote(selected);
     setPreviewNote(false);
   };
@@ -131,13 +135,12 @@ export default function Assistant() {
         <aside className="assistant-sidebar">
           <section className="assistant-context assistant-notebook">
             <div className="assistant-section-heading"><div className="assistant-context-icon"><BookOpen className="size-5" /></div><div><h2>Diario financiero</h2><p>Anota ideas, decisiones y preguntas para revisarlas después.</p></div></div>
-            <div className="assistant-note-actions"><Button type="button" variant="outline" size="sm" onClick={() => { setNote({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate", isPinned: false }); setPreviewNote(false); }}><Plus className="mr-1 size-3.5" />Nueva</Button><Button type="button" size="sm" onClick={() => saveNote.mutate(note)} disabled={saveNote.isPending || !note.title.trim()}><Save className="mr-1 size-3.5" />Guardar</Button></div>
+            <div className="assistant-note-actions"><Button type="button" variant="outline" size="sm" onClick={() => { setIsCreatingNote(true); setNote({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate", isPinned: false }); setPreviewNote(false); }}><Plus className="mr-1 size-3.5" />Nueva</Button><Button type="button" size="sm" onClick={() => saveNote.mutate(note)} disabled={saveNote.isPending || !note.title.trim()}><Save className="mr-1 size-3.5" />Guardar</Button></div>
             <Input value={note.title} onChange={event => setNote(current => ({ ...current, title: event.target.value }))} maxLength={180} placeholder="Título de la nota" aria-label="Título de la nota" />
-            <div className="assistant-note-meta"><label>Etiqueta<select value={note.tag} onChange={event => { const tag = event.target.value as NoteTag; setNote(current => ({ ...current, tag, tagColor: tagColor(tag) })); }} aria-label="Etiqueta de la nota">{noteTags.map(tag => <option value={tag.value} key={tag.value}>{tag.label}</option>)}</select></label><div className="assistant-fixed-tag-color"><span>Color predeterminado</span><span className={`note-tag-color-dot note-color-${tagColor(note.tag)}`} aria-label={`Color predeterminado de ${tagLabel(note.tag)}`} /><strong>{tagLabel(note.tag)}</strong></div></div>
+            <div className="assistant-note-meta"><label>Etiqueta<select value={note.tag} onChange={event => { const tag = event.target.value as NoteTag; setNote(current => ({ ...current, tag, tagColor: tagColor(tag) })); }} aria-label="Etiqueta de la nota">{noteTags.map(tag => <option value={tag.value} key={tag.value}>{tag.label}</option>)}</select></label></div>
             <div className="assistant-note-tabs"><button type="button" className={!previewNote ? "active" : ""} onClick={() => setPreviewNote(false)}>Editar</button><button type="button" className={previewNote ? "active" : ""} onClick={() => setPreviewNote(true)}><Eye className="mr-1 inline size-3.5" />Vista previa</button></div>
             {previewNote ? <div className="assistant-note-preview prose prose-sm max-w-none"><Streamdown>{note.content || "Escribe una nota para verla aquí."}</Streamdown></div> : <Textarea value={note.content} onChange={event => setNote(current => ({ ...current, content: event.target.value }))} maxLength={20000} placeholder="Escribe tus ideas y apuntes aquí…" className="min-h-28 resize-y" aria-label="Contenido de la nota" />}
             <div className="assistant-note-list-toolbar"><label className="assistant-note-search"><Search className="size-3.5" /><Input value={noteSearch} onChange={event => setNoteSearch(event.target.value)} placeholder="Buscar notas…" aria-label="Buscar notas por texto" /></label><select value={noteListFilter} onChange={event => setNoteListFilter(event.target.value as NoteTag | "all")} aria-label="Filtrar notas por etiqueta"><option value="all">Todas las etiquetas</option>{noteTags.map(tag => <option value={tag.value} key={tag.value}>{tag.label}</option>)}</select></div>
-            {note.id && <Button type="button" variant="ghost" size="sm" className="mt-1 self-end text-destructive hover:text-destructive" onClick={() => removeNote.mutate({ id: note.id! })} disabled={removeNote.isPending}><Trash2 className="mr-1 size-3.5" />Eliminar nota</Button>}
             <div className="assistant-note-list">{visibleNotes.map(item => <div className={`assistant-note-row ${note.id === item.id ? "selected" : ""}`} key={item.id}><button type="button" className="assistant-note-main" onClick={() => selectNote({ id: item.id, title: item.title, content: item.content, tag: (item.tag as NoteTag) || "general", tagColor: tagColor(item.tag), isPinned: Boolean(item.isPinned) })}><span>{item.isPinned && <Pin className="mr-1 inline size-3" aria-label="Nota fijada" />}{item.title}</span><small><b className={`note-tag note-tag-${tagColor(item.tag)}`}>{tagLabel(item.tag)}</b> · {new Date(item.updatedAt).toLocaleDateString("es-MX")}</small></button><div className="assistant-note-icon-actions"><button type="button" title="Visualizar nota" aria-label={`Visualizar ${item.title}`} onClick={() => { selectNote({ id: item.id, title: item.title, content: item.content, tag: (item.tag as NoteTag) || "general", tagColor: tagColor(item.tag), isPinned: Boolean(item.isPinned) }); setPreviewNote(true); }}><Eye className="size-3.5" /></button><button type="button" title={item.isPinned ? "Quitar prioridad" : "Fijar nota"} aria-label={item.isPinned ? `Quitar prioridad de ${item.title}` : `Fijar ${item.title}`} onClick={() => togglePinned.mutate({ id: item.id, isPinned: !item.isPinned })}>{item.isPinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}</button><button type="button" title="Editar nota" aria-label={`Editar ${item.title}`} onClick={() => { selectNote({ id: item.id, title: item.title, content: item.content, tag: (item.tag as NoteTag) || "general", tagColor: tagColor(item.tag), isPinned: Boolean(item.isPinned) }); setPreviewNote(false); }}><Edit3 className="size-3.5" /></button><button type="button" title="Archivar nota" aria-label={`Archivar ${item.title}`} onClick={() => archiveNote.mutate({ id: item.id, archived: true })}><Archive className="size-3.5" /></button><button type="button" title="Eliminar nota" aria-label={`Eliminar ${item.title}`} onClick={() => removeNote.mutate({ id: item.id })}><Trash2 className="size-3.5" /></button></div></div>)}</div>
           </section>
 

@@ -683,3 +683,13 @@
 - [x] Priorizar notas fijadas en el contexto de Mexi IA y excluir notas archivadas.
 - [x] Añadir pruebas de búsqueda, acciones, archivado, fijado y contexto prioritario.
 - [x] Validar TypeScript, pruebas, compilación, responsive y publicar la mejora.
+
+# Diario Financiero — simplificación y creación consecutiva
+
+- [x] Auditar el flujo actual de guardado, invalidación y selección automática de notas.
+- [x] Eliminar el botón rojo «Eliminar nota» del editor.
+- [x] Eliminar la sección visible «Color predeterminado» manteniendo el color incorporado en la etiqueta.
+- [x] Corregir el botón «Nueva» y el estado del editor para crear notas consecutivas sin reutilizar la nota anterior.
+- [x] Asegurar que la lista se actualice y muestre correctamente cada nota recién guardada.
+- [x] Añadir pruebas del flujo nueva nota, guardado, refresco y selección de notas.
+- [x] Validar TypeScript, pruebas, compilación, responsive y publicar la mejora.
