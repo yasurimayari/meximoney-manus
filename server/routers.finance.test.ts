@@ -130,7 +130,7 @@ describe("finance.dashboard", () => {
   });
 
   it("envía a Claude sólo una síntesis del espacio autenticado y devuelve su análisis", async () => {
-    mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }], orderBy: () => ({ limit: async () => [{ title: "Fondo de emergencia", content: "Quiero priorizar seis meses de gastos.", updatedAt: new Date() }] }) }) }) }), insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{ insertId: 1 }]) }) });
+    mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }], orderBy: () => ({ limit: async () => [{ title: "Fondo de emergencia", content: "Quiero priorizar seis meses de gastos.", tag: "impuestos", tagColor: "amber", updatedAt: new Date() }] }) }) }) }), insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{ insertId: 1 }]) }) });
     mocks.getFinanceSnapshot.mockResolvedValue({
       profile: { currency: "MXN" }, accounts: [], categories: [], transactions: [], debts: [], goals: [], tasks: [], calendarEvents: [], statements: [], dashboard: {},
     });
@@ -138,13 +138,14 @@ describe("finance.dashboard", () => {
     mocks.formatMexiAnalysis.mockReturnValue("Análisis preparado por Claude.");
     const caller = appRouter.createCaller(createContext(27));
 
-    await expect(caller.finance.assistant.chat({ message: "Resume mi situación" })).resolves.toMatchObject({ content: "Análisis preparado por Claude.", analysis: { canExecute: false } });
+    await expect(caller.finance.assistant.chat({ message: "Resume mi situación", noteTag: "impuestos" })).resolves.toMatchObject({ content: "Análisis preparado por Claude.", analysis: { canExecute: false } });
     expect(mocks.getFinanceSnapshot).toHaveBeenCalledWith(27);
     expect(mocks.askClaudeForMexiAnalysis).toHaveBeenCalledWith(expect.objectContaining({
       prompt: expect.stringContaining("PREGUNTA DE LA USUARIA:\nResume mi situación"),
     }));
     expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.prompt).toContain("Fondo de emergencia");
     expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.system).toContain("personalNotes");
+    expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.prompt).toContain('"personalNotesFilter":"impuestos"');
     expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.prompt).not.toContain("ANTHROPIC_API_KEY");
   });
 
@@ -154,8 +155,8 @@ describe("finance.dashboard", () => {
     mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }), insert });
     const caller = appRouter.createCaller(createContext(27));
 
-    await expect(caller.finance.assistant.notes.save({ title: "Idea", content: "## Revisar flujo\\n\\n$$x^2$$" })).resolves.toEqual({ id: 91 });
-    expect(values).toHaveBeenCalledWith({ userId: 27, title: "Idea", content: "## Revisar flujo\\n\\n$$x^2$$" });
+    await expect(caller.finance.assistant.notes.save({ title: "Idea", content: "## Revisar flujo\\n\\n$$x^2$$", tag: "inversiones", tagColor: "emerald" })).resolves.toEqual({ id: 91 });
+    expect(values).toHaveBeenCalledWith({ userId: 27, title: "Idea", content: "## Revisar flujo\\n\\n$$x^2$$", tag: "inversiones", tagColor: "emerald" });
   });
 
   it("aplica el identificador autenticado al eliminar calendario, estados y documentos", async () => {

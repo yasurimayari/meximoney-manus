@@ -841,6 +841,8 @@ export const assistantNotes = mysqlTable("assistantNotes", {
   userId: int("userId").notNull(),
   title: varchar("title", { length: 180 }).notNull().default("Nota sin título"),
   content: text("content").notNull(),
+  tag: varchar("tag", { length: 40 }).notNull().default("general"),
+  tagColor: varchar("tagColor", { length: 16 }).notNull().default("slate"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

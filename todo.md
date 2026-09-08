@@ -662,3 +662,13 @@
 - [x] Eliminar del Asistente los bloques Nota importante, Cómo responde, Límites de seguridad y Contexto disponible.
 - [x] Añadir pruebas de aislamiento y uso del diario en el contexto del asistente.
 - [x] Validar TypeScript, pruebas, compilación y responsive; publicar la mejora.
+
+# Diario Financiero — etiquetas temáticas y contexto filtrable
+
+- [x] Auditar el modelo actual de notas y definir etiquetas temáticas y colores consistentes.
+- [x] Añadir a las notas una etiqueta temática y un color persistidos sin perder las notas existentes.
+- [x] Corregir el placeholder del editor del Diario Financiero para que sea claro y no muestre una fórmula rota.
+- [x] Integrar selector de etiqueta, selector de color y filtro visual en el Diario.
+- [x] Permitir que Mexi IA filtre las notas del contexto por etiqueta temática.
+- [x] Añadir pruebas de migración, aislamiento, etiquetas, filtrado y contexto de Mexi IA.
+- [x] Validar TypeScript, pruebas, compilación, responsive y publicar la mejora.

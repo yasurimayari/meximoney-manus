@@ -364,3 +364,33 @@
   .assistant-note-actions > button { @apply flex-1; }
   .assistant-note-list, .assistant-history-list { @apply max-h-44; }
 }
+
+/* Diario Financiero: etiquetas temáticas */
+.assistant-context-filter { @apply ml-auto flex min-w-36 flex-col gap-1 text-[0.65rem] font-semibold text-muted-foreground; }
+.assistant-context-filter select, .assistant-note-meta select, .assistant-note-list-toolbar select { @apply h-8 rounded-lg border border-input bg-background px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring; }
+.assistant-note-meta { @apply flex items-end justify-between gap-3; }
+.assistant-note-meta label, .assistant-note-meta > div { @apply flex flex-1 flex-col gap-1 text-[0.65rem] font-semibold text-muted-foreground; }
+.assistant-note-meta select { @apply w-full; }
+.assistant-color-picker { @apply flex items-center gap-1.5; }
+.note-color-swatch { @apply size-5 rounded-full border-2 border-transparent transition-transform hover:scale-110; }
+.note-color-swatch.selected { @apply border-foreground ring-2 ring-primary/30; }
+.note-color-slate { @apply bg-slate-400; }
+.note-color-blue { @apply bg-blue-400; }
+.note-color-amber { @apply bg-amber-400; }
+.note-color-emerald { @apply bg-emerald-500; }
+.note-color-violet { @apply bg-violet-500; }
+.note-color-rose { @apply bg-rose-500; }
+.assistant-note-list-toolbar { @apply flex justify-end; }
+.assistant-note-list-toolbar select { @apply max-w-full; }
+.note-tag { @apply inline-flex rounded-full px-1.5 py-0.5 text-[0.58rem] font-bold uppercase tracking-wide; }
+.note-tag-slate { @apply bg-slate-100 text-slate-700; }
+.note-tag-blue { @apply bg-blue-100 text-blue-700; }
+.note-tag-amber { @apply bg-amber-100 text-amber-800; }
+.note-tag-emerald { @apply bg-emerald-100 text-emerald-800; }
+.note-tag-violet { @apply bg-violet-100 text-violet-800; }
+.note-tag-rose { @apply bg-rose-100 text-rose-800; }
+@media (max-width: 640px) {
+  .assistant-context-filter { @apply ml-0 w-full; }
+  .assistant-chat-header { @apply flex-wrap; }
+  .assistant-note-meta { @apply flex-col items-stretch; }
+}

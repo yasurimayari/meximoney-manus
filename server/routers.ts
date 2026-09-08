@@ -218,12 +218,12 @@ export function payableSettlement(payable: { amountCents: number; dueAt: Date | 
   return { paidCents, remainingCents, status, paidAt: remainingCents === 0 ? payments.reduce<Date | null>((latest, payment) => !latest || payment.paidAt > latest ? payment.paidAt : latest, null) : null };
 }
 
-function createManualSnapshotText(snapshot: Awaited<ReturnType<typeof getFinanceSnapshot>>, notes: Array<{ title: string; content: string; updatedAt: Date }> = []) {
+function createManualSnapshotText(snapshot: Awaited<ReturnType<typeof getFinanceSnapshot>>, notes: Array<{ title: string; content: string; tag: string; tagColor: string; updatedAt: Date }> = [], selectedNoteTag?: string) {
   let remainingNoteCharacters = 6000;
   const personalNotes = notes.slice(0, 20).map(note => {
     const content = note.content.trim().slice(0, Math.min(800, remainingNoteCharacters));
     remainingNoteCharacters -= content.length;
-    return { title: note.title, content, updatedAt: note.updatedAt };
+    return { title: note.title, content, tag: note.tag, tagColor: note.tagColor, updatedAt: note.updatedAt };
   }).filter(note => note.content.length > 0);
   return JSON.stringify({
     profile: snapshot.profile,
@@ -237,6 +237,7 @@ function createManualSnapshotText(snapshot: Awaited<ReturnType<typeof getFinance
     statements: snapshot.statements.map(item => ({ periodStart: item.periodStart, scope: item.scope, status: item.status, incomeCents: item.incomeCents, expenseCents: item.expenseCents, netCashFlowCents: item.netCashFlowCents, assetCents: item.assetCents, liabilityCents: item.liabilityCents, netWorthCents: item.netWorthCents })),
     dashboard: snapshot.dashboard,
     personalNotes,
+    personalNotesFilter: selectedNoteTag || "all",
   });
 }
 
@@ -2161,9 +2162,9 @@ export const appRouter = router({
           const db = await requireDb();
           return db.select().from(assistantNotes).where(eq(assistantNotes.userId, ctx.user.id)).orderBy(desc(assistantNotes.updatedAt)).limit(100);
         }),
-        save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), title: z.string().trim().min(1).max(180), content: z.string().max(20000) })).mutation(async ({ ctx, input }) => {
+        save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), title: z.string().trim().min(1).max(180), content: z.string().max(20000), tag: z.enum(["general", "impuestos", "inversiones", "presupuesto", "deudas", "patrimonio", "proyectos", "personal"]), tagColor: z.enum(["slate", "blue", "amber", "emerald", "violet", "rose"]) })).mutation(async ({ ctx, input }) => {
           const db = await requireDb();
-          const payload = { title: input.title, content: input.content };
+          const payload = { title: input.title, content: input.content, tag: input.tag, tagColor: input.tagColor };
           if (input.id) {
             const [existing] = await db.select({ id: assistantNotes.id }).from(assistantNotes).where(and(eq(assistantNotes.id, input.id), eq(assistantNotes.userId, ctx.user.id))).limit(1);
             if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "La nota no pertenece a tu espacio privado." });
@@ -2181,14 +2182,15 @@ export const appRouter = router({
           return db.select().from(assistantChatHistory).where(eq(assistantChatHistory.userId, ctx.user.id)).orderBy(desc(assistantChatHistory.createdAt)).limit(100);
         }),
       }),
-      chat: privateFinanceProcedure.input(z.object({ message: z.string().trim().min(1).max(1600) })).mutation(async ({ ctx, input }) => {
+      chat: privateFinanceProcedure.input(z.object({ message: z.string().trim().min(1).max(1600), noteTag: z.enum(["general", "impuestos", "inversiones", "presupuesto", "deudas", "patrimonio", "proyectos", "personal"]).optional() })).mutation(async ({ ctx, input }) => {
         const snapshot = await getFinanceSnapshot(ctx.user.id);
         const db = await requireDb();
-        const noteRows = await db.select({ title: assistantNotes.title, content: assistantNotes.content, updatedAt: assistantNotes.updatedAt }).from(assistantNotes).where(eq(assistantNotes.userId, ctx.user.id)).orderBy(desc(assistantNotes.updatedAt)).limit(40);
+        const notesWhere = input.noteTag ? and(eq(assistantNotes.userId, ctx.user.id), eq(assistantNotes.tag, input.noteTag)) : eq(assistantNotes.userId, ctx.user.id);
+        const noteRows = await db.select({ title: assistantNotes.title, content: assistantNotes.content, tag: assistantNotes.tag, tagColor: assistantNotes.tagColor, updatedAt: assistantNotes.updatedAt }).from(assistantNotes).where(notesWhere).orderBy(desc(assistantNotes.updatedAt)).limit(40);
         try {
           const analysis = await askClaudeForMexiAnalysis({
             system: `Eres Mexi, el asistente privado y explicable de Meximoney. ${manualOnlyNotice} Usa exclusivamente el JSON de registros manuales suministrado en este mensaje y la pregunta de la usuaria. El bloque personalNotes contiene ideas y apuntes privados: úsalo para personalizar preguntas y recomendaciones, pero no lo trates como un hecho financiero confirmado ni sustituyas los registros. No uses búsqueda web, conocimientos externos, precios de mercado, normas fiscales actuales ni herramientas. No inventes datos. Si falta información, dilo de forma explícita y propone qué registro manual se debe crear o actualizar. No des instrucciones para transferir, pagar, comprar, vender, contratar ni cancelar productos financieros. Ofrece análisis educativo, explica cálculos y distingue entre datos confirmados, ideas personales, supuestos, riesgos y próximos pasos. Responde siempre en español y usa importes en centavos solo si explicas el formato. Cierra con la frase: "Sin conexiones bancarias ni acciones financieras ejecutadas."`,
-            prompt: `REGISTROS MANUALES DE MEXIMONEY:\n${createManualSnapshotText(snapshot, noteRows)}\n\nPREGUNTA DE LA USUARIA:\n${input.message}`,
+            prompt: `REGISTROS MANUALES DE MEXIMONEY:\n${createManualSnapshotText(snapshot, noteRows, input.noteTag)}\n\nPREGUNTA DE LA USUARIA:\n${input.message}`,
           });
           const content = formatMexiAnalysis(analysis);
           const db = await requireDb();
