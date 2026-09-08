@@ -18,6 +18,7 @@ import { findRecordSearchResults, recordSearchKindLabel, type RecordSearchKind }
 import { exportRecordSearchResults } from "@/lib/recordSearchExport";
 import { exportSelectedRecords } from "@/lib/recordSelectionExport";
 import { creditCardPaymentFilterFromSearch, filterRecords } from "@/lib/recordFilters";
+import { paymentMethodLabel } from "@/lib/paymentMethodLabel";
 import { recurringTemplatePayment } from "@/lib/recurringTemplatePayment";
 import { trpc } from "@/lib/trpc";
 import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
@@ -237,8 +238,8 @@ export default function Records() {
       <section className="content-card overflow-hidden">
         <div className="card-title-row"><div><h2>Movimientos recientes</h2><p>{transactions.length} registros manuales en total{selectedTransactionIds.size ? ` · ${selectedTransactionIds.size} seleccionados` : ""}</p></div><div className="flex flex-wrap items-center gap-2"><Button type="button" size="sm" variant="outline" disabled={!selectedTransactionIds.size} onClick={() => exportSelectedRecords("excel", selectedExportRows)}><Download className="mr-1.5 size-3.5" />Excel seleccionado</Button><Button type="button" size="sm" variant="outline" disabled={!selectedTransactionIds.size} onClick={() => exportSelectedRecords("pdf", selectedExportRows)}><FileText className="mr-1.5 size-3.5" />PDF seleccionado</Button><Button type="button" size="sm" variant="outline" disabled={!selectedTransactionIds.size || removeTransactions.isPending} onClick={() => { const count = selectedTransactionIds.size; if (confirm(`¿Eliminar ${count} movimiento${count === 1 ? "" : "s"}? Esta acción no se puede deshacer.`)) removeTransactions.mutate({ ids: Array.from(selectedTransactionIds) }); }}>{removeTransactions.isPending ? "Eliminando…" : "Eliminar seleccionados"}</Button><button className="text-link" onClick={() => openCreate("movement")}>Registrar movimiento</button></div></div>
         {transactions.length === 0 ? <EmptyRecords icon={ReceiptText} title="Todavía no hay movimientos" description="Empieza con un ingreso, gasto o transferencia. Los indicadores del panel se actualizarán con tus registros." action={() => openCreate("movement")} actionLabel="Registrar primer movimiento" /> : (
-          <><div className="table-wrap"><table><thead><tr><th><input type="checkbox" aria-label="Seleccionar todos los movimientos visibles" checked={allPageSelected} onChange={event => setSelectedTransactionIds(previous => togglePageSelection(previous, pageTransactionIds, event.target.checked))} /></th><th>Fecha</th><th>Detalle</th><th>Área</th><th>Cuenta</th><th>Importe</th><th>Conciliación</th><th></th></tr></thead><tbody>{paginatedTransactions.items.map(item => {
-            const account = accounts.find(accountItem => accountItem.id === item.accountId);
+          <><div className="table-wrap"><table><thead><tr><th><input type="checkbox" aria-label="Seleccionar todos los movimientos visibles" checked={allPageSelected} onChange={event => setSelectedTransactionIds(previous => togglePageSelection(previous, pageTransactionIds, event.target.checked))} /></th><th>Fecha</th><th>Detalle</th><th>Área</th><th>Pago</th><th>Importe</th><th>Conciliación</th><th></th></tr></thead><tbody>{paginatedTransactions.items.map(item => {
+            const account = { name: paymentMethodLabel(item, accounts, data?.creditCards ?? []) };
             const category = categories.find(categoryItem => categoryItem.id === item.categoryId);
             const negative = item.type === "expense" || item.type === "transfer_out";
             const entity = data?.entities.find(entityItem => entityItem.id === item.entityId);

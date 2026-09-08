@@ -777,3 +777,9 @@
 - [x] Añadir un selector desplegable con 3, 6, 9 y 12 periodos que actualice el gráfico.
 - [x] Simplificar el indicador visual del periodo para mostrar solamente el número.
 - [x] Añadir pruebas de regresión y validar TypeScript, compilación y experiencia responsive.
+
+# Registro — columna de medios de pago
+
+- [x] Auditar el mapeo actual de la columna Cuenta en la tabla de movimientos.
+- [x] Renombrar la columna como Pago y mostrar el medio utilizado: cuenta, tarjeta de crédito u otro método disponible.
+- [x] Añadir pruebas y validar TypeScript, compilación y experiencia responsive.
