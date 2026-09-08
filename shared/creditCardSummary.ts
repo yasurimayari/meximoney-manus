@@ -67,6 +67,7 @@ export function summarizeCreditCards(cards: CreditCardSummaryCard[], reportCurre
     current.usableCards += card.status === "active" ? 1 : 0;
     byIssuer.set(issuer, current);
   }
-  const entities = Array.from(byIssuer.values()).map(item => ({ ...item, utilizationPercent: item.limitCents > 0 ? (item.payableCents / item.limitCents) * 100 : null })).sort((left, right) => right.payableCents - left.payableCents);
-  return { payableCents, availableCents, limitCents, utilizationPercent, utilizationBarPercent: utilizationPercent === null ? 0 : Math.min(100, Math.max(0, utilizationPercent)), countedCards: sameCurrency.length, usableCards: usableCards.length, entities };
+  const availablePercent = limitCents > 0 ? (availableCents / limitCents) * 100 : null;
+  const entities = Array.from(byIssuer.values()).map(item => ({ ...item, utilizationPercent: item.limitCents > 0 ? (item.payableCents / item.limitCents) * 100 : null, availablePercent: item.limitCents > 0 ? (item.availableCents / item.limitCents) * 100 : null })).sort((left, right) => right.payableCents - left.payableCents);
+  return { payableCents, availableCents, limitCents, utilizationPercent, availablePercent, utilizationBarPercent: utilizationPercent === null ? 0 : Math.min(100, Math.max(0, utilizationPercent)), countedCards: sameCurrency.length, usableCards: usableCards.length, entities };
 }

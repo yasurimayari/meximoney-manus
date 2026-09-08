@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterRecords } from "./recordFilters";
+import { creditCardPaymentFilterFromSearch, filterRecords } from "./recordFilters";
 
 describe("filterRecords", () => {
   const records = [
@@ -21,5 +21,17 @@ describe("filterRecords", () => {
     const withReconciliation = records.map((record, index) => ({ ...record, reconciledAt: index === 0 ? "2026-09-06T12:00:00.000Z" : null }));
     expect(filterRecords(withReconciliation, { reconciliation: "reconciled" }).map(record => record.id)).toEqual([1]);
     expect(filterRecords(withReconciliation, { reconciliation: "unreconciled" }).map(record => record.id)).toEqual([2, 3]);
+  });
+});
+
+describe("creditCardPaymentFilterFromSearch", () => {
+  it("convierte un enlace de tarjeta válido en el filtro de medio de pago", () => {
+    expect(creditCardPaymentFilterFromSearch("?creditCardId=60001")).toBe("card:60001");
+  });
+
+  it("ignora identificadores ausentes o inválidos", () => {
+    expect(creditCardPaymentFilterFromSearch("")).toBeNull();
+    expect(creditCardPaymentFilterFromSearch("?creditCardId=0")).toBeNull();
+    expect(creditCardPaymentFilterFromSearch("?creditCardId=abc")).toBeNull();
   });
 });

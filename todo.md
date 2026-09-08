@@ -759,3 +759,10 @@
 - [x] Corregir la actualización derivada de saldos, límite y crédito disponible por entidad.
 - [x] Eliminar los textos «6 entidades registradas» y «1 tarjeta · 1 utilizable» del módulo Tarjetas.
 - [x] Añadir pruebas de regresión y validar TypeScript, compilación y actualización visual.
+
+# Tarjetas — utilización y movimientos completos
+
+- [x] Auditar por qué los porcentajes de utilización muestran 0% cuando existen saldos a favor o movimientos vinculados.
+- [x] Corregir la semántica y el cálculo de utilización total y por entidad.
+- [x] Añadir un acceso «Ver más» desde cada tarjeta hacia el historial completo filtrado de sus movimientos.
+- [x] Añadir pruebas de regresión y validar TypeScript, compilación y experiencia responsive.

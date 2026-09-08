@@ -14,8 +14,8 @@ describe("resumen agregado de tarjetas", () => {
     expect(result.utilizationPercent).toBeCloseTo(23.3333, 3);
     expect(result.utilizationBarPercent).toBeCloseTo(23.3333, 3);
     expect(result.entities).toEqual([
-      { issuer: "Santander", payableCents: 2_000, availableCents: 8_000, limitCents: 10_000, countedCards: 1, usableCards: 1, utilizationPercent: 20 },
-      { issuer: "Klar", payableCents: 1_500, availableCents: 3_500, limitCents: 5_000, countedCards: 1, usableCards: 1, utilizationPercent: 30 },
+      { issuer: "Santander", payableCents: 2_000, availableCents: 8_000, limitCents: 10_000, countedCards: 1, usableCards: 1, utilizationPercent: 20, availablePercent: 80 },
+      { issuer: "Klar", payableCents: 1_500, availableCents: 3_500, limitCents: 5_000, countedCards: 1, usableCards: 1, utilizationPercent: 30, availablePercent: 70 },
     ]);
   });
 
@@ -40,7 +40,7 @@ describe("resumen agregado de tarjetas", () => {
 
     expect(result.availableCents).toBe(16_000);
     expect(result.entities).toEqual([
-      { issuer: "Klar", payableCents: 1_500, availableCents: 16_000, limitCents: 15_000, countedCards: 2, usableCards: 2, utilizationPercent: 10 },
+      { issuer: "Klar", payableCents: 1_500, availableCents: 16_000, limitCents: 15_000, countedCards: 2, usableCards: 2, utilizationPercent: 10, availablePercent: 106.66666666666667 },
     ]);
   });
 

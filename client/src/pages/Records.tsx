@@ -17,7 +17,7 @@ import { selectedRecordsOnPage, togglePageSelection, toggleRecordSelection } fro
 import { findRecordSearchResults, recordSearchKindLabel, type RecordSearchKind } from "@/lib/recordSearch";
 import { exportRecordSearchResults } from "@/lib/recordSearchExport";
 import { exportSelectedRecords } from "@/lib/recordSelectionExport";
-import { filterRecords } from "@/lib/recordFilters";
+import { creditCardPaymentFilterFromSearch, filterRecords } from "@/lib/recordFilters";
 import { recurringTemplatePayment } from "@/lib/recurringTemplatePayment";
 import { trpc } from "@/lib/trpc";
 import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
@@ -100,6 +100,11 @@ export default function Records() {
   const [selectedTransactionIds, setSelectedTransactionIds] = useState<Set<number>>(new Set());
   const [importOpen, setImportOpen] = useState(false);
   const [transactionPage, setTransactionPage] = useState(1);
+
+  useEffect(() => {
+    const creditCardFilter = creditCardPaymentFilterFromSearch(window.location.search);
+    if (creditCardFilter) setAccountFilter(creditCardFilter);
+  }, []);
 
   const refresh = async () => {
     setSelectedTransactionIds(new Set());

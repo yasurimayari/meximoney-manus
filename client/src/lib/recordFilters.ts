@@ -22,3 +22,8 @@ export function filterRecords<T extends FilterableRecord>(records: T[], criteria
       && (!criteria.reconciliation || (criteria.reconciliation === "reconciled" ? Boolean(record.reconciledAt) : !record.reconciledAt));
   });
 }
+
+export function creditCardPaymentFilterFromSearch(search: string) {
+  const creditCardId = Number(new URLSearchParams(search).get("creditCardId"));
+  return Number.isInteger(creditCardId) && creditCardId > 0 ? `card:${creditCardId}` : null;
+}
