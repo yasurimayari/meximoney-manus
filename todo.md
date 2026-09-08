@@ -713,3 +713,12 @@
 - [x] Añadir un identificador visible y estable a cada archivo adjunto de una nota.
 - [x] Añadir pruebas de reintento, fallo de Claude, creación independiente e identificadores de adjuntos.
 - [x] Validar TypeScript, pruebas, compilación, responsive y publicar la corrección.
+
+# Corrección de producción — Mexi IA y Diario Financiero
+
+- [x] Auditar logs de producción y la respuesta real del procedimiento de Mexi IA.
+- [x] Verificar directamente en base de datos el número y contenido de notas de la usuaria.
+- [x] Corregir la causa real por la que Mexi IA devuelve error o no completa la respuesta.
+- [x] Corregir la causa real por la que las notas se sobreescriben o no aparecen en el listado.
+- [x] Añadir pruebas de regresión basadas en los fallos observados en producción.
+- [x] Validar TypeScript, pruebas, compilación, experiencia autenticada y publicar la corrección.

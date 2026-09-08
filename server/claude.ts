@@ -47,7 +47,11 @@ function extractText(payload: ClaudeMessagesResponse) {
 }
 
 function parseAnalysis(content: string): MexiAnalysis {
-  const candidate = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  const fenced = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)?.[1];
+  const source = (fenced ?? content).trim();
+  const start = source.indexOf("{");
+  const end = source.lastIndexOf("}");
+  const candidate = start >= 0 && end > start ? source.slice(start, end + 1) : source;
   let parsed: Partial<MexiAnalysis>;
   try {
     parsed = JSON.parse(candidate) as Partial<MexiAnalysis>;

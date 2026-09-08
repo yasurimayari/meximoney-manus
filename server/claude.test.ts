@@ -38,6 +38,15 @@ describe("askClaudeForMexi", () => {
     await expect(askClaudeForMexiAnalysis({ system: "Instrucciones", prompt: "Datos manuales" })).rejects.toThrow("estructurada válida");
   });
 
+  it("acepta JSON estructurado encapsulado sin relajar la validación", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "clave-de-prueba-no-publica");
+    const structured = { answer: "Respuesta recuperada.", facts: [], calculations: [], assumptions: [], recommendations: [], warnings: [], sources: [], canExecute: false };
+    const wrapped = "Aquí está el análisis:\n```json\n" + JSON.stringify(structured) + "\n```";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: [{ type: "text", text: wrapped }] }), { status: 200 })));
+
+    await expect(askClaudeForMexiAnalysis({ system: "Instrucciones", prompt: "Datos manuales" })).resolves.toMatchObject({ answer: "Respuesta recuperada.", canExecute: false });
+  });
+
   it("reintenta una respuesta transitoria de Claude antes de fallar", async () => {
     vi.stubEnv("ANTHROPIC_API_KEY", "clave-de-prueba-no-publica");
     const fetchMock = vi.fn()
