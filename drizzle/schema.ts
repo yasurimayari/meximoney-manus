@@ -836,6 +836,24 @@ export const decisionRecords = mysqlTable("decisionRecords", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const assistantNotes = mysqlTable("assistantNotes", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 180 }).notNull().default("Nota sin título"),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const assistantChatHistory = mysqlTable("assistantChatHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  userMessage: text("userMessage").notNull(),
+  assistantContent: text("assistantContent").notNull(),
+  analysisJson: text("analysisJson"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const privacyConsents = mysqlTable("privacyConsents", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

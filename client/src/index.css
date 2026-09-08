@@ -340,3 +340,27 @@
     grid-column: auto;
   }
 }
+
+/* Mexi IA: diario privado e historial */
+.assistant-section-heading { @apply flex items-start gap-3; }
+.assistant-section-heading h2 { @apply mt-0; }
+.assistant-section-heading p { @apply mt-1 text-xs leading-5 text-muted-foreground; }
+.assistant-notebook, .assistant-history-panel { @apply space-y-3; }
+.assistant-note-actions { @apply flex justify-end gap-2; }
+.assistant-note-tabs { @apply flex gap-1 border-b border-border/70; }
+.assistant-note-tabs button { @apply border-b-2 border-transparent px-2 py-1 text-xs text-muted-foreground transition-colors; }
+.assistant-note-tabs button:hover, .assistant-note-tabs button.active { @apply border-primary text-primary; }
+.assistant-note-preview { @apply min-h-28 max-h-56 overflow-auto rounded-lg border bg-background/70 p-3; }
+.assistant-note-list, .assistant-history-list { @apply max-h-52 space-y-1 overflow-y-auto; }
+.assistant-note-list button, .assistant-history-list button { @apply flex w-full flex-col items-start rounded-lg border border-transparent bg-background/50 px-3 py-2 text-left transition-colors hover:border-border hover:bg-muted/60; }
+.assistant-note-list button.selected { @apply border-primary/30 bg-primary/5; }
+.assistant-note-list span, .assistant-history-list strong { @apply max-w-full truncate text-xs font-medium; }
+.assistant-note-list small, .assistant-history-list small { @apply text-[0.65rem] text-muted-foreground; }
+.assistant-history-list span { @apply mt-1 line-clamp-2 text-[0.7rem] leading-4 text-muted-foreground; }
+.assistant-empty { @apply rounded-lg border border-dashed p-3 text-xs leading-5 text-muted-foreground; }
+.katex-display { @apply my-3 overflow-x-auto overflow-y-hidden rounded-lg bg-background/60 px-3 py-2; }
+@media (max-width: 640px) {
+  .assistant-note-actions { @apply justify-stretch; }
+  .assistant-note-actions > button { @apply flex-1; }
+  .assistant-note-list, .assistant-history-list { @apply max-h-44; }
+}

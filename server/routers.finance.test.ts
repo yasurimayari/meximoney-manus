@@ -130,7 +130,7 @@ describe("finance.dashboard", () => {
   });
 
   it("envía a Claude sólo una síntesis del espacio autenticado y devuelve su análisis", async () => {
-    mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }) });
+    mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }), insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{ insertId: 1 }]) }) });
     mocks.getFinanceSnapshot.mockResolvedValue({
       profile: { currency: "MXN" }, accounts: [], categories: [], transactions: [], debts: [], goals: [], tasks: [], calendarEvents: [], statements: [], dashboard: {},
     });
@@ -144,6 +144,16 @@ describe("finance.dashboard", () => {
       prompt: expect.stringContaining("PREGUNTA DE LA USUARIA:\nResume mi situación"),
     }));
     expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.prompt).not.toContain("ANTHROPIC_API_KEY");
+  });
+
+  it("guarda una nota del diario únicamente bajo la usuaria autenticada", async () => {
+    const values = vi.fn().mockResolvedValue([{ insertId: 91 }]);
+    const insert = vi.fn().mockReturnValue({ values });
+    mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }), insert });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.assistant.notes.save({ title: "Idea", content: "## Revisar flujo\\n\\n$$x^2$$" })).resolves.toEqual({ id: 91 });
+    expect(values).toHaveBeenCalledWith({ userId: 27, title: "Idea", content: "## Revisar flujo\\n\\n$$x^2$$" });
   });
 
   it("aplica el identificador autenticado al eliminar calendario, estados y documentos", async () => {

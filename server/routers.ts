@@ -5,6 +5,8 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   accounts,
+  assistantChatHistory,
+  assistantNotes,
   bankStatementImports,
   bankStatementRows,
   budgets,
@@ -2147,14 +2149,42 @@ export const appRouter = router({
       remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(decisionRecords, input.id, ctx.user.id)),
     }),
     assistant: router({
-      chat: privateFinanceProcedure.input(z.object({ message: z.string().min(1).max(1600) })).mutation(async ({ ctx, input }) => {
+      notes: router({
+        list: privateFinanceProcedure.query(async ({ ctx }) => {
+          const db = await requireDb();
+          return db.select().from(assistantNotes).where(eq(assistantNotes.userId, ctx.user.id)).orderBy(desc(assistantNotes.updatedAt)).limit(100);
+        }),
+        save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), title: z.string().trim().min(1).max(180), content: z.string().max(20000) })).mutation(async ({ ctx, input }) => {
+          const db = await requireDb();
+          const payload = { title: input.title, content: input.content };
+          if (input.id) {
+            const [existing] = await db.select({ id: assistantNotes.id }).from(assistantNotes).where(and(eq(assistantNotes.id, input.id), eq(assistantNotes.userId, ctx.user.id))).limit(1);
+            if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "La nota no pertenece a tu espacio privado." });
+            await db.update(assistantNotes).set(payload).where(and(eq(assistantNotes.id, input.id), eq(assistantNotes.userId, ctx.user.id)));
+            return { id: input.id };
+          }
+          const result = await db.insert(assistantNotes).values({ userId: ctx.user.id, ...payload });
+          return { id: Number(result[0].insertId) };
+        }),
+        remove: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { const db = await requireDb(); await db.delete(assistantNotes).where(and(eq(assistantNotes.id, input.id), eq(assistantNotes.userId, ctx.user.id))); return { success: true }; }),
+      }),
+      history: router({
+        list: privateFinanceProcedure.query(async ({ ctx }) => {
+          const db = await requireDb();
+          return db.select().from(assistantChatHistory).where(eq(assistantChatHistory.userId, ctx.user.id)).orderBy(desc(assistantChatHistory.createdAt)).limit(100);
+        }),
+      }),
+      chat: privateFinanceProcedure.input(z.object({ message: z.string().trim().min(1).max(1600) })).mutation(async ({ ctx, input }) => {
         const snapshot = await getFinanceSnapshot(ctx.user.id);
         try {
           const analysis = await askClaudeForMexiAnalysis({
             system: `Eres Mexi, el asistente privado y explicable de Meximoney. ${manualOnlyNotice} Usa exclusivamente el JSON de registros manuales suministrado en este mensaje y la pregunta de la usuaria. No uses búsqueda web, conocimientos externos, precios de mercado, normas fiscales actuales ni herramientas. No inventes datos. Si falta información, dilo de forma explícita y propone qué registro manual se debe crear o actualizar. No des instrucciones para transferir, pagar, comprar, vender, contratar ni cancelar productos financieros. Ofrece análisis educativo, explica cálculos y distingue entre datos, supuestos, riesgos y próximos pasos. Responde siempre en español y usa importes en centavos solo si explicas el formato. Cierra con la frase: "Sin conexiones bancarias ni acciones financieras ejecutadas."`,
             prompt: `REGISTROS MANUALES DE MEXIMONEY:\n${createManualSnapshotText(snapshot)}\n\nPREGUNTA DE LA USUARIA:\n${input.message}`,
           });
-          return { content: formatMexiAnalysis(analysis), analysis, notice: manualOnlyNotice };
+          const content = formatMexiAnalysis(analysis);
+          const db = await requireDb();
+          await db.insert(assistantChatHistory).values({ userId: ctx.user.id, userMessage: input.message, assistantContent: content, analysisJson: JSON.stringify(analysis) });
+          return { content, analysis, notice: manualOnlyNotice };
         } catch (error) {
           console.error("[Mexi] Claude unavailable:", error instanceof Error ? error.message : "Error no identificable");
           return { content: "Mexi no pudo obtener una respuesta de Claude en este momento. Tus datos no se han modificado. Puedes reintentar la consulta; si el problema continúa, revisa que la clave privada de Claude siga activa.", notice: manualOnlyNotice };

@@ -2,6 +2,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   accounts,
+  assistantChatHistory,
+  assistantNotes,
   bankStatementImports,
   bankStatementRows,
   budgets,
@@ -341,6 +343,8 @@ export async function deleteOwnedRow(table: typeof accounts | typeof categories 
 export async function deleteAllFinancialData(userId: number) {
   const db = await requireDb();
   await db.transaction(async tx => {
+    await tx.delete(assistantChatHistory).where(eq(assistantChatHistory.userId, userId));
+    await tx.delete(assistantNotes).where(eq(assistantNotes.userId, userId));
     await tx.delete(financialPlanLinks).where(eq(financialPlanLinks.userId, userId));
     await tx.delete(financialPlanPeriods).where(eq(financialPlanPeriods.userId, userId));
     await tx.delete(financialPlanScenarios).where(eq(financialPlanScenarios.userId, userId));

@@ -642,3 +642,14 @@
 - [x] Añadir pruebas unitarias y de seguridad para aislamiento, fórmulas, salida estructurada y prohibición de acciones.
 - [x] Validar TypeScript, pruebas, compilación y experiencia responsive de Mexi IA.
 - [x] Documentar el alcance, limitaciones y publicar la versión estable de Mexi IA.
+
+# Ampliación del Asistente — diario, historial y fórmulas
+
+- [x] Auditar dependencias y componentes disponibles para Markdown y fórmulas matemáticas.
+- [x] Crear persistencia privada para entradas del diario con edición y eliminación.
+- [x] Crear persistencia privada para historial de consultas y respuestas de Mexi IA.
+- [x] Añadir procedimientos protegidos tRPC con aislamiento por usuaria y límites de tamaño.
+- [x] Integrar el diario y el panel de historial en la interfaz de Mexi IA.
+- [x] Renderizar Markdown y fórmulas matemáticas de forma segura y legible.
+- [x] Añadir pruebas de persistencia, aislamiento, historial, Markdown y fórmulas.
+- [x] Validar TypeScript, pruebas, compilación y responsive; publicar la ampliación.
