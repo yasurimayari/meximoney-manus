@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { trpc } from "@/lib/trpc";
-import { BookOpen, Eye, History, Plus, Save, Sparkles, Trash2 } from "lucide-react";
+import { Archive, BookOpen, Edit3, Eye, History, Pin, PinOff, Plus, Save, Search, Sparkles, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
@@ -26,10 +26,9 @@ const noteTags = [
   { value: "proyectos", label: "Proyectos", color: "blue" },
   { value: "personal", label: "Personal", color: "slate" },
 ] as const;
-const noteColors = ["slate", "blue", "amber", "emerald", "violet", "rose"] as const;
 type NoteTag = (typeof noteTags)[number]["value"];
-type NoteColor = (typeof noteColors)[number];
-type NoteDraft = { id?: number; title: string; content: string; tag: NoteTag; tagColor: NoteColor };
+type NoteColor = (typeof noteTags)[number]["color"];
+type NoteDraft = { id?: number; title: string; content: string; tag: NoteTag; tagColor: NoteColor; isPinned?: boolean };
 
 export default function Assistant() {
   const { isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
@@ -39,7 +38,8 @@ export default function Assistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedNoteTag, setSelectedNoteTag] = useState<NoteTag | "all">("all");
   const [noteListFilter, setNoteListFilter] = useState<NoteTag | "all">("all");
-  const [note, setNote] = useState<NoteDraft>({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate" });
+  const [noteSearch, setNoteSearch] = useState("");
+  const [note, setNote] = useState<NoteDraft>({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate", isPinned: false });
   const [previewNote, setPreviewNote] = useState(false);
   const chat = trpc.finance.assistant.chat.useMutation({
     onSuccess: response => {
@@ -59,10 +59,18 @@ export default function Assistant() {
     },
     onError: error => toast.error(error.message),
   });
+  const togglePinned = trpc.finance.assistant.notes.togglePinned.useMutation({
+    onSuccess: () => { toast.success("Prioridad de la nota actualizada"); void utils.finance.assistant.notes.list.invalidate(); },
+    onError: error => toast.error(error.message),
+  });
+  const archiveNote = trpc.finance.assistant.notes.archive.useMutation({
+    onSuccess: () => { toast.success("Nota archivada"); setNote({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate", isPinned: false }); void utils.finance.assistant.notes.list.invalidate(); },
+    onError: error => toast.error(error.message),
+  });
   const removeNote = trpc.finance.assistant.notes.remove.useMutation({
     onSuccess: () => {
       toast.success("Nota eliminada");
-      setNote({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate" });
+      setNote({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate", isPinned: false });
       void utils.finance.assistant.notes.list.invalidate();
     },
     onError: error => toast.error(error.message),
@@ -71,7 +79,7 @@ export default function Assistant() {
   useEffect(() => {
     if (!note.id && notes.data?.[0]) {
       const first = notes.data[0];
-      setNote({ id: first.id, title: first.title, content: first.content, tag: (first.tag as NoteTag) || "general", tagColor: (first.tagColor as NoteColor) || "slate" });
+      setNote({ id: first.id, title: first.title, content: first.content, tag: (first.tag as NoteTag) || "general", tagColor: (first.tagColor as NoteColor) || "slate", isPinned: Boolean(first.isPinned) });
     }
   }, [notes.data, note.id]);
 
@@ -85,8 +93,14 @@ export default function Assistant() {
     setPreviewNote(false);
   };
 
-  const visibleNotes = notes.data?.filter(item => noteListFilter === "all" || item.tag === noteListFilter) ?? [];
+  const visibleNotes = notes.data?.filter(item => {
+    const matchesTag = noteListFilter === "all" || item.tag === noteListFilter;
+    const query = noteSearch.trim().toLocaleLowerCase("es-MX");
+    const matchesSearch = !query || `${item.title} ${item.content}`.toLocaleLowerCase("es-MX").includes(query);
+    return matchesTag && matchesSearch;
+  }) ?? [];
   const tagLabel = (tag: string) => noteTags.find(item => item.value === tag)?.label ?? "General";
+  const tagColor = (tag: string) => noteTags.find(item => item.value === tag)?.color ?? "slate";
 
   const selectHistory = (item: { userMessage: string; assistantContent: string }) => {
     setMessages([{ role: "user", content: item.userMessage }, { role: "assistant", content: item.assistantContent }]);
@@ -117,14 +131,14 @@ export default function Assistant() {
         <aside className="assistant-sidebar">
           <section className="assistant-context assistant-notebook">
             <div className="assistant-section-heading"><div className="assistant-context-icon"><BookOpen className="size-5" /></div><div><h2>Diario financiero</h2><p>Anota ideas, decisiones y preguntas para revisarlas después.</p></div></div>
-            <div className="assistant-note-actions"><Button type="button" variant="outline" size="sm" onClick={() => { setNote({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate" }); setPreviewNote(false); }}><Plus className="mr-1 size-3.5" />Nueva</Button><Button type="button" size="sm" onClick={() => saveNote.mutate(note)} disabled={saveNote.isPending || !note.title.trim()}><Save className="mr-1 size-3.5" />Guardar</Button></div>
+            <div className="assistant-note-actions"><Button type="button" variant="outline" size="sm" onClick={() => { setNote({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate", isPinned: false }); setPreviewNote(false); }}><Plus className="mr-1 size-3.5" />Nueva</Button><Button type="button" size="sm" onClick={() => saveNote.mutate(note)} disabled={saveNote.isPending || !note.title.trim()}><Save className="mr-1 size-3.5" />Guardar</Button></div>
             <Input value={note.title} onChange={event => setNote(current => ({ ...current, title: event.target.value }))} maxLength={180} placeholder="Título de la nota" aria-label="Título de la nota" />
-            <div className="assistant-note-meta"><label>Etiqueta<select value={note.tag} onChange={event => setNote(current => ({ ...current, tag: event.target.value as NoteTag }))} aria-label="Etiqueta de la nota">{noteTags.map(tag => <option value={tag.value} key={tag.value}>{tag.label}</option>)}</select></label><div><span>Color</span><div className="assistant-color-picker">{noteColors.map(color => <button type="button" key={color} aria-label={`Color ${color}`} className={`note-color-swatch note-color-${color} ${note.tagColor === color ? "selected" : ""}`} onClick={() => setNote(current => ({ ...current, tagColor: color }))} />)}</div></div></div>
+            <div className="assistant-note-meta"><label>Etiqueta<select value={note.tag} onChange={event => { const tag = event.target.value as NoteTag; setNote(current => ({ ...current, tag, tagColor: tagColor(tag) })); }} aria-label="Etiqueta de la nota">{noteTags.map(tag => <option value={tag.value} key={tag.value}>{tag.label}</option>)}</select></label><div className="assistant-fixed-tag-color"><span>Color predeterminado</span><span className={`note-tag-color-dot note-color-${tagColor(note.tag)}`} aria-label={`Color predeterminado de ${tagLabel(note.tag)}`} /><strong>{tagLabel(note.tag)}</strong></div></div>
             <div className="assistant-note-tabs"><button type="button" className={!previewNote ? "active" : ""} onClick={() => setPreviewNote(false)}>Editar</button><button type="button" className={previewNote ? "active" : ""} onClick={() => setPreviewNote(true)}><Eye className="mr-1 inline size-3.5" />Vista previa</button></div>
             {previewNote ? <div className="assistant-note-preview prose prose-sm max-w-none"><Streamdown>{note.content || "Escribe una nota para verla aquí."}</Streamdown></div> : <Textarea value={note.content} onChange={event => setNote(current => ({ ...current, content: event.target.value }))} maxLength={20000} placeholder="Escribe tus ideas y apuntes aquí…" className="min-h-28 resize-y" aria-label="Contenido de la nota" />}
-            <div className="assistant-note-list-toolbar"><select value={noteListFilter} onChange={event => setNoteListFilter(event.target.value as NoteTag | "all")} aria-label="Filtrar notas por etiqueta"><option value="all">Todas las etiquetas</option>{noteTags.map(tag => <option value={tag.value} key={tag.value}>{tag.label}</option>)}</select></div>
+            <div className="assistant-note-list-toolbar"><label className="assistant-note-search"><Search className="size-3.5" /><Input value={noteSearch} onChange={event => setNoteSearch(event.target.value)} placeholder="Buscar notas…" aria-label="Buscar notas por texto" /></label><select value={noteListFilter} onChange={event => setNoteListFilter(event.target.value as NoteTag | "all")} aria-label="Filtrar notas por etiqueta"><option value="all">Todas las etiquetas</option>{noteTags.map(tag => <option value={tag.value} key={tag.value}>{tag.label}</option>)}</select></div>
             {note.id && <Button type="button" variant="ghost" size="sm" className="mt-1 self-end text-destructive hover:text-destructive" onClick={() => removeNote.mutate({ id: note.id! })} disabled={removeNote.isPending}><Trash2 className="mr-1 size-3.5" />Eliminar nota</Button>}
-            <div className="assistant-note-list">{visibleNotes.map(item => <button type="button" key={item.id} className={note.id === item.id ? "selected" : ""} onClick={() => selectNote({ id: item.id, title: item.title, content: item.content, tag: (item.tag as NoteTag) || "general", tagColor: (item.tagColor as NoteColor) || "slate" })}><span>{item.title}</span><small><b className={`note-tag note-tag-${item.tagColor}`}>{tagLabel(item.tag)}</b> · {new Date(item.updatedAt).toLocaleDateString("es-MX")}</small></button>)}</div>
+            <div className="assistant-note-list">{visibleNotes.map(item => <div className={`assistant-note-row ${note.id === item.id ? "selected" : ""}`} key={item.id}><button type="button" className="assistant-note-main" onClick={() => selectNote({ id: item.id, title: item.title, content: item.content, tag: (item.tag as NoteTag) || "general", tagColor: tagColor(item.tag), isPinned: Boolean(item.isPinned) })}><span>{item.isPinned && <Pin className="mr-1 inline size-3" aria-label="Nota fijada" />}{item.title}</span><small><b className={`note-tag note-tag-${tagColor(item.tag)}`}>{tagLabel(item.tag)}</b> · {new Date(item.updatedAt).toLocaleDateString("es-MX")}</small></button><div className="assistant-note-icon-actions"><button type="button" title="Visualizar nota" aria-label={`Visualizar ${item.title}`} onClick={() => { selectNote({ id: item.id, title: item.title, content: item.content, tag: (item.tag as NoteTag) || "general", tagColor: tagColor(item.tag), isPinned: Boolean(item.isPinned) }); setPreviewNote(true); }}><Eye className="size-3.5" /></button><button type="button" title={item.isPinned ? "Quitar prioridad" : "Fijar nota"} aria-label={item.isPinned ? `Quitar prioridad de ${item.title}` : `Fijar ${item.title}`} onClick={() => togglePinned.mutate({ id: item.id, isPinned: !item.isPinned })}>{item.isPinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}</button><button type="button" title="Editar nota" aria-label={`Editar ${item.title}`} onClick={() => { selectNote({ id: item.id, title: item.title, content: item.content, tag: (item.tag as NoteTag) || "general", tagColor: tagColor(item.tag), isPinned: Boolean(item.isPinned) }); setPreviewNote(false); }}><Edit3 className="size-3.5" /></button><button type="button" title="Archivar nota" aria-label={`Archivar ${item.title}`} onClick={() => archiveNote.mutate({ id: item.id, archived: true })}><Archive className="size-3.5" /></button><button type="button" title="Eliminar nota" aria-label={`Eliminar ${item.title}`} onClick={() => removeNote.mutate({ id: item.id })}><Trash2 className="size-3.5" /></button></div></div>)}</div>
           </section>
 
           <section className="assistant-context assistant-history-panel">

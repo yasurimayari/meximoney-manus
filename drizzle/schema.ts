@@ -843,6 +843,8 @@ export const assistantNotes = mysqlTable("assistantNotes", {
   content: text("content").notNull(),
   tag: varchar("tag", { length: 40 }).notNull().default("general"),
   tagColor: varchar("tagColor", { length: 16 }).notNull().default("slate"),
+  isPinned: boolean("isPinned").notNull().default(false),
+  archivedAt: timestamp("archivedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

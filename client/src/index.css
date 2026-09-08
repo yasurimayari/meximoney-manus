@@ -394,3 +394,23 @@
   .assistant-chat-header { @apply flex-wrap; }
   .assistant-note-meta { @apply flex-col items-stretch; }
 }
+
+/* Diario Financiero: búsqueda y acciones compactas */
+.assistant-fixed-tag-color { @apply flex min-w-24 flex-row items-center gap-1.5 text-[0.65rem] text-muted-foreground; }
+.assistant-fixed-tag-color span:first-child { @apply mr-0.5; }
+.note-tag-color-dot { @apply size-3.5 rounded-full; }
+.assistant-note-search { @apply relative flex min-w-0 flex-1 items-center; }
+.assistant-note-search > svg { @apply pointer-events-none absolute left-2 text-muted-foreground; }
+.assistant-note-search input { @apply h-8 pl-7 text-xs; }
+.assistant-note-row { @apply flex items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 transition-colors hover:border-border hover:bg-muted/40; }
+.assistant-note-row.selected { @apply border-primary/30 bg-primary/5; }
+.assistant-note-main { @apply min-w-0 flex-1 text-left; }
+.assistant-note-main > span { @apply block truncate text-sm font-medium text-foreground; }
+.assistant-note-main > small { @apply block truncate text-muted-foreground; }
+.assistant-note-icon-actions { @apply flex shrink-0 items-center gap-0.5; }
+.assistant-note-icon-actions button { @apply inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring; }
+@media (max-width: 640px) {
+  .assistant-note-list-toolbar { @apply flex-col items-stretch; }
+  .assistant-fixed-tag-color { @apply min-w-0; }
+  .assistant-note-icon-actions button { @apply size-8; }
+}

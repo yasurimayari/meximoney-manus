@@ -672,3 +672,14 @@
 - [x] Permitir que Mexi IA filtre las notas del contexto por etiqueta temática.
 - [x] Añadir pruebas de migración, aislamiento, etiquetas, filtrado y contexto de Mexi IA.
 - [x] Validar TypeScript, pruebas, compilación, responsive y publicar la mejora.
+
+# Diario Financiero — fijado, acciones y búsqueda
+
+- [x] Auditar el modelo actual de notas y sus acciones.
+- [x] Añadir persistencia de nota fijada y archivada sin perder datos existentes.
+- [x] Fijar colores de etiquetas por tema y eliminar la selección manual de círculos de color.
+- [x] Reemplazar las acciones de texto por iconos accesibles para visualizar, editar, fijar, archivar y eliminar.
+- [x] Añadir búsqueda textual combinable con filtros de etiquetas.
+- [x] Priorizar notas fijadas en el contexto de Mexi IA y excluir notas archivadas.
+- [x] Añadir pruebas de búsqueda, acciones, archivado, fijado y contexto prioritario.
+- [x] Validar TypeScript, pruebas, compilación, responsive y publicar la mejora.
