@@ -722,3 +722,13 @@
 - [x] Corregir la causa real por la que las notas se sobreescriben o no aparecen en el listado.
 - [x] Añadir pruebas de regresión basadas en los fallos observados en producción.
 - [x] Validar TypeScript, pruebas, compilación, experiencia autenticada y publicar la corrección.
+
+# Mexi IA — integración de instrucciones operativas
+
+- [x] Auditar el prompt actual y separar reglas de seguridad, contexto dinámico, protocolos y formato.
+- [x] Incorporar una política operativa versionada para Mexi IA sin duplicar ni contradecir los límites existentes.
+- [x] Usar perfil, entidades, moneda, residencia, historial y diario como contexto dinámico, evitando cifras obsoletas hardcodeadas.
+- [x] Añadir niveles de certeza, calidad de datos, contraargumentos y alternativas a las recomendaciones.
+- [x] Incorporar protocolos de deuda, liquidez, presupuesto, cierre mensual, alertas y detección de duplicados sin ejecutar acciones.
+- [x] Añadir pruebas para seguridad, modo solo lectura, contexto dinámico, fórmulas y formato de respuesta.
+- [x] Validar TypeScript, pruebas, compilación, responsive y publicar la integración.

@@ -85,6 +85,7 @@ import { creditCardAlertCandidates } from "./creditCardAlerts";
 import { payableAlertCandidates, upcomingTravelAlertCandidates } from "./scheduledAlertCandidates";
 import { extractQuickCaptureDraft } from "./quickCapture";
 import { askClaudeForMexiAnalysis, formatMexiAnalysis } from "./claude";
+import { MEXI_OPERATIONAL_POLICY } from "./mexiPolicy";
 import type { ClaudeAttachment } from "./claude";
 import { mexicoCityReferenceMonth } from "./monthReference";
 import { calculatePersonalScore } from "./personalScore";
@@ -2240,7 +2241,7 @@ export const appRouter = router({
         const noteRows = noteRowsBase.map(note => ({ ...note, attachments: attachmentRows.filter(attachment => attachment.noteId === note.id).map(({ fileKey, ...metadata }) => metadata) }));
         try {
           const analysis = await askClaudeForMexiAnalysis({
-            system: `Eres Mexi, el asistente privado y explicable de Meximoney. ${manualOnlyNotice} Usa exclusivamente el JSON de registros manuales suministrado en este mensaje y la pregunta de la usuaria. El bloque personalNotes contiene ideas y apuntes privados, ordenados con las notas fijadas primero: considera isPinned=true como contexto prioritario de la usuaria, pero no lo trates como un hecho financiero confirmado ni sustituyas los registros. No uses búsqueda web, conocimientos externos, precios de mercado, normas fiscales actuales ni herramientas. No inventes datos. Si falta información, dilo de forma explícita y propone qué registro manual se debe crear o actualizar. No des instrucciones para transferir, pagar, comprar, vender, contratar ni cancelar productos financieros. Ofrece análisis educativo, explica cálculos y distingue entre datos confirmados, ideas personales, supuestos, riesgos y próximos pasos. Responde siempre en español y usa importes en centavos solo si explicas el formato. Cierra con la frase: "Sin conexiones bancarias ni acciones financieras ejecutadas."`,
+            system: `${MEXI_OPERATIONAL_POLICY}\n\n${manualOnlyNotice}\n\nEl snapshot adjunto es la única fuente de hechos. El bloque personalNotes contiene ideas y apuntes privados, ordenados con las notas fijadas primero. Elige el nivel de detalle adecuado a la pregunta y no repitas reglas de la política en la respuesta.`,
             prompt: `REGISTROS MANUALES DE MEXIMONEY:\n${createManualSnapshotText(snapshot, noteRows, input.noteTag)}\n\nPREGUNTA DE LA USUARIA:\n${input.message}`,
             attachments: await loadAssistantClaudeAttachments(attachmentRows),
           });

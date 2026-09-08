@@ -146,6 +146,9 @@ describe("finance.dashboard", () => {
     expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.prompt).toContain("Fondo de emergencia");
     expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.prompt).toContain('"isPinned":true');
     expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.system).toContain("personalNotes");
+    expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.system).toContain("POLÍTICA OPERATIVA MEXI IA");
+    expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.system).toContain("canExecute=false");
+    expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.system).toContain("confirmado, estimado, escenario y requiere validación profesional");
     expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.prompt).toContain('"personalNotesFilter":"impuestos"');
     expect(mocks.askClaudeForMexiAnalysis.mock.calls[0]?.[0]?.prompt).not.toContain("ANTHROPIC_API_KEY");
   });
