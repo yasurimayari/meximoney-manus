@@ -158,7 +158,7 @@ function CreditUtilizationTrend({
             ? "—"
             : `${history[0].utilizationPercent.toFixed(1)}%`}
         </span>
-        <span className="text-center">Últimos {history.length} meses</span>
+        <span className="text-center">Últimos {history.length}</span>
         <span className="text-right">
           Actual:{" "}
           {history.at(-1)?.utilizationPercent === null
@@ -197,6 +197,7 @@ export default function CreditCards() {
   const [editing, setEditing] = useState<any | null>(null);
   const [paying, setPaying] = useState<any | null>(null);
   const [open, setOpen] = useState(false);
+  const [historyPeriod, setHistoryPeriod] = useState<3 | 6 | 9 | 12>(6);
   const refresh = async () => {
     await utils.finance.dashboard.invalidate();
     setOpen(false);
@@ -216,9 +217,9 @@ export default function CreditCards() {
         cards,
         data?.transactions ?? [],
         currency,
-        6
+        historyPeriod
       ),
-    [cards, data?.transactions, currency]
+    [cards, data?.transactions, currency, historyPeriod]
   );
   const utilizationPercent = cardSummary.utilizationPercent;
   const visualScaleCents = Math.max(
@@ -416,7 +417,20 @@ export default function CreditCards() {
                   pagos de tarjeta registrados.
                 </p>
               </div>
-              <span className="period-chip">6 meses</span>
+              <select
+                aria-label="Periodo del historial de utilización"
+                className="period-chip cursor-pointer appearance-none border-0 bg-transparent text-center"
+                value={historyPeriod}
+                onChange={event =>
+                  setHistoryPeriod(Number(event.target.value) as 3 | 6 | 9 | 12)
+                }
+              >
+                {[3, 6, 9, 12].map(period => (
+                  <option key={period} value={period}>
+                    {period}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="mt-5">
               <CreditUtilizationTrend

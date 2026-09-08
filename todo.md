@@ -770,3 +770,10 @@
 # Tarjetas — etiqueta de porcentaje por entidad
 
 - [x] Eliminar la palabra «usado» de los porcentajes del bloque Crédito por entidad financiera.
+
+# Tarjetas — periodo de historial de utilización
+
+- [x] Auditar el cálculo actual del historial de utilización de seis periodos.
+- [x] Añadir un selector desplegable con 3, 6, 9 y 12 periodos que actualice el gráfico.
+- [x] Simplificar el indicador visual del periodo para mostrar solamente el número.
+- [x] Añadir pruebas de regresión y validar TypeScript, compilación y experiencia responsive.

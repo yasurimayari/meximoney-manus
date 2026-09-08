@@ -75,4 +75,16 @@ describe("resumen agregado de tarjetas", () => {
     expect(history[2].usedCents).toBe(8_000);
     expect(history[2].utilizationPercent).toBe(80);
   });
+
+  it("admite los periodos extendidos usados por el selector del historial", () => {
+    const history = buildCreditUtilizationHistory(
+      [{ id: 1, status: "active", currency: "MXN", balanceCents: 2_000, creditLimitCents: 10_000 }],
+      [],
+      "MXN",
+      12,
+      new Date("2026-09-15T12:00:00.000Z")
+    );
+    expect(history).toHaveLength(12);
+    expect(history.at(-1)?.utilizationPercent).toBe(20);
+  });
 });
