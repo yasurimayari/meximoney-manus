@@ -732,3 +732,14 @@
 - [x] Incorporar protocolos de deuda, liquidez, presupuesto, cierre mensual, alertas y detección de duplicados sin ejecutar acciones.
 - [x] Añadir pruebas para seguridad, modo solo lectura, contexto dinámico, fórmulas y formato de respuesta.
 - [x] Validar TypeScript, pruebas, compilación, responsive y publicar la integración.
+
+# Auditoría crítica del Módulo Asistente
+
+- [x] Auditar autenticación, rutas tRPC, logs de navegador/servidor y estado de consultas del Asistente.
+- [x] Auditar el procedimiento real de Mexi IA, configuración de Claude y formato de respuesta.
+- [x] Auditar creación, edición, listado, invalidación de caché y visibilidad de notas.
+- [x] Reproducir los fallos con pruebas de extremo a extremo y determinar causa raíz.
+- [x] Reparar Mexi IA para que responda o muestre un error técnico accionable sin ocultar la causa.
+- [x] Reparar persistencia y listado de notas sin sobrescrituras ni falsos estados de guardado.
+- [x] Eliminar el subtítulo «análisis explicable con Claude. Solo lectura. Markdown y fórmulas visibles» del bloque de Mexi IA.
+- [x] Ejecutar pruebas, compilación y validación autenticada antes de publicar.
