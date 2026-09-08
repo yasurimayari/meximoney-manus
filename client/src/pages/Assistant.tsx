@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { trpc } from "@/lib/trpc";
-import { BookOpen, Calculator, CircleAlert, Database, Eye, History, LockKeyhole, Plus, Save, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
+import { BookOpen, Eye, History, Plus, Save, Sparkles, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ const suggestedPrompts = [
 type NoteDraft = { id?: number; title: string; content: string };
 
 export default function Assistant() {
-  const { data, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
+  const { isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const notes = trpc.finance.assistant.notes.list.useQuery();
   const history = trpc.finance.assistant.history.list.useQuery();
   const utils = trpc.useUtils();
@@ -75,7 +75,7 @@ export default function Assistant() {
     toast.success("Consulta recuperada");
   };
 
-  if (isLoading || !data) return <div className="page-loading">Cargando el contexto manual del asistente…</div>;
+  if (isLoading) return <div className="page-loading">Cargando el contexto manual del asistente…</div>;
 
   return (
     <div className="assistant-page">
@@ -111,13 +111,6 @@ export default function Assistant() {
             <div className="assistant-history-list">{history.data?.length ? history.data.map(item => <button type="button" key={item.id} onClick={() => selectHistory(item)}><strong>{item.userMessage}</strong><small>{new Date(item.createdAt).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}</small><span>{item.assistantContent.slice(0, 120)}{item.assistantContent.length > 120 ? "…" : ""}</span></button>) : <p className="assistant-empty">Tus consultas aparecerán aquí después de la primera respuesta.</p>}</div>
           </section>
 
-          <section className="assistant-context">
-            <div className="assistant-context-icon"><Database className="size-5" /></div><h2>Contexto disponible</h2><p>Mexi IA usa una síntesis privada y limitada de tus registros. La clave nunca llega al navegador.</p>
-            <div className="context-stat"><span>Movimientos</span><strong>{data.transactions.length}</strong></div><div className="context-stat"><span>Cuentas y activos</span><strong>{data.accounts.length}</strong></div><div className="context-stat"><span>Deudas activas</span><strong>{data.debts.filter(item => item.status !== "paid").length}</strong></div><div className="context-stat"><span>Objetivos activos</span><strong>{data.goals.filter(item => item.status === "active").length}</strong></div>
-          </section>
-          <section className="assistant-context assistant-safety"><ShieldCheck className="size-5" /><h2>Límites de seguridad</h2><ul><li>No usa datos externos ni precios actuales.</li><li>No ejecuta pagos, transferencias ni inversiones.</li><li>Expone datos utilizados, fórmulas, supuestos y fuentes.</li><li>Las recomendaciones son manuales y no cambian tus datos.</li></ul></section>
-          <section className="assistant-context"><Calculator className="size-5 text-primary" /><h2>Cómo responde</h2><p>Las respuestas aceptan Markdown y fórmulas LaTeX, por ejemplo <code>$ingresos - gastos$</code> o un bloque como <code>$$\\text&#123;Flujo neto&#125; = ingresos - gastos$$</code>.</p></section>
-          <section className="assistant-context assistant-alert"><CircleAlert className="size-5" /><h2>Nota importante</h2><p>Las respuestas son educativas y organizativas. Para decisiones fiscales, legales o de inversión complejas, valida con un profesional.</p></section>
         </aside>
       </div>
     </div>

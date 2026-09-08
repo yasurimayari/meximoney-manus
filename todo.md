@@ -653,3 +653,12 @@
 - [x] Renderizar Markdown y fórmulas matemáticas de forma segura y legible.
 - [x] Añadir pruebas de persistencia, aislamiento, historial, Markdown y fórmulas.
 - [x] Validar TypeScript, pruebas, compilación y responsive; publicar la ampliación.
+
+# Mexi IA — notas personalizadas y simplificación del Asistente
+
+- [x] Auditar el flujo actual del diario, el snapshot enviado a Claude y el panel lateral del Asistente.
+- [x] Incorporar notas activas del diario al contexto privado de Mexi IA con límite de tamaño y sin mezclar usuarias.
+- [x] Ajustar las instrucciones de Claude para usar las notas como contexto personal, distinguiendo ideas de datos financieros confirmados.
+- [x] Eliminar del Asistente los bloques Nota importante, Cómo responde, Límites de seguridad y Contexto disponible.
+- [x] Añadir pruebas de aislamiento y uso del diario en el contexto del asistente.
+- [x] Validar TypeScript, pruebas, compilación y responsive; publicar la mejora.
