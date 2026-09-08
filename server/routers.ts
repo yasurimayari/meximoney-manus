@@ -2195,7 +2195,9 @@ export const appRouter = router({
           const db = await requireDb();
           const payload = { title: input.title, content: input.content, tag: input.tag, tagColor: assistantNoteColorByTag[input.tag] ?? "slate" };
           const result = await db.insert(assistantNotes).values({ userId: ctx.user.id, ...payload });
-          return { id: Number(result[0].insertId) };
+          const now = new Date();
+          const id = Number(result[0].insertId);
+          return { id, note: { id, userId: ctx.user.id, ...payload, isPinned: false, archivedAt: null, createdAt: now, updatedAt: now, attachments: [] } };
         }),
         save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive(), title: z.string().trim().min(1).max(180), content: z.string().max(20000), tag: z.enum(["general", "impuestos", "inversiones", "presupuesto", "deudas", "patrimonio", "proyectos", "personal"]) })).mutation(async ({ ctx, input }) => {
           const db = await requireDb();

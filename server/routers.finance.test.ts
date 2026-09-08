@@ -159,7 +159,7 @@ describe("finance.dashboard", () => {
     mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }), insert });
     const caller = appRouter.createCaller(createContext(27));
 
-    await expect(caller.finance.assistant.notes.create({ title: "Idea", content: "## Revisar flujo\\n\\n$$x^2$$", tag: "inversiones" })).resolves.toEqual({ id: 91 });
+    await expect(caller.finance.assistant.notes.create({ title: "Idea", content: "## Revisar flujo\\n\\n$$x^2$$", tag: "inversiones" })).resolves.toMatchObject({ id: 91, note: { id: 91, userId: 27, title: "Idea", tag: "inversiones", tagColor: "emerald", isPinned: false, attachments: [] } });
     expect(values).toHaveBeenCalledWith({ userId: 27, title: "Idea", content: "## Revisar flujo\\n\\n$$x^2$$", tag: "inversiones", tagColor: "emerald" });
   });
 

@@ -743,3 +743,12 @@
 - [x] Reparar persistencia y listado de notas sin sobrescrituras ni falsos estados de guardado.
 - [x] Eliminar el subtítulo «análisis explicable con Claude. Solo lectura. Markdown y fórmulas visibles» del bloque de Mexi IA.
 - [x] Ejecutar pruebas, compilación y validación autenticada antes de publicar.
+
+# Auditoría forense recurrente del Módulo Asistente
+
+- [x] Capturar evidencia de producción de las llamadas de chat y notas, incluyendo códigos y mensajes de error.
+- [x] Verificar la credencial y el catálogo de modelos disponibles sin exponer secretos.
+- [x] Reproducir una creación y listado de notas con un flujo autenticado independiente.
+- [x] Corregir la causa raíz de cualquier fallo real detectado en los procedimientos o el estado React.
+- [x] Añadir telemetría segura y errores accionables para futuras incidencias de Mexi IA y notas.
+- [x] Validar con pruebas y compilación antes de publicar; comprobar el proveedor integrado y forzar la sesión publicada a actualizar mediante PWA v80.

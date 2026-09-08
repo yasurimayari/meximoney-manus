@@ -115,22 +115,6 @@ export async function askClaudeForMexi(input: { system: string; prompt: string }
   return callClaude(input);
 }
 
-const mexiAnalysisSchema = {
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    answer: { type: "string" },
-    facts: { type: "array", items: { type: "object", additionalProperties: false, properties: { label: { type: "string" }, value: { type: "string" }, source: { type: "string" }, date: { type: "string" } }, required: ["label", "value", "source", "date"] } },
-    calculations: { type: "array", items: { type: "object", additionalProperties: false, properties: { name: { type: "string" }, formula: { type: "string" }, substitution: { type: "string" }, result: { type: "string" }, source: { type: "string" } }, required: ["name", "formula", "substitution", "result", "source"] } },
-    assumptions: { type: "array", items: { type: "string" } },
-    recommendations: { type: "array", items: { type: "object", additionalProperties: false, properties: { title: { type: "string" }, rationale: { type: "string" }, priority: { type: "string", enum: ["alta", "media", "baja"] }, nextStep: { type: "string" } }, required: ["title", "rationale", "priority", "nextStep"] } },
-    warnings: { type: "array", items: { type: "string" } },
-    sources: { type: "array", items: { type: "object", additionalProperties: false, properties: { label: { type: "string" }, type: { type: "string", enum: ["internal", "user", "external"] }, detail: { type: "string" } }, required: ["label", "type", "detail"] } },
-    canExecute: { type: "boolean", enum: [false] },
-  },
-  required: ["answer", "facts", "calculations", "assumptions", "recommendations", "warnings", "sources", "canExecute"],
-} as const;
-
 async function askViaBuiltInMexi(input: { system: string; prompt: string; attachments?: ClaudeAttachment[] }) {
   const content: MessageContent[] = [{ type: "text", text: input.prompt }];
   for (const attachment of input.attachments ?? []) {
@@ -140,26 +124,21 @@ async function askViaBuiltInMexi(input: { system: string; prompt: string; attach
   const result = await invokeLLM({
     model: MEXI_CLAUDE_MODEL,
     messages: [{ role: "system", content: input.system }, { role: "user", content }],
-    maxTokens: 1800,
-    requestTimeoutMs: 45_000,
+    maxTokens: 1_200,
+    requestTimeoutMs: 30_000,
     maxRetries: 2,
-    response_format: { type: "json_schema", json_schema: { name: "mexi_analysis", strict: true, schema: mexiAnalysisSchema } },
   });
-  const responseContent = result.choices[0]?.message?.content;
-  if (typeof responseContent !== "string" || !responseContent.trim()) throw new ClaudeRequestError("El servicio de análisis no devolvió contenido.");
-  return parseAnalysis(responseContent);
+  const responseContent = result.choices?.[0]?.message?.content;
+  const text = typeof responseContent === "string"
+    ? responseContent
+    : Array.isArray(responseContent)
+      ? responseContent.filter((part): part is { type: "text"; text: string } => part.type === "text").map(part => part.text).join("\n")
+      : "";
+  if (!text.trim()) throw new ClaudeRequestError("El servicio integrado no devolvió una elección utilizable.");
+  return parseAnalysis(text);
 }
 
 export async function askClaudeForMexiAnalysis(input: { system: string; prompt: string; attachments?: ClaudeAttachment[] }) {
   const analysisInstructions = `${input.system}\n\nDevuelve exclusivamente un objeto JSON válido, sin markdown ni texto adicional, con esta forma exacta:\n{"answer":"string","facts":[{"label":"string","value":"string","source":"string","date":"string"}],"calculations":[{"name":"string","formula":"string","substitution":"string","result":"string","source":"string"}],"assumptions":["string"],"recommendations":[{"title":"string","rationale":"string","priority":"alta|media|baja","nextStep":"string"}],"warnings":["string"],"sources":[{"label":"string","type":"internal|user|external","detail":"string"}],"canExecute":false}. No incluyas propiedades adicionales.\n\nReglas: solo usa datos suministrados; no inventes cifras; toda recomendación debe ser manual; muestra la fórmula cuando calcules; si faltan datos, dilo en warnings o assumptions; canExecute debe ser false.`;
-  try {
-    const content = await callClaude({ ...input, system: analysisInstructions });
-    return parseAnalysis(content);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const shouldFallback = /clave|estado|tiempo|no pudo completar|servicio de análisis/i.test(message);
-    if (!shouldFallback) throw error;
-    console.warn("Mexi direct Claude path failed; using the structured built-in fallback.", message);
-    return askViaBuiltInMexi({ ...input, system: analysisInstructions });
-  }
+  return askViaBuiltInMexi({ ...input, system: analysisInstructions });
 }

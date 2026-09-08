@@ -53,14 +53,24 @@ export default function Assistant() {
       setMessages(previous => [...previous, { role: "assistant", content: "No pude preparar el análisis. Verifica que el registro manual esté completo e inténtalo de nuevo." }]);
     },
   });
-  const handleNoteSaved = (response: { id: number }) => {
+  const handleNoteSaved = async (response: { id: number }) => {
     toast.success("Nota guardada");
     setNote(current => ({ ...current, id: response.id }));
     setIsCreatingNote(false);
     setNoteSearch("");
-    void utils.finance.assistant.notes.list.invalidate();
+    await utils.finance.assistant.notes.list.invalidate();
+    const refreshed = await notes.refetch();
+    if (!refreshed.data?.some(item => item.id === response.id)) {
+      toast.error("La nota se creó, pero no pudo confirmarse en el Diario. Recarga la página e inténtalo de nuevo.");
+    }
   };
-  const createNote = trpc.finance.assistant.notes.create.useMutation({ onSuccess: handleNoteSaved, onError: error => toast.error(error.message) });
+  const createNote = trpc.finance.assistant.notes.create.useMutation({
+    onSuccess: async response => {
+      utils.finance.assistant.notes.list.setData(undefined, previous => [response.note, ...(previous ?? []).filter(item => item.id !== response.id)]);
+      await handleNoteSaved(response);
+    },
+    onError: error => toast.error(error.message),
+  });
   const saveNote = trpc.finance.assistant.notes.save.useMutation({ onSuccess: handleNoteSaved, onError: error => toast.error(error.message) });
   const togglePinned = trpc.finance.assistant.notes.togglePinned.useMutation({
     onSuccess: () => { toast.success("Prioridad de la nota actualizada"); void utils.finance.assistant.notes.list.invalidate(); },
