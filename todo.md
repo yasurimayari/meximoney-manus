@@ -766,3 +766,7 @@
 - [x] Corregir la semántica y el cálculo de utilización total y por entidad.
 - [x] Añadir un acceso «Ver más» desde cada tarjeta hacia el historial completo filtrado de sus movimientos.
 - [x] Añadir pruebas de regresión y validar TypeScript, compilación y experiencia responsive.
+
+# Tarjetas — etiqueta de porcentaje por entidad
+
+- [x] Eliminar la palabra «usado» de los porcentajes del bloque Crédito por entidad financiera.

@@ -1,88 +1,1085 @@
 import { MoneyText } from "@/components/MoneyText";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDate, formatMoney, fromCents, scopeLabel, toCents } from "@/lib/finance";
+import {
+  formatDate,
+  formatMoney,
+  fromCents,
+  scopeLabel,
+  toCents,
+} from "@/lib/finance";
 import { displayAmountCents } from "@/lib/amountTone";
 import { trpc } from "@/lib/trpc";
 import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { creditCardKindLabel } from "../../../shared/manualObligations";
-import { buildCreditUtilizationHistory, summarizeCreditCards } from "../../../shared/creditCardSummary";
-import { CalendarDays, CreditCard, Pencil, Plus, ReceiptText, Trash2, WalletCards } from "lucide-react";
+import {
+  buildCreditUtilizationHistory,
+  summarizeCreditCards,
+} from "../../../shared/creditCardSummary";
+import {
+  CalendarDays,
+  CreditCard,
+  Pencil,
+  Plus,
+  ReceiptText,
+  Trash2,
+  WalletCards,
+} from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 
-function CreditUtilizationTrend({ history, currency }: { history: ReturnType<typeof buildCreditUtilizationHistory>; currency: string }) {
+function CreditUtilizationTrend({
+  history,
+  currency,
+}: {
+  history: ReturnType<typeof buildCreditUtilizationHistory>;
+  currency: string;
+}) {
   const hasData = history.some(point => point.utilizationPercent !== null);
-  if (!hasData) return <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">Registra límites y movimientos vinculados para ver la evolución mensual.</div>;
-  const maxPercent = Math.max(100, ...history.map(point => point.utilizationPercent ?? 0));
+  if (!hasData)
+    return (
+      <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+        Registra límites y movimientos vinculados para ver la evolución mensual.
+      </div>
+    );
+  const maxPercent = Math.max(
+    100,
+    ...history.map(point => point.utilizationPercent ?? 0)
+  );
   const points = history.map((point, index) => {
-    const x = history.length === 1 ? 160 : 18 + (index / (history.length - 1)) * 284;
+    const x =
+      history.length === 1 ? 160 : 18 + (index / (history.length - 1)) * 284;
     const y = 104 - ((point.utilizationPercent ?? 0) / maxPercent) * 78;
     return { ...point, x, y };
   });
-  return <div aria-label="Tendencia histórica de utilización del crédito" className="space-y-3"><div className="overflow-hidden rounded-xl border bg-muted/15 p-2"><svg className="h-36 w-full" viewBox="0 0 320 124" role="img" aria-label={`Utilización de crédito durante los últimos ${history.length} meses`}><line x1="18" x2="302" y1="26" y2="26" className="stroke-border" strokeDasharray="3 4" /><line x1="18" x2="302" y1="65" y2="65" className="stroke-border" strokeDasharray="3 4" /><line x1="18" x2="302" y1="104" y2="104" className="stroke-border" strokeDasharray="3 4" /><text x="302" y="22" textAnchor="end" className="fill-muted-foreground text-[8px]">{maxPercent.toFixed(0)}%</text><text x="302" y="61" textAnchor="end" className="fill-muted-foreground text-[8px]">{(maxPercent / 2).toFixed(0)}%</text><text x="302" y="100" textAnchor="end" className="fill-muted-foreground text-[8px]">0%</text><polyline points={points.map(point => `${point.x},${point.y}`).join(" ")} fill="none" className="stroke-primary" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />{points.map(point => <circle key={point.monthStart.toISOString()} cx={point.x} cy={point.y} r="4" className="fill-primary stroke-background" strokeWidth="2"><title>{`${point.label}: ${point.utilizationPercent === null ? "sin límite" : `${point.utilizationPercent.toFixed(1)}%`} · ${formatMoney(point.usedCents, currency)}`}</title></circle>)}</svg></div><div className="grid grid-cols-3 gap-2 text-[11px] text-muted-foreground"><span>Inicio: {history[0].utilizationPercent === null ? "—" : `${history[0].utilizationPercent.toFixed(1)}%`}</span><span className="text-center">Últimos {history.length} meses</span><span className="text-right">Actual: {history.at(-1)?.utilizationPercent === null ? "—" : `${history.at(-1)?.utilizationPercent?.toFixed(1)}%`}</span></div></div>;
+  return (
+    <div
+      aria-label="Tendencia histórica de utilización del crédito"
+      className="space-y-3"
+    >
+      <div className="overflow-hidden rounded-xl border bg-muted/15 p-2">
+        <svg
+          className="h-36 w-full"
+          viewBox="0 0 320 124"
+          role="img"
+          aria-label={`Utilización de crédito durante los últimos ${history.length} meses`}
+        >
+          <line
+            x1="18"
+            x2="302"
+            y1="26"
+            y2="26"
+            className="stroke-border"
+            strokeDasharray="3 4"
+          />
+          <line
+            x1="18"
+            x2="302"
+            y1="65"
+            y2="65"
+            className="stroke-border"
+            strokeDasharray="3 4"
+          />
+          <line
+            x1="18"
+            x2="302"
+            y1="104"
+            y2="104"
+            className="stroke-border"
+            strokeDasharray="3 4"
+          />
+          <text
+            x="302"
+            y="22"
+            textAnchor="end"
+            className="fill-muted-foreground text-[8px]"
+          >
+            {maxPercent.toFixed(0)}%
+          </text>
+          <text
+            x="302"
+            y="61"
+            textAnchor="end"
+            className="fill-muted-foreground text-[8px]"
+          >
+            {(maxPercent / 2).toFixed(0)}%
+          </text>
+          <text
+            x="302"
+            y="100"
+            textAnchor="end"
+            className="fill-muted-foreground text-[8px]"
+          >
+            0%
+          </text>
+          <polyline
+            points={points.map(point => `${point.x},${point.y}`).join(" ")}
+            fill="none"
+            className="stroke-primary"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {points.map(point => (
+            <circle
+              key={point.monthStart.toISOString()}
+              cx={point.x}
+              cy={point.y}
+              r="4"
+              className="fill-primary stroke-background"
+              strokeWidth="2"
+            >
+              <title>{`${point.label}: ${point.utilizationPercent === null ? "sin límite" : `${point.utilizationPercent.toFixed(1)}%`} · ${formatMoney(point.usedCents, currency)}`}</title>
+            </circle>
+          ))}
+        </svg>
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-[11px] text-muted-foreground">
+        <span>
+          Inicio:{" "}
+          {history[0].utilizationPercent === null
+            ? "—"
+            : `${history[0].utilizationPercent.toFixed(1)}%`}
+        </span>
+        <span className="text-center">Últimos {history.length} meses</span>
+        <span className="text-right">
+          Actual:{" "}
+          {history.at(-1)?.utilizationPercent === null
+            ? "—"
+            : `${history.at(-1)?.utilizationPercent?.toFixed(1)}%`}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 function nextCycleDate(day: number | null) {
   if (!day) return null;
   const now = new Date();
-  const date = new Date(now.getFullYear(), now.getMonth(), Math.min(day, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()), 12);
-  if (date.getTime() < now.getTime()) date.setMonth(date.getMonth() + 1, Math.min(day, new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()));
+  const date = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    Math.min(day, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()),
+    12
+  );
+  if (date.getTime() < now.getTime())
+    date.setMonth(
+      date.getMonth() + 1,
+      Math.min(
+        day,
+        new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+      )
+    );
   return date;
 }
 
 export default function CreditCards() {
-  const { data, isLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
+  const { data, isLoading } =
+    trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const utils = trpc.useUtils();
   const [editing, setEditing] = useState<any | null>(null);
   const [paying, setPaying] = useState<any | null>(null);
   const [open, setOpen] = useState(false);
-  const refresh = async () => { await utils.finance.dashboard.invalidate(); setOpen(false); setEditing(null); setPaying(null); };
-  const remove = trpc.finance.workspace.creditCards.remove.useMutation({ onSuccess: refresh, onError: error => toast.error(error.message) });
+  const refresh = async () => {
+    await utils.finance.dashboard.invalidate();
+    setOpen(false);
+    setEditing(null);
+    setPaying(null);
+  };
+  const remove = trpc.finance.workspace.creditCards.remove.useMutation({
+    onSuccess: refresh,
+    onError: error => toast.error(error.message),
+  });
   const cards = data?.creditCards ?? [];
   const currency = data?.profile?.currency ?? "MXN";
   const cardSummary = summarizeCreditCards(cards, currency);
-  const utilizationHistory = useMemo(() => buildCreditUtilizationHistory(cards, data?.transactions ?? [], currency, 6), [cards, data?.transactions, currency]);
+  const utilizationHistory = useMemo(
+    () =>
+      buildCreditUtilizationHistory(
+        cards,
+        data?.transactions ?? [],
+        currency,
+        6
+      ),
+    [cards, data?.transactions, currency]
+  );
   const utilizationPercent = cardSummary.utilizationPercent;
-  const visualScaleCents = Math.max(cardSummary.limitCents, cardSummary.payableCents);
-  const withinLimitPercent = visualScaleCents > 0 ? Math.min(cardSummary.payableCents, cardSummary.limitCents) / visualScaleCents * 100 : 0;
-  const overLimitPercent = visualScaleCents > 0 ? Math.max(0, cardSummary.payableCents - cardSummary.limitCents) / visualScaleCents * 100 : 0;
-  const limitMarkerPercent = visualScaleCents > 0 && cardSummary.limitCents > 0 ? cardSummary.limitCents / visualScaleCents * 100 : 0;
+  const visualScaleCents = Math.max(
+    cardSummary.limitCents,
+    cardSummary.payableCents
+  );
+  const withinLimitPercent =
+    visualScaleCents > 0
+      ? (Math.min(cardSummary.payableCents, cardSummary.limitCents) /
+          visualScaleCents) *
+        100
+      : 0;
+  const overLimitPercent =
+    visualScaleCents > 0
+      ? (Math.max(0, cardSummary.payableCents - cardSummary.limitCents) /
+          visualScaleCents) *
+        100
+      : 0;
+  const limitMarkerPercent =
+    visualScaleCents > 0 && cardSummary.limitCents > 0
+      ? (cardSummary.limitCents / visualScaleCents) * 100
+      : 0;
 
   useEffect(() => {
     if (!data || !window.location.hash.startsWith("#credit-card-")) return;
     const targetId = window.location.hash.slice(1);
-    window.requestAnimationFrame(() => document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    window.requestAnimationFrame(() =>
+      document
+        .getElementById(targetId)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+    );
   }, [data]);
 
-  if (isLoading || !data) return <div className="page-loading">Cargando tus tarjetas privadas…</div>;
+  if (isLoading || !data)
+    return <div className="page-loading">Cargando tus tarjetas privadas…</div>;
 
-  return <div className="space-y-7">
-    <header className="page-heading"><div><p className="eyebrow">Crédito manual</p><h1>Tarjetas bancarias y departamentales</h1><p>Registra gastos y pagos desde cuentas propias. Coppel u otra tarjeta departamental usan el mismo flujo manual, sin consultas bancarias ni pagos ejecutados.</p></div><Button className="btn-primary" onClick={() => { setEditing(null); setOpen(true); }}><Plus className="size-4" /> Nueva tarjeta</Button></header>
-    <section className="grid gap-4 sm:grid-cols-3"><Card className="surface-card"><CardHeader className="pb-2"><CardDescription>Saldo por pagar</CardDescription><CardTitle className="text-rose-700 dark:text-rose-300"><MoneyText cents={displayAmountCents(cardSummary.payableCents, "liability")} currency={currency} /></CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Pasivo total de tarjetas no cerradas en moneda de reporte.</CardContent></Card><Card className="surface-card"><CardHeader className="pb-2"><CardDescription>Crédito disponible</CardDescription><CardTitle className="text-emerald-700 dark:text-emerald-300">{formatMoney(cardSummary.availableCents, currency)}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Suma que puedes utilizar actualmente en tarjetas activas.</CardContent></Card><Card className="surface-card"><CardHeader className="pb-2"><CardDescription>Límite total de crédito</CardDescription><CardTitle>{formatMoney(cardSummary.limitCents, currency)}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Crédito otorgado total por las entidades registradas.</CardContent></Card></section>
-    <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]"><div className="space-y-5"><Card className="surface-card"><CardHeader className="pb-2"><CardDescription>Utilización total del crédito</CardDescription><CardTitle className={cardSummary.utilizationPercent !== null && cardSummary.utilizationPercent >= 75 ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}>{cardSummary.utilizationPercent === null ? "Sin límite" : `${cardSummary.utilizationPercent.toFixed(1)}% usado`}</CardTitle></CardHeader><CardContent><div className="space-y-2" role="group" aria-label="Utilización total del crédito"><div className="flex items-center justify-between text-[11px] text-muted-foreground"><span>0%</span><span>Límite 100%</span><span>{utilizationPercent === null ? "Sin límite" : `${utilizationPercent.toFixed(1)}% usado`}</span></div><div className="relative h-4 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Porcentaje de utilización total del crédito" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, utilizationPercent ?? 0)}><div className="absolute inset-y-0 left-0 rounded-l-full bg-emerald-500" style={{ width: `${withinLimitPercent}%` }} />{overLimitPercent > 0 ? <div className="absolute inset-y-0 bg-rose-600" style={{ left: `${withinLimitPercent}%`, width: `${overLimitPercent}%` }} /> : null}<span aria-hidden="true" className="absolute inset-y-[-3px] z-10 w-0.5 bg-slate-700 dark:bg-slate-200" style={{ left: `${limitMarkerPercent}%` }} /></div><div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs"><span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300"><i className="size-2 rounded-full bg-emerald-500" />Disponible: {cardSummary.availablePercent === null ? "Sin límite" : `${cardSummary.availablePercent.toFixed(1)}%`} · {formatMoney(cardSummary.availableCents, currency)}</span>{overLimitPercent > 0 ? <span className="inline-flex items-center gap-1.5 text-rose-700 dark:text-rose-300"><i className="size-2 rounded-full bg-rose-600" />Sobregiro: {formatMoney(cardSummary.payableCents - cardSummary.limitCents, currency)}</span> : null}</div></div><p className="mt-3 text-xs leading-5 text-muted-foreground">{cardSummary.limitCents === 0 ? "Registra al menos un límite de crédito para calcular la utilización." : `${formatMoney(cardSummary.payableCents, currency)} por pagar de ${formatMoney(cardSummary.limitCents, currency)} de límite total.`}</p></CardContent></Card><section className="content-card"><div className="card-title-row"><div><p className="eyebrow">Historial reciente</p><h2>Utilización en los últimos meses</h2><p>Estimación reconstruida con el saldo actual y los gastos o pagos de tarjeta registrados.</p></div><span className="period-chip">6 meses</span></div><div className="mt-5"><CreditUtilizationTrend history={utilizationHistory} currency={currency} /></div></section></div><Card className="surface-card"><CardHeader className="pb-3"><CardTitle className="text-base">Crédito por entidad financiera</CardTitle></CardHeader><CardContent>{cardSummary.entities.length ? <div className="grid gap-3 sm:grid-cols-2">{cardSummary.entities.map(entity => <div className="rounded-xl border bg-muted/20 p-3" key={entity.issuer}><div className="flex items-start justify-between gap-3"><p className="min-w-0 truncate font-semibold">{entity.issuer}</p><span className={`text-sm font-semibold ${entity.utilizationPercent !== null && entity.utilizationPercent >= 75 ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}`}>{entity.utilizationPercent === null ? "Sin límite" : `${entity.utilizationPercent.toFixed(1)}% usado`}</span></div><div className="mt-3 grid grid-cols-2 gap-2 text-xs"><div><p className="text-muted-foreground">Disponible</p><p className="font-semibold text-emerald-700 dark:text-emerald-300">{formatMoney(entity.availableCents, currency)}</p><p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-300">{entity.availablePercent === null ? "Sin límite" : `${entity.availablePercent.toFixed(1)}% disponible`}</p></div><div><p className="text-muted-foreground">Límite</p><p className="font-semibold">{formatMoney(entity.limitCents, currency)}</p></div><div className="col-span-2"><p className="text-muted-foreground">Saldo por pagar</p><p className="font-semibold text-rose-700 dark:text-rose-300">{formatMoney(entity.payableCents, currency)}</p></div></div></div>)}</div> : <p className="text-sm text-muted-foreground">Las tarjetas con emisor vacío aparecerán como «Entidad no especificada».</p>}</CardContent></Card></section>
-        {cards.length === 0 ? <section className="content-card text-center"><CreditCard className="mx-auto size-8 text-primary" /><h2 className="mt-3 text-lg font-semibold">Aún no hay tarjetas registradas</h2><p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Crea una tarjeta bancaria o departamental con límite opcional, saldo inicial, ámbito, corte y fecha de pago. Después podrás elegirla al registrar un gasto.</p><Button className="mt-4" onClick={() => setOpen(true)}>Crear primera tarjeta</Button></section> : <div className="grid gap-5 xl:grid-cols-2">{cards.map(card => { const available = card.creditLimitCents > 0 ? Math.max(0, card.creditLimitCents - card.balanceCents) : null; const overLimit = card.creditLimitCents > 0 ? Math.max(0, card.balanceCents - card.creditLimitCents) : 0; const cardTransactions = data.transactions.filter(transaction => transaction.creditCardId === card.id).sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()); const cutoff = nextCycleDate(card.statementClosingDay); const due = nextCycleDate(card.paymentDueDay); return <Card className="surface-card scroll-mt-6" key={card.id} id={`credit-card-${card.id}`}><CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle className="flex items-center gap-2"><CreditCard className="size-5 text-primary" />{card.name}</CardTitle><CardDescription>{creditCardKindLabel(card.cardKind)} · {card.issuer || "Emisor pendiente"} · {card.currency} · {scopeLabel[card.scope]}</CardDescription></div><span className={`rounded-full px-2 py-1 text-xs font-medium ${card.status === "active" ? "bg-emerald-500/10 text-emerald-700" : "bg-muted text-muted-foreground"}`}>{card.status === "active" ? "Activa" : card.status === "paused" ? "En pausa" : "Cerrada"}</span></div></CardHeader><CardContent className="space-y-4"><div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3"><div><p className="text-xs text-muted-foreground">Saldo actual</p><strong className="text-lg"><MoneyText cents={displayAmountCents(card.balanceCents, "liability")} currency={card.currency} /></strong></div><div><p className="text-xs text-muted-foreground">Crédito disponible</p><strong className="text-lg">{available === null ? "Sin límite" : formatMoney(available, card.currency)}</strong></div><div><p className="text-xs text-muted-foreground">Corte próximo</p><strong>{cutoff ? formatDate(cutoff) : "Pendiente"}</strong></div><div><p className="text-xs text-muted-foreground">Pago próximo</p><strong>{due ? formatDate(due) : "Pendiente"}</strong></div></div>{overLimit > 0 ? <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"><strong>Sobregiro registrado: <MoneyText cents={displayAmountCents(overLimit, "liability")} currency={card.currency} /></strong><br /><span>El saldo real supera el límite; se conserva como pasivo y puedes registrar pagos para reducirlo.</span></div> : null}<div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setPaying(card)} disabled={card.status !== "active"}><WalletCards className="mr-1.5 size-4" /> Pagar desde cuenta</Button><Button size="sm" variant="outline" onClick={() => { setEditing(card); setOpen(true); }}><Pencil className="mr-1.5 size-4" /> Editar</Button><Button size="icon" variant="ghost" className="text-muted-foreground hover:text-destructive" aria-label={`Eliminar ${card.name}`} onClick={() => { if (confirm("¿Eliminar esta tarjeta? Sólo será posible si no tiene gastos o pagos vinculados.")) remove.mutate({ id: card.id }); }}><Trash2 className="size-4" /></Button></div><div className="rounded-lg border"><div className="flex items-center gap-2 border-b px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><ReceiptText className="size-3.5" /> Movimientos de tarjeta</div>{cardTransactions.length ? <><div className="divide-y">{cardTransactions.slice(0, 5).map(transaction => <div className="flex items-center justify-between gap-3 px-3 py-2 text-sm" key={transaction.id}><div className="min-w-0"><p className="truncate font-medium">{transaction.notes || (transaction.type === "expense" ? "Gasto con tarjeta" : "Pago de tarjeta")}</p><p className="text-xs text-muted-foreground">{formatDate(transaction.occurredAt)}</p></div><strong><MoneyText cents={displayAmountCents(transaction.amountCents, transaction.type === "expense" ? "expense" : "income")} currency={transaction.currency} /></strong></div>)}</div><div className="border-t px-3 py-2"><Button asChild size="sm" variant="ghost" className="w-full justify-start text-primary"><Link href={`/registros?creditCardId=${card.id}`}>Ver más movimientos ({cardTransactions.length})</Link></Button></div></> : <p className="px-3 py-4 text-sm text-muted-foreground">Aún no hay gastos ni pagos vinculados.</p>}</div>{card.notes ? <p className="text-xs text-muted-foreground">{card.notes}</p> : null}</CardContent></Card>; })}</div>}
-    <Dialog open={open} onOpenChange={setOpen}><DialogContent className="credit-card-form-dialog max-h-[90vh] max-w-2xl overflow-y-auto"><DialogHeader><DialogTitle>{editing ? "Editar tarjeta" : "Nueva tarjeta de crédito"}</DialogTitle></DialogHeader><CreditCardForm key={editing ? `card-${editing.id}` : "new-card"} card={editing} defaultCurrency={currency} onDone={refresh} /></DialogContent></Dialog>
-    <Dialog open={!!paying} onOpenChange={isOpen => !isOpen && setPaying(null)}><DialogContent className="credit-card-payment-dialog max-w-xl"><DialogHeader><DialogTitle>Pagar {paying?.name}</DialogTitle></DialogHeader>{paying ? <CreditCardPaymentForm card={paying} accounts={data.accounts} onDone={refresh} /> : null}</DialogContent></Dialog>
-  </div>;
+  return (
+    <div className="space-y-7">
+      <header className="page-heading">
+        <div>
+          <p className="eyebrow">Crédito manual</p>
+          <h1>Tarjetas bancarias y departamentales</h1>
+          <p>
+            Registra gastos y pagos desde cuentas propias. Coppel u otra tarjeta
+            departamental usan el mismo flujo manual, sin consultas bancarias ni
+            pagos ejecutados.
+          </p>
+        </div>
+        <Button
+          className="btn-primary"
+          onClick={() => {
+            setEditing(null);
+            setOpen(true);
+          }}
+        >
+          <Plus className="size-4" /> Nueva tarjeta
+        </Button>
+      </header>
+      <section className="grid gap-4 sm:grid-cols-3">
+        <Card className="surface-card">
+          <CardHeader className="pb-2">
+            <CardDescription>Saldo por pagar</CardDescription>
+            <CardTitle className="text-rose-700 dark:text-rose-300">
+              <MoneyText
+                cents={displayAmountCents(
+                  cardSummary.payableCents,
+                  "liability"
+                )}
+                currency={currency}
+              />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Pasivo total de tarjetas no cerradas en moneda de reporte.
+          </CardContent>
+        </Card>
+        <Card className="surface-card">
+          <CardHeader className="pb-2">
+            <CardDescription>Crédito disponible</CardDescription>
+            <CardTitle className="text-emerald-700 dark:text-emerald-300">
+              {formatMoney(cardSummary.availableCents, currency)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Suma que puedes utilizar actualmente en tarjetas activas.
+          </CardContent>
+        </Card>
+        <Card className="surface-card">
+          <CardHeader className="pb-2">
+            <CardDescription>Límite total de crédito</CardDescription>
+            <CardTitle>
+              {formatMoney(cardSummary.limitCents, currency)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Crédito otorgado total por las entidades registradas.
+          </CardContent>
+        </Card>
+      </section>
+      <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]">
+        <div className="space-y-5">
+          <Card className="surface-card">
+            <CardHeader className="pb-2">
+              <CardDescription>Utilización total del crédito</CardDescription>
+              <CardTitle
+                className={
+                  cardSummary.utilizationPercent !== null &&
+                  cardSummary.utilizationPercent >= 75
+                    ? "text-amber-700 dark:text-amber-300"
+                    : "text-emerald-700 dark:text-emerald-300"
+                }
+              >
+                {cardSummary.utilizationPercent === null
+                  ? "Sin límite"
+                  : `${cardSummary.utilizationPercent.toFixed(1)}% usado`}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div
+                className="space-y-2"
+                role="group"
+                aria-label="Utilización total del crédito"
+              >
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>0%</span>
+                  <span>Límite 100%</span>
+                  <span>
+                    {utilizationPercent === null
+                      ? "Sin límite"
+                      : `${utilizationPercent.toFixed(1)}% usado`}
+                  </span>
+                </div>
+                <div
+                  className="relative h-4 overflow-hidden rounded-full bg-muted"
+                  role="progressbar"
+                  aria-label="Porcentaje de utilización total del crédito"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.min(100, utilizationPercent ?? 0)}
+                >
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-l-full bg-emerald-500"
+                    style={{ width: `${withinLimitPercent}%` }}
+                  />
+                  {overLimitPercent > 0 ? (
+                    <div
+                      className="absolute inset-y-0 bg-rose-600"
+                      style={{
+                        left: `${withinLimitPercent}%`,
+                        width: `${overLimitPercent}%`,
+                      }}
+                    />
+                  ) : null}
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-y-[-3px] z-10 w-0.5 bg-slate-700 dark:bg-slate-200"
+                    style={{ left: `${limitMarkerPercent}%` }}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
+                  <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
+                    <i className="size-2 rounded-full bg-emerald-500" />
+                    Disponible:{" "}
+                    {cardSummary.availablePercent === null
+                      ? "Sin límite"
+                      : `${cardSummary.availablePercent.toFixed(1)}%`}{" "}
+                    · {formatMoney(cardSummary.availableCents, currency)}
+                  </span>
+                  {overLimitPercent > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 text-rose-700 dark:text-rose-300">
+                      <i className="size-2 rounded-full bg-rose-600" />
+                      Sobregiro:{" "}
+                      {formatMoney(
+                        cardSummary.payableCents - cardSummary.limitCents,
+                        currency
+                      )}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                {cardSummary.limitCents === 0
+                  ? "Registra al menos un límite de crédito para calcular la utilización."
+                  : `${formatMoney(cardSummary.payableCents, currency)} por pagar de ${formatMoney(cardSummary.limitCents, currency)} de límite total.`}
+              </p>
+            </CardContent>
+          </Card>
+          <section className="content-card">
+            <div className="card-title-row">
+              <div>
+                <p className="eyebrow">Historial reciente</p>
+                <h2>Utilización en los últimos meses</h2>
+                <p>
+                  Estimación reconstruida con el saldo actual y los gastos o
+                  pagos de tarjeta registrados.
+                </p>
+              </div>
+              <span className="period-chip">6 meses</span>
+            </div>
+            <div className="mt-5">
+              <CreditUtilizationTrend
+                history={utilizationHistory}
+                currency={currency}
+              />
+            </div>
+          </section>
+        </div>
+        <Card className="surface-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              Crédito por entidad financiera
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {cardSummary.entities.length ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {cardSummary.entities.map(entity => (
+                  <div
+                    className="rounded-xl border bg-muted/20 p-3"
+                    key={entity.issuer}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="min-w-0 truncate font-semibold">
+                        {entity.issuer}
+                      </p>
+                      <span
+                        className={`text-sm font-semibold ${entity.utilizationPercent !== null && entity.utilizationPercent >= 75 ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}`}
+                      >
+                        {entity.utilizationPercent === null
+                          ? "Sin límite"
+                          : `${entity.utilizationPercent.toFixed(1)}%`}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <p className="text-muted-foreground">Disponible</p>
+                        <p className="font-semibold text-emerald-700 dark:text-emerald-300">
+                          {formatMoney(entity.availableCents, currency)}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-300">
+                          {entity.availablePercent === null
+                            ? "Sin límite"
+                            : `${entity.availablePercent.toFixed(1)}% disponible`}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Límite</p>
+                        <p className="font-semibold">
+                          {formatMoney(entity.limitCents, currency)}
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Saldo por pagar</p>
+                        <p className="font-semibold text-rose-700 dark:text-rose-300">
+                          {formatMoney(entity.payableCents, currency)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Las tarjetas con emisor vacío aparecerán como «Entidad no
+                especificada».
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+      {cards.length === 0 ? (
+        <section className="content-card text-center">
+          <CreditCard className="mx-auto size-8 text-primary" />
+          <h2 className="mt-3 text-lg font-semibold">
+            Aún no hay tarjetas registradas
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+            Crea una tarjeta bancaria o departamental con límite opcional, saldo
+            inicial, ámbito, corte y fecha de pago. Después podrás elegirla al
+            registrar un gasto.
+          </p>
+          <Button className="mt-4" onClick={() => setOpen(true)}>
+            Crear primera tarjeta
+          </Button>
+        </section>
+      ) : (
+        <div className="grid gap-5 xl:grid-cols-2">
+          {cards.map(card => {
+            const available =
+              card.creditLimitCents > 0
+                ? Math.max(0, card.creditLimitCents - card.balanceCents)
+                : null;
+            const overLimit =
+              card.creditLimitCents > 0
+                ? Math.max(0, card.balanceCents - card.creditLimitCents)
+                : 0;
+            const cardTransactions = data.transactions
+              .filter(transaction => transaction.creditCardId === card.id)
+              .sort(
+                (a, b) =>
+                  new Date(b.occurredAt).getTime() -
+                  new Date(a.occurredAt).getTime()
+              );
+            const cutoff = nextCycleDate(card.statementClosingDay);
+            const due = nextCycleDate(card.paymentDueDay);
+            return (
+              <Card
+                className="surface-card scroll-mt-6"
+                key={card.id}
+                id={`credit-card-${card.id}`}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <CreditCard className="size-5 text-primary" />
+                        {card.name}
+                      </CardTitle>
+                      <CardDescription>
+                        {creditCardKindLabel(card.cardKind)} ·{" "}
+                        {card.issuer || "Emisor pendiente"} · {card.currency} ·{" "}
+                        {scopeLabel[card.scope]}
+                      </CardDescription>
+                    </div>
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs font-medium ${card.status === "active" ? "bg-emerald-500/10 text-emerald-700" : "bg-muted text-muted-foreground"}`}
+                    >
+                      {card.status === "active"
+                        ? "Activa"
+                        : card.status === "paused"
+                          ? "En pausa"
+                          : "Cerrada"}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Saldo actual
+                      </p>
+                      <strong className="text-lg">
+                        <MoneyText
+                          cents={displayAmountCents(
+                            card.balanceCents,
+                            "liability"
+                          )}
+                          currency={card.currency}
+                        />
+                      </strong>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Crédito disponible
+                      </p>
+                      <strong className="text-lg">
+                        {available === null
+                          ? "Sin límite"
+                          : formatMoney(available, card.currency)}
+                      </strong>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Corte próximo
+                      </p>
+                      <strong>
+                        {cutoff ? formatDate(cutoff) : "Pendiente"}
+                      </strong>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Pago próximo
+                      </p>
+                      <strong>{due ? formatDate(due) : "Pendiente"}</strong>
+                    </div>
+                  </div>
+                  {overLimit > 0 ? (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                      <strong>
+                        Sobregiro registrado:{" "}
+                        <MoneyText
+                          cents={displayAmountCents(overLimit, "liability")}
+                          currency={card.currency}
+                        />
+                      </strong>
+                      <br />
+                      <span>
+                        El saldo real supera el límite; se conserva como pasivo
+                        y puedes registrar pagos para reducirlo.
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => setPaying(card)}
+                      disabled={card.status !== "active"}
+                    >
+                      <WalletCards className="mr-1.5 size-4" /> Pagar desde
+                      cuenta
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditing(card);
+                        setOpen(true);
+                      }}
+                    >
+                      <Pencil className="mr-1.5 size-4" /> Editar
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label={`Eliminar ${card.name}`}
+                      onClick={() => {
+                        if (
+                          confirm(
+                            "¿Eliminar esta tarjeta? Sólo será posible si no tiene gastos o pagos vinculados."
+                          )
+                        )
+                          remove.mutate({ id: card.id });
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                  <div className="rounded-lg border">
+                    <div className="flex items-center gap-2 border-b px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <ReceiptText className="size-3.5" /> Movimientos de
+                      tarjeta
+                    </div>
+                    {cardTransactions.length ? (
+                      <>
+                        <div className="divide-y">
+                          {cardTransactions.slice(0, 5).map(transaction => (
+                            <div
+                              className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                              key={transaction.id}
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate font-medium">
+                                  {transaction.notes ||
+                                    (transaction.type === "expense"
+                                      ? "Gasto con tarjeta"
+                                      : "Pago de tarjeta")}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatDate(transaction.occurredAt)}
+                                </p>
+                              </div>
+                              <strong>
+                                <MoneyText
+                                  cents={displayAmountCents(
+                                    transaction.amountCents,
+                                    transaction.type === "expense"
+                                      ? "expense"
+                                      : "income"
+                                  )}
+                                  currency={transaction.currency}
+                                />
+                              </strong>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="border-t px-3 py-2">
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="ghost"
+                            className="w-full justify-start text-primary"
+                          >
+                            <Link href={`/registros?creditCardId=${card.id}`}>
+                              Ver más movimientos ({cardTransactions.length})
+                            </Link>
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="px-3 py-4 text-sm text-muted-foreground">
+                        Aún no hay gastos ni pagos vinculados.
+                      </p>
+                    )}
+                  </div>
+                  {card.notes ? (
+                    <p className="text-xs text-muted-foreground">
+                      {card.notes}
+                    </p>
+                  ) : null}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="credit-card-form-dialog max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editing ? "Editar tarjeta" : "Nueva tarjeta de crédito"}
+            </DialogTitle>
+          </DialogHeader>
+          <CreditCardForm
+            key={editing ? `card-${editing.id}` : "new-card"}
+            card={editing}
+            defaultCurrency={currency}
+            onDone={refresh}
+          />
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={!!paying}
+        onOpenChange={isOpen => !isOpen && setPaying(null)}
+      >
+        <DialogContent className="credit-card-payment-dialog max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Pagar {paying?.name}</DialogTitle>
+          </DialogHeader>
+          {paying ? (
+            <CreditCardPaymentForm
+              card={paying}
+              accounts={data.accounts}
+              onDone={refresh}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
 
-function CreditCardForm({ card, defaultCurrency, onDone }: { card: any; defaultCurrency: string; onDone: () => void | Promise<void> }) {
-  const mutation = trpc.finance.workspace.creditCards.save.useMutation({ onSuccess: async () => { toast.success(card ? "Tarjeta actualizada" : "Tarjeta creada"); await onDone(); }, onError: error => toast.error(error.message) });
-  const [form, setForm] = useState(() => ({ name: card?.name ?? "", issuer: card?.issuer ?? "", cardKind: card?.cardKind ?? "bank_credit", scope: card?.scope ?? "personal", currency: card?.currency ?? defaultCurrency, limit: card ? fromCents(card.creditLimitCents) : "", balance: card ? fromCents(card.balanceCents) : "0", rate: card?.interestRateBps ? (card.interestRateBps / 100).toString() : "", minimum: card ? fromCents(card.minimumPaymentCents) : "0", closingDay: card?.statementClosingDay?.toString() ?? "", dueDay: card?.paymentDueDay?.toString() ?? "", status: card?.status ?? "active", notes: card?.notes ?? "" }));
-  const submit = (event: FormEvent) => { event.preventDefault(); mutation.mutate({ id: card?.id, entityId: card?.entityId ?? null, projectId: card?.projectId ?? null, name: form.name, issuer: form.issuer || null, cardKind: form.cardKind as "bank_credit" | "departmental", scope: form.scope as "personal" | "pfae" | "business" | "mixed", currency: form.currency.toUpperCase(), creditLimitCents: toCents(form.limit || "0"), balanceCents: toCents(form.balance || "0"), interestRateBps: form.rate ? Math.round(Number(form.rate) * 100) : null, minimumPaymentCents: toCents(form.minimum || "0"), statementClosingDay: form.closingDay ? Number(form.closingDay) : null, paymentDueDay: form.dueDay ? Number(form.dueDay) : null, status: form.status as any, notes: form.notes || null }); };
-  return <form className="form-grid" onSubmit={submit}><div className="form-field span-2"><Label>Nombre de la tarjeta</Label><Input required placeholder={form.cardKind === "departmental" ? "Ej. Tarjeta Coppel" : "Ej. Santander LikeU"} value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} /></div><div className="form-field"><Label>Clase de tarjeta</Label><select value={form.cardKind} onChange={event => setForm({ ...form, cardKind: event.target.value })}><option value="bank_credit">Tarjeta bancaria</option><option value="departmental">Tarjeta departamental (ej. Coppel)</option></select></div><div className="form-field"><Label>Banco, tienda o emisor</Label><Input value={form.issuer} onChange={event => setForm({ ...form, issuer: event.target.value })} /></div><div className="form-field"><Label>Moneda</Label><Input maxLength={3} required value={form.currency} onChange={event => setForm({ ...form, currency: event.target.value.toUpperCase() })} /></div><div className="form-field"><Label>Uso o ámbito</Label><select value={form.scope} onChange={event => setForm({ ...form, scope: event.target.value })}><option value="personal">Personal</option><option value="pfae">PFAE</option><option value="business">Empresarial</option><option value="mixed">Mixto</option></select></div><div className="form-field"><Label>Límite de crédito</Label><Input type="number" min="0" step="0.01" value={form.limit} onChange={event => setForm({ ...form, limit: event.target.value })} /></div><div className="form-field"><Label>Saldo inicial actual</Label><Input type="number" step="0.01" required value={form.balance} onChange={event => setForm({ ...form, balance: event.target.value })} /></div><div className="form-field"><Label>Tasa anual (%)</Label><Input type="number" min="0" step="0.01" value={form.rate} onChange={event => setForm({ ...form, rate: event.target.value })} /></div><div className="form-field"><Label>Pago mínimo</Label><Input type="number" min="0" step="0.01" value={form.minimum} onChange={event => setForm({ ...form, minimum: event.target.value })} /></div><div className="form-field"><Label>Día de corte</Label><Input type="number" min="1" max="31" value={form.closingDay} onChange={event => setForm({ ...form, closingDay: event.target.value })} /></div><div className="form-field"><Label>Día límite de pago</Label><Input type="number" min="1" max="31" value={form.dueDay} onChange={event => setForm({ ...form, dueDay: event.target.value })} /></div><div className="form-field"><Label>Estado</Label><select value={form.status} onChange={event => setForm({ ...form, status: event.target.value })}><option value="active">Activa</option><option value="paused">En pausa</option><option value="closed">Cerrada</option></select></div><div className="form-field span-2"><Label>Notas</Label><Textarea placeholder="Ej. Sin anualidad, usar para gastos recurrentes" value={form.notes} onChange={event => setForm({ ...form, notes: event.target.value })} /></div><div className="form-actions span-2"><Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Guardando…" : card ? "Guardar cambios" : "Crear tarjeta"}</Button></div></form>;
+function CreditCardForm({
+  card,
+  defaultCurrency,
+  onDone,
+}: {
+  card: any;
+  defaultCurrency: string;
+  onDone: () => void | Promise<void>;
+}) {
+  const mutation = trpc.finance.workspace.creditCards.save.useMutation({
+    onSuccess: async () => {
+      toast.success(card ? "Tarjeta actualizada" : "Tarjeta creada");
+      await onDone();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const [form, setForm] = useState(() => ({
+    name: card?.name ?? "",
+    issuer: card?.issuer ?? "",
+    cardKind: card?.cardKind ?? "bank_credit",
+    scope: card?.scope ?? "personal",
+    currency: card?.currency ?? defaultCurrency,
+    limit: card ? fromCents(card.creditLimitCents) : "",
+    balance: card ? fromCents(card.balanceCents) : "0",
+    rate: card?.interestRateBps ? (card.interestRateBps / 100).toString() : "",
+    minimum: card ? fromCents(card.minimumPaymentCents) : "0",
+    closingDay: card?.statementClosingDay?.toString() ?? "",
+    dueDay: card?.paymentDueDay?.toString() ?? "",
+    status: card?.status ?? "active",
+    notes: card?.notes ?? "",
+  }));
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    mutation.mutate({
+      id: card?.id,
+      entityId: card?.entityId ?? null,
+      projectId: card?.projectId ?? null,
+      name: form.name,
+      issuer: form.issuer || null,
+      cardKind: form.cardKind as "bank_credit" | "departmental",
+      scope: form.scope as "personal" | "pfae" | "business" | "mixed",
+      currency: form.currency.toUpperCase(),
+      creditLimitCents: toCents(form.limit || "0"),
+      balanceCents: toCents(form.balance || "0"),
+      interestRateBps: form.rate ? Math.round(Number(form.rate) * 100) : null,
+      minimumPaymentCents: toCents(form.minimum || "0"),
+      statementClosingDay: form.closingDay ? Number(form.closingDay) : null,
+      paymentDueDay: form.dueDay ? Number(form.dueDay) : null,
+      status: form.status as any,
+      notes: form.notes || null,
+    });
+  };
+  return (
+    <form className="form-grid" onSubmit={submit}>
+      <div className="form-field span-2">
+        <Label>Nombre de la tarjeta</Label>
+        <Input
+          required
+          placeholder={
+            form.cardKind === "departmental"
+              ? "Ej. Tarjeta Coppel"
+              : "Ej. Santander LikeU"
+          }
+          value={form.name}
+          onChange={event => setForm({ ...form, name: event.target.value })}
+        />
+      </div>
+      <div className="form-field">
+        <Label>Clase de tarjeta</Label>
+        <select
+          value={form.cardKind}
+          onChange={event => setForm({ ...form, cardKind: event.target.value })}
+        >
+          <option value="bank_credit">Tarjeta bancaria</option>
+          <option value="departmental">
+            Tarjeta departamental (ej. Coppel)
+          </option>
+        </select>
+      </div>
+      <div className="form-field">
+        <Label>Banco, tienda o emisor</Label>
+        <Input
+          value={form.issuer}
+          onChange={event => setForm({ ...form, issuer: event.target.value })}
+        />
+      </div>
+      <div className="form-field">
+        <Label>Moneda</Label>
+        <Input
+          maxLength={3}
+          required
+          value={form.currency}
+          onChange={event =>
+            setForm({ ...form, currency: event.target.value.toUpperCase() })
+          }
+        />
+      </div>
+      <div className="form-field">
+        <Label>Uso o ámbito</Label>
+        <select
+          value={form.scope}
+          onChange={event => setForm({ ...form, scope: event.target.value })}
+        >
+          <option value="personal">Personal</option>
+          <option value="pfae">PFAE</option>
+          <option value="business">Empresarial</option>
+          <option value="mixed">Mixto</option>
+        </select>
+      </div>
+      <div className="form-field">
+        <Label>Límite de crédito</Label>
+        <Input
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.limit}
+          onChange={event => setForm({ ...form, limit: event.target.value })}
+        />
+      </div>
+      <div className="form-field">
+        <Label>Saldo inicial actual</Label>
+        <Input
+          type="number"
+          step="0.01"
+          required
+          value={form.balance}
+          onChange={event => setForm({ ...form, balance: event.target.value })}
+        />
+      </div>
+      <div className="form-field">
+        <Label>Tasa anual (%)</Label>
+        <Input
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.rate}
+          onChange={event => setForm({ ...form, rate: event.target.value })}
+        />
+      </div>
+      <div className="form-field">
+        <Label>Pago mínimo</Label>
+        <Input
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.minimum}
+          onChange={event => setForm({ ...form, minimum: event.target.value })}
+        />
+      </div>
+      <div className="form-field">
+        <Label>Día de corte</Label>
+        <Input
+          type="number"
+          min="1"
+          max="31"
+          value={form.closingDay}
+          onChange={event =>
+            setForm({ ...form, closingDay: event.target.value })
+          }
+        />
+      </div>
+      <div className="form-field">
+        <Label>Día límite de pago</Label>
+        <Input
+          type="number"
+          min="1"
+          max="31"
+          value={form.dueDay}
+          onChange={event => setForm({ ...form, dueDay: event.target.value })}
+        />
+      </div>
+      <div className="form-field">
+        <Label>Estado</Label>
+        <select
+          value={form.status}
+          onChange={event => setForm({ ...form, status: event.target.value })}
+        >
+          <option value="active">Activa</option>
+          <option value="paused">En pausa</option>
+          <option value="closed">Cerrada</option>
+        </select>
+      </div>
+      <div className="form-field span-2">
+        <Label>Notas</Label>
+        <Textarea
+          placeholder="Ej. Sin anualidad, usar para gastos recurrentes"
+          value={form.notes}
+          onChange={event => setForm({ ...form, notes: event.target.value })}
+        />
+      </div>
+      <div className="form-actions span-2">
+        <Button type="submit" disabled={mutation.isPending}>
+          {mutation.isPending
+            ? "Guardando…"
+            : card
+              ? "Guardar cambios"
+              : "Crear tarjeta"}
+        </Button>
+      </div>
+    </form>
+  );
 }
 
-function CreditCardPaymentForm({ card, accounts, onDone }: { card: any; accounts: any[]; onDone: () => void | Promise<void> }) {
-  const mutation = trpc.finance.workspace.creditCards.paymentSave.useMutation({ onSuccess: async () => { toast.success("Pago registrado como traspaso; no se duplicó ningún gasto."); await onDone(); }, onError: error => toast.error(error.message) });
-  const sources = useMemo(() => accounts.filter(account => account.status === "active" && account.currency === card.currency), [accounts, card.currency]);
-  const [form, setForm] = useState({ sourceAccountId: "", amount: "", occurredAt: new Date().toISOString().slice(0, 10), bankReference: "", notes: "" });
-  const submit = (event: FormEvent) => { event.preventDefault(); mutation.mutate({ creditCardId: card.id, sourceAccountId: Number(form.sourceAccountId), amountCents: toCents(form.amount), occurredAt: new Date(`${form.occurredAt}T12:00:00`).getTime(), status: "confirmed", bankReference: form.bankReference.trim() || null, notes: form.notes || null }); };
-  return <form className="form-grid credit-card-payment-form" onSubmit={submit}><div className="form-field span-2 rounded-lg bg-muted/50 p-3 text-sm"><strong>Saldo actual: <MoneyText cents={card.balanceCents} currency={card.currency} /></strong></div><div className="form-field span-2"><Label>Cuenta bancaria o de efectivo de origen</Label><select required value={form.sourceAccountId} onChange={event => setForm({ ...form, sourceAccountId: event.target.value })}><option value="">Elige la cuenta desde la que pagaste</option>{sources.map(account => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}</select>{sources.length === 0 ? <small className="text-destructive">Necesitas una cuenta activa en {card.currency} para registrar el pago como traspaso.</small> : null}</div><div className="form-field"><Label>Importe</Label><Input type="number" min="0.01" step="0.01" inputMode="decimal" required value={form.amount} onChange={event => setForm({ ...form, amount: event.target.value })} /></div><div className="form-field"><Label>Fecha</Label><Input type="date" required value={form.occurredAt} onChange={event => setForm({ ...form, occurredAt: event.target.value })} /></div><div className="form-field"><Label>Referencia bancaria</Label><Input maxLength={160} value={form.bankReference} placeholder="Ej. SPEI o folio bancario" onChange={event => setForm({ ...form, bankReference: event.target.value })} /></div><div className="form-field span-2"><Label>Nota</Label><Textarea placeholder="Ej. Pago total desde Santander" value={form.notes} onChange={event => setForm({ ...form, notes: event.target.value })} /></div><div className="form-actions span-2"><Button type="submit" disabled={mutation.isPending || sources.length === 0}>{mutation.isPending ? "Registrando…" : "Registrar pago como traspaso"}</Button></div></form>;
+function CreditCardPaymentForm({
+  card,
+  accounts,
+  onDone,
+}: {
+  card: any;
+  accounts: any[];
+  onDone: () => void | Promise<void>;
+}) {
+  const mutation = trpc.finance.workspace.creditCards.paymentSave.useMutation({
+    onSuccess: async () => {
+      toast.success(
+        "Pago registrado como traspaso; no se duplicó ningún gasto."
+      );
+      await onDone();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const sources = useMemo(
+    () =>
+      accounts.filter(
+        account =>
+          account.status === "active" && account.currency === card.currency
+      ),
+    [accounts, card.currency]
+  );
+  const [form, setForm] = useState({
+    sourceAccountId: "",
+    amount: "",
+    occurredAt: new Date().toISOString().slice(0, 10),
+    bankReference: "",
+    notes: "",
+  });
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    mutation.mutate({
+      creditCardId: card.id,
+      sourceAccountId: Number(form.sourceAccountId),
+      amountCents: toCents(form.amount),
+      occurredAt: new Date(`${form.occurredAt}T12:00:00`).getTime(),
+      status: "confirmed",
+      bankReference: form.bankReference.trim() || null,
+      notes: form.notes || null,
+    });
+  };
+  return (
+    <form className="form-grid credit-card-payment-form" onSubmit={submit}>
+      <div className="form-field span-2 rounded-lg bg-muted/50 p-3 text-sm">
+        <strong>
+          Saldo actual:{" "}
+          <MoneyText cents={card.balanceCents} currency={card.currency} />
+        </strong>
+      </div>
+      <div className="form-field span-2">
+        <Label>Cuenta bancaria o de efectivo de origen</Label>
+        <select
+          required
+          value={form.sourceAccountId}
+          onChange={event =>
+            setForm({ ...form, sourceAccountId: event.target.value })
+          }
+        >
+          <option value="">Elige la cuenta desde la que pagaste</option>
+          {sources.map(account => (
+            <option key={account.id} value={account.id}>
+              {account.name} · {account.currency}
+            </option>
+          ))}
+        </select>
+        {sources.length === 0 ? (
+          <small className="text-destructive">
+            Necesitas una cuenta activa en {card.currency} para registrar el
+            pago como traspaso.
+          </small>
+        ) : null}
+      </div>
+      <div className="form-field">
+        <Label>Importe</Label>
+        <Input
+          type="number"
+          min="0.01"
+          step="0.01"
+          inputMode="decimal"
+          required
+          value={form.amount}
+          onChange={event => setForm({ ...form, amount: event.target.value })}
+        />
+      </div>
+      <div className="form-field">
+        <Label>Fecha</Label>
+        <Input
+          type="date"
+          required
+          value={form.occurredAt}
+          onChange={event =>
+            setForm({ ...form, occurredAt: event.target.value })
+          }
+        />
+      </div>
+      <div className="form-field">
+        <Label>Referencia bancaria</Label>
+        <Input
+          maxLength={160}
+          value={form.bankReference}
+          placeholder="Ej. SPEI o folio bancario"
+          onChange={event =>
+            setForm({ ...form, bankReference: event.target.value })
+          }
+        />
+      </div>
+      <div className="form-field span-2">
+        <Label>Nota</Label>
+        <Textarea
+          placeholder="Ej. Pago total desde Santander"
+          value={form.notes}
+          onChange={event => setForm({ ...form, notes: event.target.value })}
+        />
+      </div>
+      <div className="form-actions span-2">
+        <Button
+          type="submit"
+          disabled={mutation.isPending || sources.length === 0}
+        >
+          {mutation.isPending ? "Registrando…" : "Registrar pago como traspaso"}
+        </Button>
+      </div>
+    </form>
+  );
 }
