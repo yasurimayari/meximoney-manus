@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   accounts,
   assistantChatHistory,
+  assistantNoteAttachments,
   assistantNotes,
   bankStatementImports,
   bankStatementRows,
@@ -344,6 +345,7 @@ export async function deleteAllFinancialData(userId: number) {
   const db = await requireDb();
   await db.transaction(async tx => {
     await tx.delete(assistantChatHistory).where(eq(assistantChatHistory.userId, userId));
+    await tx.delete(assistantNoteAttachments).where(eq(assistantNoteAttachments.userId, userId));
     await tx.delete(assistantNotes).where(eq(assistantNotes.userId, userId));
     await tx.delete(financialPlanLinks).where(eq(financialPlanLinks.userId, userId));
     await tx.delete(financialPlanPeriods).where(eq(financialPlanPeriods.userId, userId));

@@ -7,6 +7,13 @@ type ClaudeTextBlock = {
   text: string;
 };
 
+type ClaudeInputContent =
+  | { type: "text"; text: string }
+  | { type: "image"; source: { type: "base64"; media_type: "image/jpeg" | "image/png"; data: string } }
+  | { type: "document"; source: { type: "base64"; media_type: "application/pdf"; data: string } };
+
+export type ClaudeAttachment = { fileName: string; mimeType: "image/jpeg" | "image/png" | "application/pdf"; base64: string };
+
 type ClaudeMessagesResponse = {
   content?: ClaudeTextBlock[];
 };
@@ -72,7 +79,7 @@ export function formatMexiAnalysis(analysis: MexiAnalysis) {
   ].filter(Boolean).join("");
 }
 
-async function callClaude(input: { system: string; prompt: string; maxTokens?: number }) {
+async function callClaude(input: { system: string; prompt: string; maxTokens?: number; attachments?: ClaudeAttachment[] }) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new ClaudeRequestError("La clave de Claude no está configurada en el servidor.");
 
@@ -88,7 +95,7 @@ async function callClaude(input: { system: string; prompt: string; maxTokens?: n
       model: MEXI_CLAUDE_MODEL,
       max_tokens: input.maxTokens ?? 2_400,
       system: input.system,
-      messages: [{ role: "user", content: input.prompt }],
+      messages: [{ role: "user", content: input.attachments?.length ? [{ type: "text", text: input.prompt }, ...input.attachments.map(attachment => attachment.mimeType === "application/pdf" ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: attachment.base64 } } : { type: "image", source: { type: "base64", media_type: attachment.mimeType, data: attachment.base64 } })] as ClaudeInputContent[] : input.prompt }],
     }),
   });
 
@@ -100,7 +107,7 @@ export async function askClaudeForMexi(input: { system: string; prompt: string }
   return callClaude(input);
 }
 
-export async function askClaudeForMexiAnalysis(input: { system: string; prompt: string }) {
+export async function askClaudeForMexiAnalysis(input: { system: string; prompt: string; attachments?: ClaudeAttachment[] }) {
   const content = await callClaude({
     ...input,
     system: `${input.system}\n\nDevuelve exclusivamente un objeto JSON válido, sin markdown ni texto adicional, con esta forma exacta:\n{"answer":"string","facts":[{"label":"string","value":"string","source":"string","date":"string opcional"}],"calculations":[{"name":"string","formula":"string","substitution":"string","result":"string","source":"string"}],"assumptions":["string"],"recommendations":[{"title":"string","rationale":"string","priority":"alta|media|baja","nextStep":"string"}],"warnings":["string"],"sources":[{"label":"string","type":"internal|user|external","detail":"string"}],"canExecute":false}. No incluyas propiedades adicionales.\n\nReglas: solo usa datos suministrados; no inventes cifras; toda recomendación debe ser manual; muestra la fórmula cuando calcules; si faltan datos, dilo en warnings o assumptions; canExecute debe ser false.`,

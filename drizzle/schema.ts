@@ -849,6 +849,18 @@ export const assistantNotes = mysqlTable("assistantNotes", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const assistantNoteAttachments = mysqlTable("assistantNoteAttachments", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  noteId: int("noteId").notNull(),
+  fileKey: varchar("fileKey", { length: 500 }).notNull(),
+  fileUrl: varchar("fileUrl", { length: 700 }).notNull(),
+  fileName: varchar("fileName", { length: 180 }).notNull(),
+  fileMimeType: varchar("fileMimeType", { length: 100 }).notNull(),
+  fileSizeBytes: int("fileSizeBytes").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const assistantChatHistory = mysqlTable("assistantChatHistory", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

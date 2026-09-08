@@ -4,8 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { trpc } from "@/lib/trpc";
-import { Archive, BookOpen, Edit3, Eye, History, Pin, PinOff, Plus, Save, Search, Sparkles, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Archive, BookOpen, Edit3, Eye, FileText, History, Paperclip, Pin, PinOff, Plus, Save, Search, Sparkles, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
 
@@ -42,6 +42,7 @@ export default function Assistant() {
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [note, setNote] = useState<NoteDraft>({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate", isPinned: false });
   const [previewNote, setPreviewNote] = useState(false);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
   const chat = trpc.finance.assistant.chat.useMutation({
     onSuccess: response => {
       setMessages(previous => [...previous, { role: "assistant", content: response.content }]);
@@ -69,6 +70,14 @@ export default function Assistant() {
     onSuccess: () => {       toast.success("Nota archivada"); setIsCreatingNote(true); setNote({ title: "Nota sin título", content: "", tag: "general", tagColor: "slate", isPinned: false }); void utils.finance.assistant.notes.list.invalidate(); },
     onError: error => toast.error(error.message),
   });
+  const uploadAttachment = trpc.finance.assistant.notes.attachments.upload.useMutation({
+    onSuccess: () => { toast.success("Adjunto guardado"); void utils.finance.assistant.notes.list.invalidate(); },
+    onError: error => toast.error(error.message),
+  });
+  const removeAttachment = trpc.finance.assistant.notes.attachments.remove.useMutation({
+    onSuccess: () => { toast.success("Adjunto eliminado"); void utils.finance.assistant.notes.list.invalidate(); },
+    onError: error => toast.error(error.message),
+  });
   const removeNote = trpc.finance.assistant.notes.remove.useMutation({
     onSuccess: () => {
       toast.success("Nota eliminada");
@@ -86,6 +95,16 @@ export default function Assistant() {
     }
   }, [notes.data, note.id, isCreatingNote]);
 
+  const handleAttachmentSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (!note.id) { toast.error("Guarda la nota antes de adjuntar un archivo."); return; }
+    for (const file of files) {
+      const base64 = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(",")[1] ?? ""); reader.onerror = () => reject(new Error("No se pudo leer el archivo.")); reader.readAsDataURL(file); });
+      uploadAttachment.mutate({ noteId: note.id, fileName: file.name, mimeType: file.type, base64 });
+    }
+  };
+
   const send = (content: string) => {
     setMessages(previous => [...previous, { role: "user", content }]);
     chat.mutate({ message: content, noteTag: selectedNoteTag === "all" ? undefined : selectedNoteTag });
@@ -97,6 +116,7 @@ export default function Assistant() {
     setPreviewNote(false);
   };
 
+  const noteAttachments = note.id ? notes.data?.find(item => item.id === note.id)?.attachments ?? [] : [];
   const visibleNotes = notes.data?.filter(item => {
     const matchesTag = noteListFilter === "all" || item.tag === noteListFilter;
     const query = noteSearch.trim().toLocaleLowerCase("es-MX");
@@ -139,6 +159,8 @@ export default function Assistant() {
             <Input value={note.title} onChange={event => setNote(current => ({ ...current, title: event.target.value }))} maxLength={180} placeholder="Título de la nota" aria-label="Título de la nota" />
             <div className="assistant-note-meta"><label>Etiqueta<select value={note.tag} onChange={event => { const tag = event.target.value as NoteTag; setNote(current => ({ ...current, tag, tagColor: tagColor(tag) })); }} aria-label="Etiqueta de la nota">{noteTags.map(tag => <option value={tag.value} key={tag.value}>{tag.label}</option>)}</select></label></div>
             <div className="assistant-note-tabs"><button type="button" className={!previewNote ? "active" : ""} onClick={() => setPreviewNote(false)}>Editar</button><button type="button" className={previewNote ? "active" : ""} onClick={() => setPreviewNote(true)}><Eye className="mr-1 inline size-3.5" />Vista previa</button></div>
+            <div className="assistant-attachment-toolbar"><Button type="button" variant="outline" size="sm" onClick={() => attachmentInputRef.current?.click()} disabled={!note.id || uploadAttachment.isPending}><Paperclip className="mr-1 size-3.5" />Adjuntar</Button><span>JPG, PNG o PDF · máximo 10 MB</span><input ref={attachmentInputRef} type="file" accept="image/jpeg,image/png,application/pdf" multiple hidden onChange={handleAttachmentSelection} /></div>
+            {noteAttachments.length > 0 && <div className="assistant-attachment-list">{noteAttachments.map(attachment => <div key={attachment.id} className="assistant-attachment-row"><a href={attachment.fileUrl} target="_blank" rel="noreferrer"><FileText className="size-3.5" />{attachment.fileName}</a><button type="button" title="Eliminar adjunto" aria-label={`Eliminar ${attachment.fileName}`} onClick={() => removeAttachment.mutate({ id: attachment.id })}><X className="size-3.5" /></button></div>)}</div>}
             {previewNote ? <div className="assistant-note-preview prose prose-sm max-w-none"><Streamdown>{note.content || "Escribe una nota para verla aquí."}</Streamdown></div> : <Textarea value={note.content} onChange={event => setNote(current => ({ ...current, content: event.target.value }))} maxLength={20000} placeholder="Escribe tus ideas y apuntes aquí…" className="min-h-28 resize-y" aria-label="Contenido de la nota" />}
             <div className="assistant-note-list-toolbar"><label className="assistant-note-search"><Search className="size-3.5" /><Input value={noteSearch} onChange={event => setNoteSearch(event.target.value)} placeholder="Buscar notas…" aria-label="Buscar notas por texto" /></label><select value={noteListFilter} onChange={event => setNoteListFilter(event.target.value as NoteTag | "all")} aria-label="Filtrar notas por etiqueta"><option value="all">Todas las etiquetas</option>{noteTags.map(tag => <option value={tag.value} key={tag.value}>{tag.label}</option>)}</select></div>
             <div className="assistant-note-list">{visibleNotes.map(item => <div className={`assistant-note-row ${note.id === item.id ? "selected" : ""}`} key={item.id}><button type="button" className="assistant-note-main" onClick={() => selectNote({ id: item.id, title: item.title, content: item.content, tag: (item.tag as NoteTag) || "general", tagColor: tagColor(item.tag), isPinned: Boolean(item.isPinned) })}><span>{item.isPinned && <Pin className="mr-1 inline size-3" aria-label="Nota fijada" />}{item.title}</span><small><b className={`note-tag note-tag-${tagColor(item.tag)}`}>{tagLabel(item.tag)}</b> · {new Date(item.updatedAt).toLocaleDateString("es-MX")}</small></button><div className="assistant-note-icon-actions"><button type="button" title="Visualizar nota" aria-label={`Visualizar ${item.title}`} onClick={() => { selectNote({ id: item.id, title: item.title, content: item.content, tag: (item.tag as NoteTag) || "general", tagColor: tagColor(item.tag), isPinned: Boolean(item.isPinned) }); setPreviewNote(true); }}><Eye className="size-3.5" /></button><button type="button" title={item.isPinned ? "Quitar prioridad" : "Fijar nota"} aria-label={item.isPinned ? `Quitar prioridad de ${item.title}` : `Fijar ${item.title}`} onClick={() => togglePinned.mutate({ id: item.id, isPinned: !item.isPinned })}>{item.isPinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}</button><button type="button" title="Editar nota" aria-label={`Editar ${item.title}`} onClick={() => { selectNote({ id: item.id, title: item.title, content: item.content, tag: (item.tag as NoteTag) || "general", tagColor: tagColor(item.tag), isPinned: Boolean(item.isPinned) }); setPreviewNote(false); }}><Edit3 className="size-3.5" /></button><button type="button" title="Archivar nota" aria-label={`Archivar ${item.title}`} onClick={() => archiveNote.mutate({ id: item.id, archived: true })}><Archive className="size-3.5" /></button><button type="button" title="Eliminar nota" aria-label={`Eliminar ${item.title}`} onClick={() => removeNote.mutate({ id: item.id })}><Trash2 className="size-3.5" /></button></div></div>)}</div>

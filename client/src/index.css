@@ -414,3 +414,15 @@
   .assistant-fixed-tag-color { @apply min-w-0; }
   .assistant-note-icon-actions button { @apply size-8; }
 }
+
+/* Adjuntos privados del Diario Financiero */
+.assistant-attachment-toolbar { @apply mt-2 flex items-center gap-2; }
+.assistant-attachment-toolbar > span { @apply text-[0.68rem] text-muted-foreground; }
+.assistant-attachment-list { @apply mt-2 space-y-1; }
+.assistant-attachment-row { @apply flex items-center justify-between gap-2 rounded-md border border-border/70 bg-muted/20 px-2 py-1 text-xs; }
+.assistant-attachment-row a { @apply flex min-w-0 items-center gap-1.5 truncate text-foreground hover:text-primary; }
+.assistant-attachment-row a svg { @apply shrink-0; }
+.assistant-attachment-row button { @apply inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-background hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring; }
+@media (max-width: 640px) {
+  .assistant-attachment-toolbar { @apply flex-wrap; }
+}

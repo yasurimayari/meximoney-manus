@@ -693,3 +693,14 @@
 - [x] Asegurar que la lista se actualice y muestre correctamente cada nota recién guardada.
 - [x] Añadir pruebas del flujo nueva nota, guardado, refresco y selección de notas.
 - [x] Validar TypeScript, pruebas, compilación, responsive y publicar la mejora.
+
+# Diario Financiero — notas independientes y adjuntos
+
+- [x] Auditar el flujo actual que reutiliza el id de la nota y las capacidades de almacenamiento privado.
+- [x] Corregir el guardado para que cada nueva nota inserte un registro independiente.
+- [x] Añadir persistencia de adjuntos privados vinculados a una nota.
+- [x] Permitir JPG, PNG y PDF con límites de tamaño y validación de tipo.
+- [x] Integrar carga, listado, visualización y eliminación de adjuntos en el Diario.
+- [x] Incorporar al contexto de Mexi IA el metadato de adjuntos y el contenido legible cuando sea seguro; no enviar archivos binarios sin procesamiento explícito.
+- [x] Añadir pruebas de creación consecutiva, aislamiento, validación de archivos y contexto.
+- [x] Validar TypeScript, pruebas, compilación, responsive y publicar la mejora.

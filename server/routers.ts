@@ -7,6 +7,7 @@ import {
   accounts,
   assistantChatHistory,
   assistantNotes,
+  assistantNoteAttachments,
   bankStatementImports,
   bankStatementRows,
   budgets,
@@ -72,7 +73,8 @@ import { sendPasswordResetEmail } from "./passwordResetEmail";
 import { passwordResetRequestResponse } from "./passwordResetResponse";
 import { normalizeLoanKind } from "../shared/manualObligations";
 import { deleteAllFinancialData, deleteOwnedRow, getFinanceSnapshot, getProfile, requireDb, resolveWorkspaceAccess } from "./db";
-import { storagePut } from "./storage";
+import { storageGetSignedUrl, storagePut } from "./storage";
+import { decodeAssistantAttachment, MAX_ASSISTANT_ATTACHMENT_BYTES } from "./assistantAttachmentUpload";
 import { requiresPersonalProfileConsent } from "./profilePrivacy";
 import { calculateMonthlyStatement, monthBounds } from "./finance";
 import { comparableInvestmentValueCents } from "./investmentData";
@@ -83,6 +85,7 @@ import { creditCardAlertCandidates } from "./creditCardAlerts";
 import { payableAlertCandidates, upcomingTravelAlertCandidates } from "./scheduledAlertCandidates";
 import { extractQuickCaptureDraft } from "./quickCapture";
 import { askClaudeForMexiAnalysis, formatMexiAnalysis } from "./claude";
+import type { ClaudeAttachment } from "./claude";
 import { mexicoCityReferenceMonth } from "./monthReference";
 import { calculatePersonalScore } from "./personalScore";
 import { matchStatementLines } from "../shared/bankReconciliation";
@@ -220,12 +223,32 @@ export function payableSettlement(payable: { amountCents: number; dueAt: Date | 
 
 const assistantNoteColorByTag: Record<string, string> = { general: "slate", impuestos: "amber", inversiones: "emerald", presupuesto: "blue", deudas: "rose", patrimonio: "violet", proyectos: "blue", personal: "slate" };
 
-function createManualSnapshotText(snapshot: Awaited<ReturnType<typeof getFinanceSnapshot>>, notes: Array<{ title: string; content: string; tag: string; tagColor: string; isPinned: boolean; updatedAt: Date }> = [], selectedNoteTag?: string) {
+async function loadAssistantClaudeAttachments(rows: Array<{ fileKey: string; fileName: string; fileMimeType: string }>): Promise<ClaudeAttachment[]> {
+  const attachments: ClaudeAttachment[] = [];
+  let totalBytes = 0;
+  for (const row of rows.slice(0, 4)) {
+    if (!["image/jpeg", "image/png", "application/pdf"].includes(row.fileMimeType)) continue;
+    try {
+      const signedUrl = await storageGetSignedUrl(row.fileKey);
+      const response = await fetch(signedUrl, { signal: AbortSignal.timeout(15_000) });
+      if (!response.ok) continue;
+      const bytes = Buffer.from(await response.arrayBuffer());
+      if (!bytes.length || bytes.byteLength > 4 * 1024 * 1024 || totalBytes + bytes.byteLength > 8 * 1024 * 1024) continue;
+      totalBytes += bytes.byteLength;
+      attachments.push({ fileName: row.fileName, mimeType: row.fileMimeType as ClaudeAttachment["mimeType"], base64: bytes.toString("base64") });
+    } catch {
+      // Un adjunto inaccesible no debe bloquear el análisis de texto.
+    }
+  }
+  return attachments;
+}
+
+function createManualSnapshotText(snapshot: Awaited<ReturnType<typeof getFinanceSnapshot>>, notes: Array<{ title: string; content: string; tag: string; tagColor: string; isPinned: boolean; updatedAt: Date; attachments?: Array<{ fileName: string; fileMimeType: string; fileSizeBytes: number }> }> = [], selectedNoteTag?: string) {
   let remainingNoteCharacters = 6000;
   const personalNotes = notes.slice(0, 20).map(note => {
     const content = note.content.trim().slice(0, Math.min(800, remainingNoteCharacters));
     remainingNoteCharacters -= content.length;
-    return { title: note.title, content, tag: note.tag, tagColor: note.tagColor, isPinned: note.isPinned, updatedAt: note.updatedAt };
+    return { title: note.title, content, tag: note.tag, tagColor: note.tagColor, isPinned: note.isPinned, updatedAt: note.updatedAt, attachments: note.attachments ?? [] };
   }).filter(note => note.content.length > 0);
   return JSON.stringify({
     profile: snapshot.profile,
@@ -2162,7 +2185,10 @@ export const appRouter = router({
       notes: router({
         list: privateFinanceProcedure.query(async ({ ctx }) => {
           const db = await requireDb();
-          return db.select().from(assistantNotes).where(and(eq(assistantNotes.userId, ctx.user.id), isNull(assistantNotes.archivedAt))).orderBy(desc(assistantNotes.isPinned), desc(assistantNotes.updatedAt)).limit(100);
+          const rows = await db.select().from(assistantNotes).where(and(eq(assistantNotes.userId, ctx.user.id), isNull(assistantNotes.archivedAt))).orderBy(desc(assistantNotes.isPinned), desc(assistantNotes.updatedAt)).limit(100);
+          const ids = rows.map(row => row.id);
+          const attachments = ids.length ? await db.select().from(assistantNoteAttachments).where(and(eq(assistantNoteAttachments.userId, ctx.user.id), inArray(assistantNoteAttachments.noteId, ids))) : [];
+          return rows.map(row => ({ ...row, attachments: attachments.filter(attachment => attachment.noteId === row.id) }));
         }),
         save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), title: z.string().trim().min(1).max(180), content: z.string().max(20000), tag: z.enum(["general", "impuestos", "inversiones", "presupuesto", "deudas", "patrimonio", "proyectos", "personal"]) })).mutation(async ({ ctx, input }) => {
           const db = await requireDb();
@@ -2178,7 +2204,20 @@ export const appRouter = router({
         }),
         togglePinned: privateFinanceProcedure.input(z.object({ id: z.number().int().positive(), isPinned: z.boolean() })).mutation(async ({ ctx, input }) => { const db = await requireDb(); await db.update(assistantNotes).set({ isPinned: input.isPinned }).where(and(eq(assistantNotes.id, input.id), eq(assistantNotes.userId, ctx.user.id), isNull(assistantNotes.archivedAt))); return { success: true }; }),
         archive: privateFinanceProcedure.input(z.object({ id: z.number().int().positive(), archived: z.boolean() })).mutation(async ({ ctx, input }) => { const db = await requireDb(); await db.update(assistantNotes).set({ archivedAt: input.archived ? new Date() : null, isPinned: input.archived ? false : undefined }).where(and(eq(assistantNotes.id, input.id), eq(assistantNotes.userId, ctx.user.id))); return { success: true }; }),
-        remove: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { const db = await requireDb(); await db.delete(assistantNotes).where(and(eq(assistantNotes.id, input.id), eq(assistantNotes.userId, ctx.user.id))); return { success: true }; }),
+        remove: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { const db = await requireDb(); await db.delete(assistantNoteAttachments).where(and(eq(assistantNoteAttachments.noteId, input.id), eq(assistantNoteAttachments.userId, ctx.user.id))); await db.delete(assistantNotes).where(and(eq(assistantNotes.id, input.id), eq(assistantNotes.userId, ctx.user.id))); return { success: true }; }),
+        attachments: router({
+          list: privateFinanceProcedure.input(z.object({ noteId: z.number().int().positive() })).query(async ({ ctx, input }) => { const db = await requireDb(); return db.select().from(assistantNoteAttachments).where(and(eq(assistantNoteAttachments.noteId, input.noteId), eq(assistantNoteAttachments.userId, ctx.user.id))); }),
+          upload: privateFinanceProcedure.input(z.object({ noteId: z.number().int().positive(), fileName: z.string().trim().min(1).max(180), mimeType: z.string(), base64: z.string().min(1).max(Math.ceil(MAX_ASSISTANT_ATTACHMENT_BYTES * 1.4)) })).mutation(async ({ ctx, input }) => {
+            const db = await requireDb();
+            const [noteRow] = await db.select({ id: assistantNotes.id }).from(assistantNotes).where(and(eq(assistantNotes.id, input.noteId), eq(assistantNotes.userId, ctx.user.id))).limit(1);
+            if (!noteRow) throw new TRPCError({ code: "NOT_FOUND", message: "La nota no pertenece a tu espacio privado." });
+            const decoded = decodeAssistantAttachment(input);
+            const { key, url } = await storagePut(`assistant-notes/${ctx.user.id}/${input.noteId}/${randomUUID()}-${decoded.safeFileName}`, decoded.bytes, decoded.mimeType);
+            const result = await db.insert(assistantNoteAttachments).values({ userId: ctx.user.id, noteId: input.noteId, fileKey: key, fileUrl: url, fileName: decoded.safeFileName, fileMimeType: decoded.mimeType, fileSizeBytes: decoded.bytes.byteLength });
+            return { id: Number(result[0].insertId), url, fileName: decoded.safeFileName };
+          }),
+          remove: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { const db = await requireDb(); await db.delete(assistantNoteAttachments).where(and(eq(assistantNoteAttachments.id, input.id), eq(assistantNoteAttachments.userId, ctx.user.id))); return { success: true }; }),
+        }),
       }),
       history: router({
         list: privateFinanceProcedure.query(async ({ ctx }) => {
@@ -2190,11 +2229,16 @@ export const appRouter = router({
         const snapshot = await getFinanceSnapshot(ctx.user.id);
         const db = await requireDb();
         const notesWhere = input.noteTag ? and(eq(assistantNotes.userId, ctx.user.id), eq(assistantNotes.tag, input.noteTag), isNull(assistantNotes.archivedAt)) : and(eq(assistantNotes.userId, ctx.user.id), isNull(assistantNotes.archivedAt));
-        const noteRows = await db.select({ title: assistantNotes.title, content: assistantNotes.content, tag: assistantNotes.tag, tagColor: assistantNotes.tagColor, isPinned: assistantNotes.isPinned, updatedAt: assistantNotes.updatedAt }).from(assistantNotes).where(notesWhere).orderBy(desc(assistantNotes.isPinned), desc(assistantNotes.updatedAt)).limit(40);
+        const noteRowsBase = await db.select({ id: assistantNotes.id, title: assistantNotes.title, content: assistantNotes.content, tag: assistantNotes.tag, tagColor: assistantNotes.tagColor, isPinned: assistantNotes.isPinned, updatedAt: assistantNotes.updatedAt }).from(assistantNotes).where(notesWhere).orderBy(desc(assistantNotes.isPinned), desc(assistantNotes.updatedAt)).limit(40);
+        const noteIds = noteRowsBase.map(note => note.id);
+        const attachmentRowsResult = noteIds.length ? await db.select({ noteId: assistantNoteAttachments.noteId, fileName: assistantNoteAttachments.fileName, fileMimeType: assistantNoteAttachments.fileMimeType, fileSizeBytes: assistantNoteAttachments.fileSizeBytes, fileKey: assistantNoteAttachments.fileKey }).from(assistantNoteAttachments).where(and(eq(assistantNoteAttachments.userId, ctx.user.id), inArray(assistantNoteAttachments.noteId, noteIds))) : [];
+        const attachmentRows = Array.isArray(attachmentRowsResult) ? attachmentRowsResult : [];
+        const noteRows = noteRowsBase.map(note => ({ ...note, attachments: attachmentRows.filter(attachment => attachment.noteId === note.id).map(({ fileKey, ...metadata }) => metadata) }));
         try {
           const analysis = await askClaudeForMexiAnalysis({
             system: `Eres Mexi, el asistente privado y explicable de Meximoney. ${manualOnlyNotice} Usa exclusivamente el JSON de registros manuales suministrado en este mensaje y la pregunta de la usuaria. El bloque personalNotes contiene ideas y apuntes privados, ordenados con las notas fijadas primero: considera isPinned=true como contexto prioritario de la usuaria, pero no lo trates como un hecho financiero confirmado ni sustituyas los registros. No uses búsqueda web, conocimientos externos, precios de mercado, normas fiscales actuales ni herramientas. No inventes datos. Si falta información, dilo de forma explícita y propone qué registro manual se debe crear o actualizar. No des instrucciones para transferir, pagar, comprar, vender, contratar ni cancelar productos financieros. Ofrece análisis educativo, explica cálculos y distingue entre datos confirmados, ideas personales, supuestos, riesgos y próximos pasos. Responde siempre en español y usa importes en centavos solo si explicas el formato. Cierra con la frase: "Sin conexiones bancarias ni acciones financieras ejecutadas."`,
             prompt: `REGISTROS MANUALES DE MEXIMONEY:\n${createManualSnapshotText(snapshot, noteRows, input.noteTag)}\n\nPREGUNTA DE LA USUARIA:\n${input.message}`,
+            attachments: await loadAssistantClaudeAttachments(attachmentRows),
           });
           const content = formatMexiAnalysis(analysis);
           const db = await requireDb();
