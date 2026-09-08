@@ -51,7 +51,8 @@ export function summarizeCreditCards(cards: CreditCardSummaryCard[], reportCurre
   const sameCurrency = cards.filter(card => card.currency === reportCurrency && card.status !== "closed");
   const usableCards = sameCurrency.filter(card => card.status === "active");
   const payableCents = sameCurrency.reduce((sum, card) => sum + Math.max(0, card.balanceCents), 0);
-  const availableCents = usableCards.reduce((sum, card) => sum + Math.max(0, card.creditLimitCents - Math.max(0, card.balanceCents)), 0);
+  // Un saldo negativo es crédito a favor: aumenta el importe que puede usarse por encima del límite nominal.
+  const availableCents = usableCards.reduce((sum, card) => sum + Math.max(0, card.creditLimitCents - card.balanceCents), 0);
   const limitCents = sameCurrency.reduce((sum, card) => sum + Math.max(0, card.creditLimitCents), 0);
   const utilizationPercent = limitCents > 0 ? (payableCents / limitCents) * 100 : null;
   const byIssuer = new Map<string, { issuer: string; payableCents: number; availableCents: number; limitCents: number; countedCards: number; usableCards: number }>();
@@ -61,7 +62,7 @@ export function summarizeCreditCards(cards: CreditCardSummaryCard[], reportCurre
     const balanceCents = Math.max(0, card.balanceCents);
     current.payableCents += balanceCents;
     current.limitCents += Math.max(0, card.creditLimitCents);
-    current.availableCents += card.status === "active" ? Math.max(0, card.creditLimitCents - balanceCents) : 0;
+    current.availableCents += card.status === "active" ? Math.max(0, card.creditLimitCents - card.balanceCents) : 0;
     current.countedCards += 1;
     current.usableCards += card.status === "active" ? 1 : 0;
     byIssuer.set(issuer, current);

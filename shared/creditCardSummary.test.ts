@@ -32,6 +32,18 @@ describe("resumen agregado de tarjetas", () => {
     expect(result.utilizationBarPercent).toBe(100);
   });
 
+  it("actualiza el crédito disponible total y por entidad cuando existe un saldo a favor", () => {
+    const result = summarizeCreditCards([
+      { id: 1, status: "active", currency: "MXN", balanceCents: -2_500, creditLimitCents: 10_000, issuer: "Klar" },
+      { id: 2, status: "active", currency: "MXN", balanceCents: 1_500, creditLimitCents: 5_000, issuer: "Klar" },
+    ], "MXN");
+
+    expect(result.availableCents).toBe(16_000);
+    expect(result.entities).toEqual([
+      { issuer: "Klar", payableCents: 1_500, availableCents: 16_000, limitCents: 15_000, countedCards: 2, usableCards: 2, utilizationPercent: 10 },
+    ]);
+  });
+
   it("respeta un umbral personalizado para las alertas", () => {
     const cards = [
       { id: 1, name: "Baja", status: "active" as const, currency: "MXN", balanceCents: 2_000, creditLimitCents: 10_000 },

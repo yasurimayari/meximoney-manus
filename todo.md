@@ -752,3 +752,10 @@
 - [x] Corregir la causa raíz de cualquier fallo real detectado en los procedimientos o el estado React.
 - [x] Añadir telemetría segura y errores accionables para futuras incidencias de Mexi IA y notas.
 - [x] Validar con pruebas y compilación antes de publicar; comprobar el proveedor integrado y forzar la sesión publicada a actualizar mediante PWA v80.
+
+# Tarjetas — crédito por entidad
+
+- [x] Auditar el cálculo y el refresco de Crédito por entidad después de registrar un movimiento.
+- [x] Corregir la actualización derivada de saldos, límite y crédito disponible por entidad.
+- [x] Eliminar los textos «6 entidades registradas» y «1 tarjeta · 1 utilizable» del módulo Tarjetas.
+- [x] Añadir pruebas de regresión y validar TypeScript, compilación y actualización visual.
