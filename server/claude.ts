@@ -83,23 +83,25 @@ async function callClaude(input: { system: string; prompt: string; maxTokens?: n
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new ClaudeRequestError("La clave de Claude no está configurada en el servidor.");
 
-  const response = await fetch(CLAUDE_MESSAGES_URL, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "anthropic-version": CLAUDE_VERSION,
-      "x-api-key": apiKey,
-    },
-    signal: AbortSignal.timeout(45_000),
-    body: JSON.stringify({
-      model: MEXI_CLAUDE_MODEL,
-      max_tokens: input.maxTokens ?? 2_400,
-      system: input.system,
-      messages: [{ role: "user", content: input.attachments?.length ? [{ type: "text", text: input.prompt }, ...input.attachments.map(attachment => attachment.mimeType === "application/pdf" ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: attachment.base64 } } : { type: "image", source: { type: "base64", media_type: attachment.mimeType, data: attachment.base64 } })] as ClaudeInputContent[] : input.prompt }],
-    }),
+  const body = JSON.stringify({
+    model: MEXI_CLAUDE_MODEL,
+    max_tokens: input.maxTokens ?? 1_800,
+    system: input.system,
+    messages: [{ role: "user", content: input.attachments?.length ? [{ type: "text", text: input.prompt }, ...input.attachments.map(attachment => attachment.mimeType === "application/pdf" ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: attachment.base64 } } : { type: "image", source: { type: "base64", media_type: attachment.mimeType, data: attachment.base64 } })] as ClaudeInputContent[] : input.prompt }],
   });
-
-  if (!response.ok) throw new ClaudeRequestError(`Claude respondió con estado ${response.status}.`);
+  let response: Response | null = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      response = await fetch(CLAUDE_MESSAGES_URL, { method: "POST", headers: { "content-type": "application/json", "anthropic-version": CLAUDE_VERSION, "x-api-key": apiKey }, signal: AbortSignal.timeout(75_000), body });
+    } catch (error) {
+      if (attempt === 1) throw new ClaudeRequestError("Claude no respondió dentro del tiempo esperado.");
+    }
+    if (response?.ok) break;
+    const status = response?.status ?? 0;
+    if (attempt === 0 && (status === 408 || status === 429 || status >= 500)) { await new Promise(resolve => setTimeout(resolve, 700)); continue; }
+    throw new ClaudeRequestError(status ? `Claude respondió con estado ${status}.` : "Claude no respondió dentro del tiempo esperado.");
+  }
+  if (!response?.ok) throw new ClaudeRequestError("Claude no pudo completar el análisis.");
   return extractText(await response.json() as ClaudeMessagesResponse);
 }
 

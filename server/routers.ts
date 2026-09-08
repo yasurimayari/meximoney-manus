@@ -2190,17 +2190,21 @@ export const appRouter = router({
           const attachments = ids.length ? await db.select().from(assistantNoteAttachments).where(and(eq(assistantNoteAttachments.userId, ctx.user.id), inArray(assistantNoteAttachments.noteId, ids))) : [];
           return rows.map(row => ({ ...row, attachments: attachments.filter(attachment => attachment.noteId === row.id) }));
         }),
-        save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), title: z.string().trim().min(1).max(180), content: z.string().max(20000), tag: z.enum(["general", "impuestos", "inversiones", "presupuesto", "deudas", "patrimonio", "proyectos", "personal"]) })).mutation(async ({ ctx, input }) => {
+        create: privateFinanceProcedure.input(z.object({ title: z.string().trim().min(1).max(180), content: z.string().max(20000), tag: z.enum(["general", "impuestos", "inversiones", "presupuesto", "deudas", "patrimonio", "proyectos", "personal"]) })).mutation(async ({ ctx, input }) => {
           const db = await requireDb();
           const payload = { title: input.title, content: input.content, tag: input.tag, tagColor: assistantNoteColorByTag[input.tag] ?? "slate" };
-          if (input.id) {
+          const result = await db.insert(assistantNotes).values({ userId: ctx.user.id, ...payload });
+          return { id: Number(result[0].insertId) };
+        }),
+        save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive(), title: z.string().trim().min(1).max(180), content: z.string().max(20000), tag: z.enum(["general", "impuestos", "inversiones", "presupuesto", "deudas", "patrimonio", "proyectos", "personal"]) })).mutation(async ({ ctx, input }) => {
+          const db = await requireDb();
+          const payload = { title: input.title, content: input.content, tag: input.tag, tagColor: assistantNoteColorByTag[input.tag] ?? "slate" };
+          {
             const [existing] = await db.select({ id: assistantNotes.id }).from(assistantNotes).where(and(eq(assistantNotes.id, input.id), eq(assistantNotes.userId, ctx.user.id))).limit(1);
             if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "La nota no pertenece a tu espacio privado." });
             await db.update(assistantNotes).set(payload).where(and(eq(assistantNotes.id, input.id), eq(assistantNotes.userId, ctx.user.id)));
             return { id: input.id };
           }
-          const result = await db.insert(assistantNotes).values({ userId: ctx.user.id, ...payload });
-          return { id: Number(result[0].insertId) };
         }),
         togglePinned: privateFinanceProcedure.input(z.object({ id: z.number().int().positive(), isPinned: z.boolean() })).mutation(async ({ ctx, input }) => { const db = await requireDb(); await db.update(assistantNotes).set({ isPinned: input.isPinned }).where(and(eq(assistantNotes.id, input.id), eq(assistantNotes.userId, ctx.user.id), isNull(assistantNotes.archivedAt))); return { success: true }; }),
         archive: privateFinanceProcedure.input(z.object({ id: z.number().int().positive(), archived: z.boolean() })).mutation(async ({ ctx, input }) => { const db = await requireDb(); await db.update(assistantNotes).set({ archivedAt: input.archived ? new Date() : null, isPinned: input.archived ? false : undefined }).where(and(eq(assistantNotes.id, input.id), eq(assistantNotes.userId, ctx.user.id))); return { success: true }; }),

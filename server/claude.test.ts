@@ -38,6 +38,17 @@ describe("askClaudeForMexi", () => {
     await expect(askClaudeForMexiAnalysis({ system: "Instrucciones", prompt: "Datos manuales" })).rejects.toThrow("estructurada válida");
   });
 
+  it("reintenta una respuesta transitoria de Claude antes de fallar", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "clave-de-prueba-no-publica");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("temporal", { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: "text", text: "Análisis recuperado." }] }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(askClaudeForMexi({ system: "Instrucciones", prompt: "Datos manuales" })).resolves.toBe("Análisis recuperado.");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("falla sin revelar la clave cuando Claude rechaza la petición", async () => {
     vi.stubEnv("ANTHROPIC_API_KEY", "clave-de-prueba-no-publica");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("no autorizado", { status: 401 })));

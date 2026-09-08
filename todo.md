@@ -704,3 +704,12 @@
 - [x] Incorporar al contexto de Mexi IA el metadato de adjuntos y el contenido legible cuando sea seguro; no enviar archivos binarios sin procesamiento explícito.
 - [x] Añadir pruebas de creación consecutiva, aislamiento, validación de archivos y contexto.
 - [x] Validar TypeScript, pruebas, compilación, responsive y publicar la mejora.
+
+# Corrección de Mexi IA y notas — respuesta, persistencia e identificadores
+
+- [x] Auditar logs y medir el flujo de respuesta de Claude, incluyendo tamaño del contexto y adjuntos.
+- [x] Corregir el manejo de errores y reintentos de Claude para evitar fallos transitorios y respuestas excesivamente lentas.
+- [x] Corregir definitivamente la creación de notas para que nunca reutilice el registro anterior al crear una nueva.
+- [x] Añadir un identificador visible y estable a cada archivo adjunto de una nota.
+- [x] Añadir pruebas de reintento, fallo de Claude, creación independiente e identificadores de adjuntos.
+- [x] Validar TypeScript, pruebas, compilación, responsive y publicar la corrección.
