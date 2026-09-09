@@ -25,6 +25,7 @@ import {
   exchangeRates,
   financeDocuments,
   financeNotifications,
+  financeTaskLinks,
   financeTasks,
   financedAssetPurchases,
   financialContacts,
@@ -199,6 +200,36 @@ const financialPlanResourceTable = {
   fiscal_review: fiscalPeriodReviews,
   document: financeDocuments,
 } as const;
+
+const taskLinkResourceTable = {
+  account: accounts,
+  credit_card: creditCards,
+  contact: financialContacts,
+  investment: investments,
+  receivable: receivables,
+  payable: payables,
+  fiscal_record: fiscalRecords,
+  document: financeDocuments,
+  travel: travelPlans,
+  calendar_event: calendarEvents,
+  budget: budgets,
+  category: categories,
+} as const;
+
+const taskLinkInputSchema = z.object({
+  resourceType: z.enum(["account", "credit_card", "contact", "investment", "receivable", "payable", "fiscal_record", "document", "travel", "calendar_event", "budget", "category"]),
+  resourceId: z.number().int().positive(),
+});
+
+async function assertTaskLinkResourceOwnership(db: Awaited<ReturnType<typeof requireDb>>, userId: number, resourceType: keyof typeof taskLinkResourceTable, resourceId: number) {
+  const table = taskLinkResourceTable[resourceType];
+  const [resource] = await db.select({ id: table.id }).from(table).where(and(eq(table.id, resourceId), eq(table.userId, userId))).limit(1);
+  if (!resource) throw new TRPCError({ code: "BAD_REQUEST", message: "Una de las referencias de la tarea no pertenece a tu espacio privado." });
+}
+
+export function uniqueTaskLinks(links: Array<{ resourceType: keyof typeof taskLinkResourceTable; resourceId: number }>) {
+  return Array.from(new Map(links.map(link => [`${link.resourceType}:${link.resourceId}`, link])).values());
+}
 
 async function assertFinancialPlanResourceOwnership(db: Awaited<ReturnType<typeof requireDb>>, userId: number, resourceType: keyof typeof financialPlanResourceTable, resourceId: number) {
   const table = financialPlanResourceTable[resourceType];
@@ -1981,18 +2012,34 @@ export const appRouter = router({
       }),
     }),
     tasks: router({
-      save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), projectId: z.number().int().positive().nullable().optional(), milestoneId: z.number().int().positive().nullable().optional(), linkedTransactionId: z.number().int().positive().nullable().optional(), title: z.string().min(1).max(180), area: z.enum(["budget", "debt", "savings", "investment", "tax", "documents", "business", "review", "other"]), scope: scopeSchema, priority: z.enum(["critical", "high", "medium", "low"]), status: z.enum(["pending", "in_progress", "waiting", "completed", "cancelled"]), dueAt: optionalDate, goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(), requiresConfirmation: z.boolean(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      save: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), milestoneId: z.number().int().positive().nullable().optional(), linkedTransactionId: z.number().int().positive().nullable().optional(), title: z.string().min(1).max(180), area: z.enum(["budget", "debt", "savings", "investment", "tax", "documents", "business", "review", "other"]), scope: scopeSchema, priority: z.enum(["critical", "high", "medium", "low"]), status: z.enum(["pending", "in_progress", "waiting", "completed", "cancelled"]), dueAt: optionalDate, goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(), requiresConfirmation: z.boolean(), notes: z.string().max(3000).nullable().optional(), links: z.array(taskLinkInputSchema).max(20).optional() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar tareas." });
-        const db = await requireDb(); const { id, dueAt, milestoneId, projectId, linkedTransactionId, ...values } = input;
+        const db = await requireDb(); const { id, dueAt, entityId, milestoneId, projectId, linkedTransactionId, links, ...values } = input;
+        if (entityId) { const [entity] = await db.select({ id: workspaceEntities.id }).from(workspaceEntities).where(and(eq(workspaceEntities.id, entityId), eq(workspaceEntities.ownerId, ctx.workspaceAccess.ownerId))).limit(1); if (!entity) throw new TRPCError({ code: "BAD_REQUEST", message: "La entidad seleccionada no pertenece a tu espacio." }); }
         if (projectId) { const [project] = await db.select({ id: financialProjects.id }).from(financialProjects).where(and(eq(financialProjects.id, projectId), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId))).limit(1); if (!project) throw new TRPCError({ code: "BAD_REQUEST", message: "El proyecto seleccionado no pertenece a tu espacio." }); }
         if (milestoneId) { const [milestone] = await db.select().from(projectMilestones).where(and(eq(projectMilestones.id, milestoneId), eq(projectMilestones.userId, ctx.workspaceAccess.ownerId))).limit(1); if (!milestone || (projectId && milestone.projectId !== projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "El hito no pertenece al proyecto seleccionado." }); }
         if (linkedTransactionId) { const [transaction] = await db.select({ id: financialTransactions.id }).from(financialTransactions).where(and(eq(financialTransactions.id, linkedTransactionId), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId))).limit(1); if (!transaction) throw new TRPCError({ code: "BAD_REQUEST", message: "El movimiento seleccionado no pertenece a tu espacio privado." }); }
-        const payload = { ...values, projectId: projectId ?? null, milestoneId: milestoneId ?? null, linkedTransactionId: linkedTransactionId ?? null, dueAt: asDate(dueAt), archivedAt: null };
-        if (id) await db.update(financeTasks).set(payload).where(and(eq(financeTasks.id, id), eq(financeTasks.userId, ctx.workspaceAccess.ownerId)));
-        else await db.insert(financeTasks).values({ userId: ctx.workspaceAccess.ownerId, ...payload }); return { success: true };
+        if (id) { const [task] = await db.select({ id: financeTasks.id }).from(financeTasks).where(and(eq(financeTasks.id, id), eq(financeTasks.userId, ctx.workspaceAccess.ownerId))).limit(1); if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "La tarea seleccionada no pertenece a tu espacio privado." }); }
+        const normalizedLinks = links === undefined ? undefined : uniqueTaskLinks(links as Array<{ resourceType: keyof typeof taskLinkResourceTable; resourceId: number }>);
+        if (normalizedLinks) await Promise.all(normalizedLinks.map(link => assertTaskLinkResourceOwnership(db, ctx.workspaceAccess.ownerId, link.resourceType, link.resourceId)));
+        const payload = { ...values, entityId: entityId ?? null, projectId: projectId ?? null, milestoneId: milestoneId ?? null, linkedTransactionId: linkedTransactionId ?? null, dueAt: asDate(dueAt), archivedAt: null };
+        let taskId = id;
+        await db.transaction(async tx => {
+          if (taskId) await tx.update(financeTasks).set(payload).where(and(eq(financeTasks.id, taskId), eq(financeTasks.userId, ctx.workspaceAccess.ownerId)));
+          else {
+            const result = await tx.insert(financeTasks).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
+            taskId = Number((result as any)[0]?.insertId ?? (result as any).insertId);
+          }
+          if (!taskId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No fue posible identificar la tarea guardada." });
+          if (normalizedLinks) {
+            await tx.delete(financeTaskLinks).where(and(eq(financeTaskLinks.taskId, taskId), eq(financeTaskLinks.userId, ctx.workspaceAccess.ownerId)));
+            if (normalizedLinks.length) await tx.insert(financeTaskLinks).values(normalizedLinks.map(link => ({ userId: ctx.workspaceAccess.ownerId, taskId: taskId!, ...link })));
+          }
+        });
+        return { success: true, id: taskId };
       }),
       archive: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive(), archived: z.boolean() })).mutation(async ({ ctx, input }) => { if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede archivar tareas." }); const db = await requireDb(); await db.update(financeTasks).set({ archivedAt: input.archived ? new Date() : null }).where(and(eq(financeTasks.id, input.id), eq(financeTasks.userId, ctx.workspaceAccess.ownerId))); return { success: true }; }),
-      remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar tareas." }); const db = await requireDb(); await db.transaction(async tx => { await tx.update(calendarEvents).set({ linkedTaskId: null }).where(and(eq(calendarEvents.userId, ctx.workspaceAccess.ownerId), eq(calendarEvents.linkedTaskId, input.id))); await tx.delete(financeTasks).where(and(eq(financeTasks.id, input.id), eq(financeTasks.userId, ctx.workspaceAccess.ownerId))); }); return { success: true }; }),
+      remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar tareas." }); const db = await requireDb(); await db.transaction(async tx => { await tx.update(calendarEvents).set({ linkedTaskId: null }).where(and(eq(calendarEvents.userId, ctx.workspaceAccess.ownerId), eq(calendarEvents.linkedTaskId, input.id))); await tx.delete(financeTaskLinks).where(and(eq(financeTaskLinks.userId, ctx.workspaceAccess.ownerId), eq(financeTaskLinks.taskId, input.id))); await tx.delete(financeTasks).where(and(eq(financeTasks.id, input.id), eq(financeTasks.userId, ctx.workspaceAccess.ownerId))); }); return { success: true }; }),
     }),
     reviews: router({
       save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), periodStart: z.number().int().positive(), status: z.enum(["draft", "reviewed", "closed"]), incomeCents: moneySchema, expenseCents: moneySchema, netCashFlowCents: z.number().int(), observations: z.string().max(5000).nullable().optional(), nextActions: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {

@@ -783,3 +783,20 @@
 - [x] Auditar el mapeo actual de la columna Cuenta en la tabla de movimientos.
 - [x] Renombrar la columna como Pago y mostrar el medio utilizado: cuenta, tarjeta de crédito u otro método disponible.
 - [x] Añadir pruebas y validar TypeScript, compilación y experiencia responsive.
+
+# Fase E — plan priorizado de consolidación
+
+- [ ] Prioridad 1: estabilizar saldos, medios de pago, conciliación y trazabilidad antes de ampliar automatizaciones.
+- [ ] Prioridad 2: reforzar proyecciones y añadir análisis de estacionalidad basado sólo en historial suficiente.
+- [ ] Prioridad 3: incorporar hábitos financieros voluntarios, configurables y separados de cualquier evaluación crediticia.
+- [ ] Prioridad 4: incorporar OCR de comprobantes con revisión humana, privacidad y confirmación explícita antes de guardar.
+- [ ] Prioridad 5: realizar revisión integral de privacidad, operación offline, rendimiento y cierre formal de Fase E.
+
+# Módulo ToDo — centro unificado de tareas
+
+- [x] Auditar las tareas actuales, navegación del grupo Resumen y relaciones disponibles con módulos financieros.
+- [x] Diseñar un modelo unificado de ToDo con relaciones trazables a proyectos, objetivos, movimientos, cuentas, tarjetas, deudas, inversiones, viajes, calendario, contactos y obligaciones.
+- [x] Implementar procedimientos protegidos y migraciones necesarias para crear, editar, completar, archivar, filtrar y priorizar tareas.
+- [x] Crear la página ToDo en Resumen con vistas operativas inspiradas funcionalmente en TickTick, sin replicar su interfaz.
+- [x] Integrar un bloque de tareas prioritarias en Panel y enlaces contextuales desde áreas relacionadas.
+- [x] Añadir pruebas, validar responsive y publicar el módulo.

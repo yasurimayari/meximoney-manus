@@ -715,6 +715,18 @@ export const financeTasks = mysqlTable("financeTasks", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => [index("financeTasks_user_linked_transaction_idx").on(table.userId, table.linkedTransactionId)]);
 
+export const financeTaskLinks = mysqlTable("financeTaskLinks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  taskId: int("taskId").notNull(),
+  resourceType: mysqlEnum("resourceType", ["account", "credit_card", "contact", "investment", "receivable", "payable", "fiscal_record", "document", "travel", "calendar_event", "budget", "category"]).notNull(),
+  resourceId: int("resourceId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("financeTaskLinks_user_task_idx").on(table.userId, table.taskId),
+  uniqueIndex("financeTaskLinks_unique_resource_idx").on(table.taskId, table.resourceType, table.resourceId),
+]);
+
 export const projectMilestones = mysqlTable("projectMilestones", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
