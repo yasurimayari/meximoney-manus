@@ -792,6 +792,13 @@
 - [ ] Prioridad 4: incorporar OCR de comprobantes con revisión humana, privacidad y confirmación explícita antes de guardar.
 - [ ] Prioridad 5: realizar revisión integral de privacidad, operación offline, rendimiento y cierre formal de Fase E.
 
+# Fase E — Prioridad 1: control de precisión
+
+- [x] Crear un resumen verificable de cobertura de medios de pago, conciliación y revisión usando sólo movimientos confirmados.
+- [x] Integrar el resumen de precisión en Cuentas con acceso contextual a los registros y a la conciliación.
+- [x] Añadir pruebas de los porcentajes, estados vacíos y exclusión de movimientos no confirmados.
+- [x] Validar cálculos, responsive, PWA y publicar el primer bloque de consolidación.
+
 # Módulo ToDo — centro unificado de tareas
 
 - [x] Auditar las tareas actuales, navegación del grupo Resumen y relaciones disponibles con módulos financieros.

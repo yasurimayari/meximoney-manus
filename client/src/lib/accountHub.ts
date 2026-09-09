@@ -19,6 +19,44 @@ function isConfirmedMovement(transaction: any) {
   return transaction.status !== "draft" && transaction.reviewStatus !== "draft" && transaction.reviewStatus !== "pending_review";
 }
 
+export type AccuracySummary = {
+  confirmedCount: number;
+  paymentLinkedCount: number;
+  paymentCoveragePercent: number | null;
+  accountMovementCount: number;
+  reconciledAccountMovementCount: number;
+  reconciliationCoveragePercent: number | null;
+  pendingReviewCount: number;
+  missingPaymentMethodCount: number;
+};
+
+function isPrecisionConfirmed(transaction: any) {
+  return transaction.status === "confirmed" && transaction.reviewStatus !== "draft" && transaction.reviewStatus !== "pending_review";
+}
+
+function percentage(part: number, total: number) {
+  return total ? Math.round((part / total) * 1000) / 10 : null;
+}
+
+export function buildAccuracySummary(transactions: any[]): AccuracySummary {
+  const confirmed = transactions.filter(isPrecisionConfirmed);
+  const paymentLinked = confirmed.filter(transaction => transaction.accountId !== null && transaction.accountId !== undefined || transaction.creditCardId !== null && transaction.creditCardId !== undefined);
+  const accountMovements = confirmed.filter(transaction => transaction.accountId !== null && transaction.accountId !== undefined);
+  const reconciledAccountMovements = accountMovements.filter(transaction => Boolean(transaction.reconciledAt));
+  const pendingReview = transactions.filter(transaction => !isPrecisionConfirmed(transaction));
+  const missingPaymentMethod = confirmed.filter(transaction => transaction.accountId === null || transaction.accountId === undefined).filter(transaction => transaction.creditCardId === null || transaction.creditCardId === undefined);
+  return {
+    confirmedCount: confirmed.length,
+    paymentLinkedCount: paymentLinked.length,
+    paymentCoveragePercent: percentage(paymentLinked.length, confirmed.length),
+    accountMovementCount: accountMovements.length,
+    reconciledAccountMovementCount: reconciledAccountMovements.length,
+    reconciliationCoveragePercent: percentage(reconciledAccountMovements.length, accountMovements.length),
+    pendingReviewCount: pendingReview.length,
+    missingPaymentMethodCount: missingPaymentMethod.length,
+  };
+}
+
 function movementAmountDelta(transaction: any) {
   const amountCents = Number(transaction.amountCents ?? 0);
   return transaction.type === "income" || transaction.type === "transfer_in" ? amountCents : transaction.type === "expense" || transaction.type === "transfer_out" ? -amountCents : 0;

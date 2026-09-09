@@ -117,7 +117,7 @@ export function BankStatementReconciliationPanel({ accounts }: { accounts: Accou
     }
   }
 
-  return <section className="content-card space-y-5" aria-labelledby="bank-reconciliation-title">
+  return <section className="content-card scroll-mt-6 space-y-5" id="conciliacion-bancaria" aria-labelledby="bank-reconciliation-title">
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
       <div><p className="eyebrow">Conciliación bancaria manual</p><h2 id="bank-reconciliation-title">Estados de cuenta y diferencias</h2><p className="mt-1 max-w-3xl text-sm text-muted-foreground">Importa un CSV, encuentra coincidencias exactas por referencia e importe y confirma cada resultado. La conciliación automática nunca crea, edita ni elimina movimientos por sí sola.</p></div>
       <Button type="button" variant="outline" onClick={() => setImportOpen(current => !current)}><FileUp className="size-4" /> {importOpen ? "Cerrar importación" : "Importar estado CSV"}</Button>

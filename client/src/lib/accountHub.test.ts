@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balanceSignal, buildAccountHistory, deriveAccountBalance, displayBalanceCents, paginateAccountHistory, relatedMovements } from "./accountHub";
+import { balanceSignal, buildAccuracySummary, buildAccountHistory, deriveAccountBalance, displayBalanceCents, paginateAccountHistory, relatedMovements } from "./accountHub";
 
 describe("movimientos del centro de cuentas", () => {
   const transactions = [
@@ -66,5 +66,33 @@ describe("movimientos del centro de cuentas", () => {
     expect(balanceSignal(-1200)).toEqual({ tone: "negative", label: "Saldo negativo" });
     expect(balanceSignal(1200, true)).toEqual({ tone: "negative", label: "Saldo pendiente" });
     expect(balanceSignal(0, true)).toEqual({ tone: "neutral", label: "Sin saldo pendiente" });
+  });
+
+  it("resume cobertura de pago y conciliación sólo con movimientos confirmados", () => {
+    const summary = buildAccuracySummary([
+      { id: 1, status: "confirmed", reviewStatus: "approved", accountId: 7, creditCardId: null, reconciledAt: new Date("2026-09-01") },
+      { id: 2, status: "confirmed", reviewStatus: "approved", accountId: null, creditCardId: 4, reconciledAt: null },
+      { id: 3, status: "confirmed", reviewStatus: "approved", accountId: 7, creditCardId: null, reconciledAt: null },
+      { id: 4, status: "needs_review", reviewStatus: "pending_review", accountId: null, creditCardId: null, reconciledAt: null },
+      { id: 5, status: "estimated", reviewStatus: "approved", accountId: null, creditCardId: null, reconciledAt: null },
+    ]);
+    expect(summary).toEqual({
+      confirmedCount: 3,
+      paymentLinkedCount: 3,
+      paymentCoveragePercent: 100,
+      accountMovementCount: 2,
+      reconciledAccountMovementCount: 1,
+      reconciliationCoveragePercent: 50,
+      pendingReviewCount: 2,
+      missingPaymentMethodCount: 0,
+    });
+  });
+
+  it("devuelve cobertura vacía en lugar de porcentajes engañosos sin movimientos aplicables", () => {
+    expect(buildAccuracySummary([{ id: 9, status: "needs_review", reviewStatus: "pending_review" }])).toMatchObject({
+      paymentCoveragePercent: null,
+      reconciliationCoveragePercent: null,
+      pendingReviewCount: 1,
+    });
   });
 });
