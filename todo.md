@@ -786,9 +786,9 @@
 
 # Fase E — plan priorizado de consolidación
 
-- [ ] Prioridad 1: estabilizar saldos, medios de pago, conciliación y trazabilidad antes de ampliar automatizaciones.
-- [ ] Prioridad 2: reforzar proyecciones y añadir análisis de estacionalidad basado sólo en historial suficiente.
-- [ ] Prioridad 3: incorporar hábitos financieros voluntarios, configurables y separados de cualquier evaluación crediticia.
+- [x] Prioridad 1: estabilizar saldos, medios de pago, conciliación y trazabilidad antes de ampliar automatizaciones.
+- [x] Prioridad 2: reforzar proyecciones y añadir análisis de estacionalidad basado sólo en historial suficiente.
+- [x] Prioridad 3: incorporar hábitos financieros voluntarios, configurables y separados de cualquier evaluación crediticia.
 - [ ] Prioridad 4: incorporar OCR de comprobantes con revisión humana, privacidad y confirmación explícita antes de guardar.
 - [ ] Prioridad 5: realizar revisión integral de privacidad, operación offline, rendimiento y cierre formal de Fase E.
 
@@ -805,6 +805,13 @@
 - [x] Definir métricas transparentes de estacionalidad, cobertura mínima y estados de datos insuficientes.
 - [x] Integrar una vista de estacionalidad basada en historial confirmado sin ejecutar ni modificar operaciones.
 - [x] Añadir pruebas de cálculo, filtros, estados vacíos y responsive; publicar el bloque.
+
+# Fase E — Prioridad 3: hábitos voluntarios
+
+- [x] Auditar factores de hábitos existentes y definir métricas separadas del Score crediticio.
+- [x] Crear preferencias privadas y opt-in para los hábitos que la usuaria quiera registrar.
+- [x] Implementar registro, seguimiento y visualización de hábitos sin inferir ni crear datos.
+- [x] Añadir pruebas de aislamiento, consentimiento, cálculo y responsive; publicar el bloque.
 
 # Módulo ToDo — centro unificado de tareas
 

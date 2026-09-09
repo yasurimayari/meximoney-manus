@@ -554,4 +554,25 @@ describe("finance.dashboard", () => {
 
     expect(set).toHaveBeenCalledWith(expect.objectContaining({ status: "cancelled", currentCents: 2_000_00, targetCents: 45_000_00 }));
   });
+  it("crea hábitos voluntarios sólo para la usuaria autenticada", async () => {
+    const values = vi.fn(() => ({ $returningId: async () => [{ id: 44 }] }));
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
+      insert: () => ({ values }),
+    });
+    const caller = appRouter.createCaller(createContext(27));
+    await expect(caller.finance.habits.saveHabit({ title: "Revisar pagos próximos", cadence: "weekly", color: "teal" })).resolves.toMatchObject({ id: 44, title: "Revisar pagos próximos" });
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({ userId: 27, title: "Revisar pagos próximos", cadence: "weekly", color: "teal" }));
+  });
+  it("registra una acción de hábito únicamente si pertenece a la usuaria autenticada y está activa", async () => {
+    const checkinValues = vi.fn(() => ({ $returningId: async () => [{ id: 78 }] }));
+    const answers = [[{ accepted: true }], [{ id: 44, isActive: true }]];
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => answers.shift() ?? [] }) }) }),
+      insert: () => ({ values: checkinValues }),
+    });
+    const caller = appRouter.createCaller(createContext(27));
+    await expect(caller.finance.habits.checkIn({ habitId: 44, completedAt: Date.parse("2026-09-09T12:00:00Z"), note: "Revisión manual" })).resolves.toMatchObject({ success: true, id: 78 });
+    expect(checkinValues).toHaveBeenCalledWith(expect.objectContaining({ userId: 27, habitId: 44, note: "Revisión manual" }));
+  });
 });

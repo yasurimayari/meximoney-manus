@@ -32,6 +32,9 @@ import {
   fiscalPeriodReviews,
   fiscalRecords,
   financialGoals,
+  financialHabitCheckins,
+  financialHabitPreferences,
+  financialHabits,
   financialPlanLevels,
   financialPlanLinks,
   financialPlanPeriods,
@@ -1641,6 +1644,56 @@ export const appRouter = router({
         const db = await requireDb();
         await db.insert(personalScoreSnapshots).values({ userId: ctx.workspaceAccess.ownerId, calculatedAt: referenceDate, periodStart: start, totalScore: score.totalScore, level: score.level, ...score.factors, notes: input.notes ?? null });
         return { success: true, ...score };
+      }),
+    }),
+    habits: router({
+      overview: privateFinanceProcedure.query(async ({ ctx }) => {
+        const db = await requireDb();
+        const [preferences] = await db.select().from(financialHabitPreferences).where(eq(financialHabitPreferences.userId, ctx.user.id)).limit(1);
+        const habits = await db.select().from(financialHabits).where(eq(financialHabits.userId, ctx.user.id)).orderBy(asc(financialHabits.createdAt));
+        const habitIds = habits.map(habit => habit.id);
+        const checkins = habitIds.length ? await db.select().from(financialHabitCheckins).where(and(eq(financialHabitCheckins.userId, ctx.user.id), inArray(financialHabitCheckins.habitId, habitIds))).orderBy(desc(financialHabitCheckins.completedAt)) : [];
+        const now = new Date(); const weekStart = new Date(now); weekStart.setDate(now.getDate() - 6); weekStart.setHours(0, 0, 0, 0);
+        const monthStart = new Date(now); monthStart.setDate(now.getDate() - 29); monthStart.setHours(0, 0, 0, 0);
+        return {
+          preferences: preferences ?? { enabled: false, showOnDashboard: true },
+          habits: habits.map(habit => {
+            const related = checkins.filter(checkin => checkin.habitId === habit.id);
+            return { ...habit, lastCheckinAt: related[0]?.completedAt ?? null, weeklyCheckins: related.filter(checkin => new Date(checkin.completedAt) >= weekStart).length, monthlyCheckins: related.filter(checkin => new Date(checkin.completedAt) >= monthStart).length, checkins: related.slice(0, 12) };
+          }),
+        };
+      }),
+      savePreferences: privateFinanceProcedure.input(z.object({ enabled: z.boolean(), showOnDashboard: z.boolean() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        await db.insert(financialHabitPreferences).values({ userId: ctx.user.id, ...input }).onDuplicateKeyUpdate({ set: { ...input } });
+        return { success: true, ...input };
+      }),
+      saveHabit: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), title: z.string().trim().min(1).max(140), cadence: z.enum(["daily", "weekly", "monthly"]), color: z.enum(["teal", "emerald", "sky", "indigo", "violet", "amber", "rose"]) })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb(); const { id, ...payload } = input;
+        if (id) {
+          const [habit] = await db.select({ id: financialHabits.id }).from(financialHabits).where(and(eq(financialHabits.id, id), eq(financialHabits.userId, ctx.user.id))).limit(1);
+          if (!habit) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró el hábito seleccionado." });
+          await db.update(financialHabits).set(payload).where(and(eq(financialHabits.id, id), eq(financialHabits.userId, ctx.user.id)));
+          return { id, ...payload };
+        }
+        const [created] = await db.insert(financialHabits).values({ userId: ctx.user.id, ...payload }).$returningId();
+        return { id: created.id, ...payload };
+      }),
+      checkIn: privateFinanceProcedure.input(z.object({ habitId: z.number().int().positive(), completedAt: z.number().int().positive().optional(), note: z.string().trim().max(500).nullable().optional() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        const [habit] = await db.select({ id: financialHabits.id, isActive: financialHabits.isActive }).from(financialHabits).where(and(eq(financialHabits.id, input.habitId), eq(financialHabits.userId, ctx.user.id))).limit(1);
+        if (!habit || !habit.isActive) throw new TRPCError({ code: "NOT_FOUND", message: "El hábito no está activo." });
+        const [created] = await db.insert(financialHabitCheckins).values({ userId: ctx.user.id, habitId: input.habitId, completedAt: new Date(input.completedAt ?? Date.now()), note: input.note ?? null }).$returningId();
+        return { id: created.id, success: true };
+      }),
+      removeCheckin: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb(); await db.delete(financialHabitCheckins).where(and(eq(financialHabitCheckins.id, input.id), eq(financialHabitCheckins.userId, ctx.user.id))); return { success: true };
+      }),
+      archiveHabit: privateFinanceProcedure.input(z.object({ id: z.number().int().positive(), archived: z.boolean() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb(); await db.update(financialHabits).set({ isActive: !input.archived, archivedAt: input.archived ? new Date() : null }).where(and(eq(financialHabits.id, input.id), eq(financialHabits.userId, ctx.user.id))); return { success: true };
+      }),
+      removeHabit: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb(); await db.transaction(async tx => { await tx.delete(financialHabitCheckins).where(and(eq(financialHabitCheckins.habitId, input.id), eq(financialHabitCheckins.userId, ctx.user.id))); await tx.delete(financialHabits).where(and(eq(financialHabits.id, input.id), eq(financialHabits.userId, ctx.user.id))); }); return { success: true };
       }),
     }),
     transactions: router({

@@ -9,9 +9,10 @@ import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 import { emptyWorkspaceFilters, filterWorkspaceSnapshot, WorkspaceFilterBar } from "@/components/WorkspaceFilterBar";
 import { buildPfaePanelSummary } from "../../../shared/pfaePanelSummary";
 import { creditCardUtilizationAlerts } from "../../../shared/creditCardSummary";
-import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CalendarClock, CheckCircle2, CircleDollarSign, Landmark, ListTodo, Plus, ReceiptText, ShieldCheck, Target, WalletCards } from "lucide-react";
+import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CalendarClock, CheckCircle2, CircleDollarSign, HeartPulse, Landmark, ListTodo, Plus, ReceiptText, ShieldCheck, Target, WalletCards } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
+import { habitMetrics } from "@/lib/habitMetrics";
 
 function MetricCard({ icon: Icon, label, value, note, tone = "neutral" }: { icon: typeof WalletCards; label: string; value: ReactNode; note: ReactNode; tone?: "neutral" | "positive" | "warm" | "danger" }) {
   return <article className={`metric-card metric-${tone}`}><div className="metric-icon"><Icon className="size-5" /></div><p>{label}</p><strong>{value}</strong><small>{note}</small></article>;
@@ -20,6 +21,7 @@ function MetricCard({ icon: Icon, label, value, note, tone = "neutral" }: { icon
 export default function Home() {
   const { data: rawData, isLoading, error } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery);
   const { data: notificationData } = trpc.finance.notifications.get.useQuery(undefined, { staleTime: 60_000 });
+  const { data: habitsData } = trpc.finance.habits.overview.useQuery();
   const [workspaceFilters, setWorkspaceFilters] = useState(emptyWorkspaceFilters);
   const data = useMemo(() => {
     if (!rawData) return rawData;
@@ -83,5 +85,12 @@ export default function Home() {
       <section className="content-card"><div className="card-title-row"><div><h2>Objetivos en marcha</h2><p>Progreso medido con el último valor manual.</p></div><Link href="/planificacion" className="text-link">Gestionar</Link></div>{activeGoals.length === 0 ? <div className="inline-empty"><Target className="size-5" /><span>No hay objetivos activos. Define una meta para convertir prioridades en un plan.</span></div> : <div className="goal-list">{activeGoals.slice(0, 4).map(goal => { const progress = goal.targetCents > 0 ? Math.min(100, (goal.currentCents / goal.targetCents) * 100) : 0; return <div className="goal-row" key={goal.id}><div className="goal-head"><span><strong>{goal.name}</strong><small>{scopeLabel[goal.scope]} · {priorityLabel[goal.priority]}</small></span><b>{progress.toFixed(0)}%</b></div><div className="progress-track"><span style={{ width: `${progress}%` }} /></div><div className="goal-meta"><span><MoneyText cents={goal.currentCents} currency={goal.currency} /> de <MoneyText cents={goal.targetCents} currency={goal.currency} /></span><span>{goal.targetDate ? `Meta: ${formatDate(goal.targetDate)}` : "Fecha pendiente"}</span></div></div>; })}</div>}</section>
       <section className="content-card"><div className="card-title-row"><div><h2>ToDo prioritario</h2><p>Las próximas acciones de todos tus módulos, ordenadas para decidir qué sigue.</p></div><Link href="/todo" className="text-link">Abrir ToDo</Link></div>{pendingTasks.length === 0 ? <div className="inline-empty"><ListTodo className="size-5" /><span>No hay tareas pendientes. Añade una próxima acción desde ToDo o desde su módulo de origen.</span></div> : <div className="task-list">{pendingTasks.slice(0, 4).map(task => <Link href="/todo" className="task-row transition-colors hover:bg-muted/60" key={task.id}><span className={`priority-dot priority-${task.priority}`} /><div><strong>{task.title}</strong><small>{task.dueAt ? `Vence ${formatDate(task.dueAt)}` : "Sin fecha límite"} · {scopeLabel[task.scope]}</small></div><span className="task-priority">{priorityLabel[task.priority]}</span></Link>)}</div>}</section>
     </div>
+    {habitsData?.preferences.enabled && habitsData.preferences.showOnDashboard ? <section className="content-card"><div className="card-title-row"><div><h2>Hábitos voluntarios</h2><p>Seguimiento manual, separado de tu Score.</p></div><Link href="/habitos" className="text-link">Abrir hábitos</Link></div><HabitsPanel habits={habitsData.habits} /></section> : null}
   </div>;
+}
+
+function HabitsPanel({ habits }: { habits: Array<{ id: number; title: string; isActive: boolean; checkins: Array<{ completedAt: Date | string }> }> }) {
+  const metrics = habitMetrics(habits);
+  if (metrics.activeCount === 0) return <div className="inline-empty"><HeartPulse className="size-5" /><span>No hay hábitos activos. Configúralos sólo si deseas seguirlos.</span></div>;
+  return <div className="space-y-4"><div className="flex items-end justify-between gap-4"><div><strong className="text-3xl tabular-nums text-primary">{metrics.completionRate ?? "—"}{metrics.completionRate !== null ? "%" : ""}</strong><p className="mt-1 text-sm text-muted-foreground">Cobertura semanal elegida por ti</p></div><span className="rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">{metrics.completedThisWeek}/{metrics.activeCount}</span></div><div className="task-list">{habits.filter(habit => habit.isActive).slice(0, 3).map(habit => <Link href="/habitos" key={habit.id} className="task-row transition-colors hover:bg-muted/60"><HeartPulse className="size-4 text-primary" /><div><strong>{habit.title}</strong><small>{habit.checkins.length ? "Con registros manuales" : "Aún sin registro"}</small></div></Link>)}</div></div>;
 }

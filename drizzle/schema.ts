@@ -789,6 +789,36 @@ export const personalScoreSnapshots = mysqlTable("personalScoreSnapshots", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const financialHabitPreferences = mysqlTable("financialHabitPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  enabled: boolean("enabled").notNull().default(false),
+  showOnDashboard: boolean("showOnDashboard").notNull().default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const financialHabits = mysqlTable("financialHabits", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 140 }).notNull(),
+  cadence: mysqlEnum("cadence", ["daily", "weekly", "monthly"]).notNull().default("weekly"),
+  color: varchar("color", { length: 24 }).notNull().default("teal"),
+  isActive: boolean("isActive").notNull().default(true),
+  archivedAt: timestamp("archivedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [index("financialHabits_user_active_idx").on(table.userId, table.isActive)]);
+
+export const financialHabitCheckins = mysqlTable("financialHabitCheckins", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  habitId: int("habitId").notNull(),
+  completedAt: timestamp("completedAt").notNull(),
+  note: varchar("note", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("financialHabitCheckins_user_habit_date_idx").on(table.userId, table.habitId, table.completedAt)]);
+
 export const monthlyReviews = mysqlTable("monthlyReviews", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

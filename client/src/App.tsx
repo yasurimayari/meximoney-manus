@@ -32,6 +32,7 @@ import Projects from "./pages/Projects";
 import Score from "./pages/Score";
 import Travels from "./pages/Travels";
 import ToDo from "./pages/ToDo";
+import Habits from "./pages/Habits";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
@@ -44,6 +45,7 @@ function Router() {
       <Route path={"/datos-offline"}><DashboardLayout><OfflineData /></DashboardLayout></Route>
       <Route path={"/"}><DashboardLayout><Home /></DashboardLayout></Route>
       <Route path={"/todo"}><DashboardLayout><ToDo /></DashboardLayout></Route>
+      <Route path={"/habitos"}><DashboardLayout><Habits /></DashboardLayout></Route>
       <Route path={"/movimientos"}><DashboardLayout><Records /></DashboardLayout></Route>
       <Route path={"/cuentas"}><DashboardLayout><Accounts /></DashboardLayout></Route>
       <Route path={"/planificacion"}><DashboardLayout><Planning /></DashboardLayout></Route>

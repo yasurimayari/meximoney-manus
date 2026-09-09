@@ -29,6 +29,9 @@ import {
   financeTasks,
   financedAssetPurchases,
   financialGoals,
+  financialHabitCheckins,
+  financialHabitPreferences,
+  financialHabits,
   financialPlanLevels,
   financialPlanLinks,
   financialPlanPeriods,
@@ -349,6 +352,9 @@ export async function deleteOwnedRow(table: typeof accounts | typeof categories 
 export async function deleteAllFinancialData(userId: number) {
   const db = await requireDb();
   await db.transaction(async tx => {
+    await tx.delete(financialHabitCheckins).where(eq(financialHabitCheckins.userId, userId));
+    await tx.delete(financialHabits).where(eq(financialHabits.userId, userId));
+    await tx.delete(financialHabitPreferences).where(eq(financialHabitPreferences.userId, userId));
     await tx.delete(assistantChatHistory).where(eq(assistantChatHistory.userId, userId));
     await tx.delete(assistantNoteAttachments).where(eq(assistantNoteAttachments.userId, userId));
     await tx.delete(assistantNotes).where(eq(assistantNotes.userId, userId));
