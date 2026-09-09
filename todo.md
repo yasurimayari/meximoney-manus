@@ -799,6 +799,13 @@
 - [x] Añadir pruebas de los porcentajes, estados vacíos y exclusión de movimientos no confirmados.
 - [x] Validar cálculos, responsive, PWA y publicar el primer bloque de consolidación.
 
+# Fase E — Prioridad 2: estacionalidad
+
+- [x] Auditar la cobertura temporal, la calidad y la moneda de los movimientos manuales antes de identificar patrones.
+- [x] Definir métricas transparentes de estacionalidad, cobertura mínima y estados de datos insuficientes.
+- [x] Integrar una vista de estacionalidad basada en historial confirmado sin ejecutar ni modificar operaciones.
+- [x] Añadir pruebas de cálculo, filtros, estados vacíos y responsive; publicar el bloque.
+
 # Módulo ToDo — centro unificado de tareas
 
 - [x] Auditar las tareas actuales, navegación del grupo Resumen y relaciones disponibles con módulos financieros.
