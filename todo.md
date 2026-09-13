@@ -789,7 +789,7 @@
 - [x] Prioridad 1: estabilizar saldos, medios de pago, conciliación y trazabilidad antes de ampliar automatizaciones.
 - [x] Prioridad 2: reforzar proyecciones y añadir análisis de estacionalidad basado sólo en historial suficiente.
 - [x] Prioridad 3: incorporar hábitos financieros voluntarios, configurables y separados de cualquier evaluación crediticia.
-- [ ] Prioridad 4: incorporar OCR de comprobantes con revisión humana, privacidad y confirmación explícita antes de guardar.
+- [x] Prioridad 4: incorporar OCR de comprobantes con revisión humana, privacidad y confirmación explícita antes de guardar.
 - [ ] Prioridad 5: realizar revisión integral de privacidad, operación offline, rendimiento y cierre formal de Fase E.
 
 # Fase E — Prioridad 1: control de precisión
@@ -812,6 +812,15 @@
 - [x] Crear preferencias privadas y opt-in para los hábitos que la usuaria quiera registrar.
 - [x] Implementar registro, seguimiento y visualización de hábitos sin inferir ni crear datos.
 - [x] Añadir pruebas de aislamiento, consentimiento, cálculo y responsive; publicar el bloque.
+
+# Fase E — Prioridad 4: OCR con revisión humana
+
+- [x] Auditar los documentos, adjuntos y flujos de carga existentes para reutilizar almacenamiento privado.
+- [x] Definir un contrato de extracción de comprobantes con campos, fuentes y niveles de confianza visibles.
+- [x] Implementar la extracción privada de JPG, PNG y PDF sin crear movimientos ni datos fiscales automáticamente.
+- [x] Crear una propuesta editable para revisar, aceptar o descartar los datos extraídos antes de guardarlos.
+- [x] Añadir pruebas de aislamiento, validación de archivos, extracción y ausencia de mutaciones automáticas.
+- [x] Validar TypeScript, pruebas, compilación, responsive y publicar el bloque.
 
 # Módulo ToDo — centro unificado de tareas
 

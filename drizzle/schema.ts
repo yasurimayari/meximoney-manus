@@ -1,4 +1,4 @@
-import { boolean, index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { boolean, index, int, json, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -524,6 +524,22 @@ export const financeDocuments = mysqlTable("financeDocuments", {
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+export const documentOcrExtractions = mysqlTable("documentOcrExtractions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  documentId: int("documentId").notNull(),
+  status: mysqlEnum("status", ["extracted", "reviewed", "discarded", "failed"]).notNull().default("extracted"),
+  provider: varchar("provider", { length: 80 }).notNull().default("gemini-3-flash-preview"),
+  sourceFileKey: varchar("sourceFileKey", { length: 500 }).notNull(),
+  extraction: json("extraction").notNull(),
+  errorMessage: varchar("errorMessage", { length: 1000 }),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("documentOcrExtractions_user_document_idx").on(table.userId, table.documentId),
+  index("documentOcrExtractions_document_created_idx").on(table.documentId, table.createdAt),
+]);
 
 export const calendarEvents = mysqlTable("calendarEvents", {
   id: int("id").autoincrement().primaryKey(),

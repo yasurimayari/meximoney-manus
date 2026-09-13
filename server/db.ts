@@ -19,6 +19,7 @@ import {
   debtBalanceAdjustments,
   debtPayments,
   decisionRecords,
+  documentOcrExtractions,
   exchangeRates,
   financialContacts,
   fiscalPeriodReviews,
@@ -389,6 +390,7 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(budgets).where(eq(budgets.userId, userId));
     await tx.delete(calendarColorPreferences).where(eq(calendarColorPreferences.userId, userId));
     await tx.delete(calendarEvents).where(eq(calendarEvents.userId, userId));
+    await tx.delete(documentOcrExtractions).where(eq(documentOcrExtractions.userId, userId));
     await tx.delete(financeDocuments).where(eq(financeDocuments.userId, userId));
     await tx.delete(financeTaskLinks).where(eq(financeTaskLinks.userId, userId));
     await tx.delete(financeTasks).where(eq(financeTasks.userId, userId));

@@ -176,6 +176,7 @@ describe("finance.dashboard", () => {
   });
 
   it("aplica el identificador autenticado al eliminar calendario, estados y documentos", async () => {
+    mocks.requireDb.mockResolvedValue({ delete: () => ({ where: vi.fn().mockResolvedValue([]) }) });
     const caller = appRouter.createCaller(createContext(27));
 
     await caller.finance.calendar.remove({ id: 81 });

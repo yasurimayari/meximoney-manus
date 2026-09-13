@@ -22,6 +22,7 @@ import {
   debtBalanceAdjustments,
   debtPayments,
   decisionRecords,
+  documentOcrExtractions,
   exchangeRates,
   financeDocuments,
   financeNotifications,
@@ -89,6 +90,7 @@ import { creditCardAlertCandidates } from "./creditCardAlerts";
 import { payableAlertCandidates, upcomingTravelAlertCandidates } from "./scheduledAlertCandidates";
 import { extractQuickCaptureDraft } from "./quickCapture";
 import { askClaudeForMexiAnalysis, formatMexiAnalysis } from "./claude";
+import { extractDocumentOcr, OCR_PROVIDER } from "./documentOcr";
 import { MEXI_OPERATIONAL_POLICY } from "./mexiPolicy";
 import type { ClaudeAttachment } from "./claude";
 import { mexicoCityReferenceMonth } from "./monthReference";
@@ -96,7 +98,7 @@ import { calculatePersonalScore } from "./personalScore";
 import { matchStatementLines } from "../shared/bankReconciliation";
 import { normalizeParticipantIds } from "../shared/travelParticipants";
 import { buildManualAmortizationSchedule, debtPaymentBreakdownIsValid } from "./debtAmortization";
-import { decodePdfUpload } from "./documentUpload";
+import { decodeDocumentUpload, decodePdfUpload } from "./documentUpload";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { sdk } from "./_core/sdk";
 import { systemRouter } from "./_core/systemRouter";
@@ -1744,15 +1746,64 @@ export const appRouter = router({
         const db = await requireDb(); const { id, issuedAt, expiresAt, reminderAt, fileUpload, removeStoredFile, ...values } = input;
         let filePayload: Record<string, string | number | null> = {};
         if (fileUpload) {
-          const { bytes, safeFileName } = decodePdfUpload(fileUpload);
-          const { key, url } = await storagePut(`documents/${ctx.user.id}/${randomUUID()}-${safeFileName}`, bytes, "application/pdf");
-          filePayload = { fileKey: key, fileUrl: url, fileName: safeFileName, fileMimeType: "application/pdf", fileSizeBytes: bytes.byteLength };
+          const { bytes, safeFileName, mimeType } = decodeDocumentUpload(fileUpload);
+          const { key, url } = await storagePut(`documents/${ctx.user.id}/${randomUUID()}-${safeFileName}`, bytes, mimeType);
+          filePayload = { fileKey: key, fileUrl: url, fileName: safeFileName, fileMimeType: mimeType, fileSizeBytes: bytes.byteLength };
         } else if (removeStoredFile) filePayload = { fileKey: null, fileUrl: null, fileName: null, fileMimeType: null, fileSizeBytes: null };
         const payload = { ...values, ...filePayload, issuedAt: asDate(issuedAt), expiresAt: asDate(expiresAt), reminderAt: asDate(reminderAt) };
-        if (id) await db.update(financeDocuments).set(payload).where(and(eq(financeDocuments.id, id), eq(financeDocuments.userId, ctx.user.id)));
-        else await db.insert(financeDocuments).values({ userId: ctx.user.id, ...payload }); return { success: true };
+        if (id) {
+          const [existing] = await db.select({ id: financeDocuments.id }).from(financeDocuments).where(and(eq(financeDocuments.id, id), eq(financeDocuments.userId, ctx.user.id))).limit(1);
+          if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró el documento solicitado." });
+          await db.update(financeDocuments).set(payload).where(and(eq(financeDocuments.id, id), eq(financeDocuments.userId, ctx.user.id)));
+          return { success: true, id: existing.id };
+        }
+        const [created] = await db.insert(financeDocuments).values({ userId: ctx.user.id, ...payload }).$returningId();
+        return { success: true, id: created.id };
       }),
-      remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => deleteOwnedRow(financeDocuments, input.id, ctx.user.id)),
+      remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = await requireDb();
+        await db.delete(documentOcrExtractions).where(and(eq(documentOcrExtractions.documentId, input.id), eq(documentOcrExtractions.userId, ctx.user.id)));
+        return deleteOwnedRow(financeDocuments, input.id, ctx.user.id);
+      }),
+      ocr: router({
+        list: privateFinanceProcedure.input(z.object({ documentId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+          const db = await requireDb();
+          const [document] = await db.select({ id: financeDocuments.id }).from(financeDocuments).where(and(eq(financeDocuments.id, input.documentId), eq(financeDocuments.userId, ctx.user.id))).limit(1);
+          if (!document) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró el documento solicitado." });
+          return db.select().from(documentOcrExtractions).where(and(eq(documentOcrExtractions.userId, ctx.user.id), eq(documentOcrExtractions.documentId, input.documentId))).orderBy(desc(documentOcrExtractions.createdAt));
+        }),
+        analyze: privateFinanceProcedure.input(z.object({ documentId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+          const db = await requireDb();
+          const [document] = await db.select().from(financeDocuments).where(and(eq(financeDocuments.id, input.documentId), eq(financeDocuments.userId, ctx.user.id))).limit(1);
+          if (!document) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró el documento solicitado." });
+          if (!document.fileKey || !document.fileMimeType || !["application/pdf", "image/jpeg", "image/png"].includes(document.fileMimeType)) throw new TRPCError({ code: "BAD_REQUEST", message: "Adjunta un archivo JPG, PNG o PDF privado antes de solicitar OCR." });
+          try {
+            const signedUrl = await storageGetSignedUrl(document.fileKey);
+            const extraction = await extractDocumentOcr({ signedUrl, mimeType: document.fileMimeType as "application/pdf" | "image/jpeg" | "image/png", fileName: document.fileName || document.name });
+            const [stored] = await db.insert(documentOcrExtractions).values({ userId: ctx.user.id, documentId: document.id, sourceFileKey: document.fileKey, provider: OCR_PROVIDER, extraction }).$returningId();
+            return { id: stored.id, extraction };
+          } catch (error) {
+            const message = error instanceof Error ? error.message.slice(0, 950) : "No se pudo procesar el archivo.";
+            await db.insert(documentOcrExtractions).values({ userId: ctx.user.id, documentId: document.id, sourceFileKey: document.fileKey, provider: OCR_PROVIDER, status: "failed", extraction: { suggestedName: null, suggestedType: null, issuer: null, documentNumber: null, issuedOn: null, dueOn: null, totalCents: null, currency: null, taxIdentifier: null, reference: null, summary: null, confidence: "low", warnings: ["La extracción no se completó. Conserva el archivo y vuelve a intentarlo más tarde."], fields: [] }, errorMessage: message });
+            throw new TRPCError({ code: "BAD_GATEWAY", message: "No fue posible extraer el comprobante ahora. El documento no se modificó; puedes reintentar más tarde." });
+          }
+        }),
+        review: privateFinanceProcedure.input(z.object({ id: z.number().int().positive(), action: z.enum(["apply", "discard"]), name: z.string().min(1).max(180).nullable().optional(), type: z.enum(["statement", "invoice", "contract", "policy", "tax", "receipt", "other"]).nullable().optional(), issuedAt: optionalDate, notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+          const db = await requireDb();
+          const [extraction] = await db.select().from(documentOcrExtractions).where(and(eq(documentOcrExtractions.id, input.id), eq(documentOcrExtractions.userId, ctx.user.id))).limit(1);
+          if (!extraction) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró la propuesta OCR." });
+          if (input.action === "apply") {
+            const documentUpdate: Record<string, unknown> = {};
+            if (input.name) documentUpdate.name = input.name;
+            if (input.type) documentUpdate.type = input.type;
+            if (input.issuedAt !== undefined) documentUpdate.issuedAt = asDate(input.issuedAt);
+            if (input.notes !== undefined) documentUpdate.notes = input.notes;
+            if (Object.keys(documentUpdate).length) await db.update(financeDocuments).set(documentUpdate).where(and(eq(financeDocuments.id, extraction.documentId), eq(financeDocuments.userId, ctx.user.id)));
+          }
+          await db.update(documentOcrExtractions).set({ status: input.action === "apply" ? "reviewed" : "discarded", reviewedAt: new Date() }).where(and(eq(documentOcrExtractions.id, extraction.id), eq(documentOcrExtractions.userId, ctx.user.id)));
+          return { success: true, documentId: extraction.documentId };
+        }),
+      }),
     }),
     calendar: router({
       save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), title: z.string().min(1).max(180), eventType: z.enum(["tax", "credit_card_cutoff", "credit_card_payment", "loan_payment", "document_expiry", "insurance_renewal", "review", "other"]), scope: scopeSchema, startsAt: z.number().int().positive(), endsAt: optionalDate, recurrence: z.enum(["none", "monthly", "quarterly", "yearly"]), amountCents: moneySchema.nullable().optional(), currency: z.string().length(3), linkedDebtId: z.number().int().positive().nullable().optional(), linkedCreditCardId: z.number().int().positive().nullable().optional(), linkedDocumentId: z.number().int().positive().nullable().optional(), linkedTaskId: z.number().int().positive().nullable().optional(), status: z.enum(["planned", "completed", "cancelled"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {

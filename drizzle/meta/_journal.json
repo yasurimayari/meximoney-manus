@@ -414,6 +414,13 @@
       "when": 1788918488591,
       "tag": "0058_black_wrecking_crew",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "5",
+      "when": 1789055888704,
+      "tag": "0059_yellow_terrax",
+      "breakpoints": true
     }
   ]
 }
