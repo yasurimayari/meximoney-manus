@@ -77,7 +77,7 @@ function safeProfile(profile: any) {
 }
 
 function safeDocument(document: any) {
-  const { referenceUrl, notes, ...safe } = document;
+  const { referenceUrl, fileUrl, fileKey, notes, ...safe } = document;
   return safe;
 }
 

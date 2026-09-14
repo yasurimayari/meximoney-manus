@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { lazy, Suspense } from "react";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -8,7 +9,6 @@ import Home from "./pages/Home";
 import Records from "./pages/Records";
 import Planning from "./pages/Planning";
 import Quality from "./pages/Quality";
-import Assistant from "./pages/Assistant";
 import Analytics from "./pages/Analytics";
 import Reports from "./pages/Reports";
 import Calendar from "./pages/Calendar";
@@ -35,6 +35,12 @@ import ToDo from "./pages/ToDo";
 import Habits from "./pages/Habits";
 import DashboardLayout from "./components/DashboardLayout";
 
+const Assistant = lazy(() => import("./pages/Assistant"));
+
+function RouteLoader({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Cargando módulo…</div>}>{children}</Suspense>;
+}
+
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -53,7 +59,7 @@ function Router() {
       <Route path={"/viajes"}><DashboardLayout><Travels /></DashboardLayout></Route>
       <Route path={"/score"}><DashboardLayout><Score /></DashboardLayout></Route>
       <Route path={"/calidad"}><DashboardLayout><Quality /></DashboardLayout></Route>
-      <Route path={"/asistente"}><DashboardLayout><Assistant /></DashboardLayout></Route>
+      <Route path={"/asistente"}><DashboardLayout><RouteLoader><Assistant /></RouteLoader></DashboardLayout></Route>
       <Route path={"/analitica"}><DashboardLayout><Analytics /></DashboardLayout></Route>
       <Route path={"/calendario"}><DashboardLayout><Calendar /></DashboardLayout></Route>
       <Route path={"/estados"}><DashboardLayout><Statements /></DashboardLayout></Route>

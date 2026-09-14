@@ -8,12 +8,14 @@ describe("bóveda offline personal", () => {
       dashboard: { cashFlow: { income: 1 } },
       accounts: [{ id: 1 }], creditCards: [{ id: 2 }], debts: [{ id: 3 }], transactions: [{ id: 4 }], budgets: [{ id: 5 }], investments: [{ id: 6 }], calendarEvents: [{ id: 7 }],
       categories: [], investmentOperations: [], goals: [], statements: [], fiscalRecords: [],
-      documents: [{ id: 8, name: "Factura", referenceUrl: "https://private/file", notes: "detalle privado" }],
+      documents: [{ id: 8, name: "Factura", referenceUrl: "https://private/link", fileUrl: "https://private/file", fileKey: "documentos/privado.pdf", notes: "detalle privado" }],
     });
     expect(snapshot.profile).toMatchObject({ workspaceName: "Personal", currency: "MXN" });
     expect(snapshot.profile).not.toHaveProperty("birthDate");
     expect(snapshot.profile).not.toHaveProperty("contactEmail");
     expect(snapshot.documents[0]).toEqual({ id: 8, name: "Factura" });
+    expect(snapshot.documents[0]).not.toHaveProperty("fileUrl");
+    expect(snapshot.documents[0]).not.toHaveProperty("fileKey");
     expect(snapshot.transactions).toHaveLength(1);
   });
 });

@@ -790,7 +790,7 @@
 - [x] Prioridad 2: reforzar proyecciones y añadir análisis de estacionalidad basado sólo en historial suficiente.
 - [x] Prioridad 3: incorporar hábitos financieros voluntarios, configurables y separados de cualquier evaluación crediticia.
 - [x] Prioridad 4: incorporar OCR de comprobantes con revisión humana, privacidad y confirmación explícita antes de guardar.
-- [ ] Prioridad 5: realizar revisión integral de privacidad, operación offline, rendimiento y cierre formal de Fase E.
+- [x] Prioridad 5: realizar revisión integral de privacidad, operación offline, rendimiento y cierre formal de Fase E.
 
 # Fase E — Prioridad 1: control de precisión
 
@@ -821,6 +821,13 @@
 - [x] Crear una propuesta editable para revisar, aceptar o descartar los datos extraídos antes de guardarlos.
 - [x] Añadir pruebas de aislamiento, validación de archivos, extracción y ausencia de mutaciones automáticas.
 - [x] Validar TypeScript, pruebas, compilación, responsive y publicar el bloque.
+
+# Fase E — Prioridad 5: cierre técnico
+
+- [x] Auditar exposición de datos privados, almacenamiento, rutas protegidas y eliminación integral.
+- [x] Verificar el alcance real de PWA offline, caché y barrera de sesión sin ampliar el almacenamiento local.
+- [x] Revisar rendimiento de compilación, tamaños de bundle y rutas críticas para priorizar correcciones de bajo riesgo.
+- [x] Documentar hallazgos, aplicar correcciones seguras y validar pruebas, compilación, responsive y PWA.
 
 # Módulo ToDo — centro unificado de tareas
 
