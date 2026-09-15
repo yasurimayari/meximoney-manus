@@ -597,7 +597,7 @@
 
 # Roadmap de mejora futura
 
-- [ ] Fase 0: establecer línea base de uso, criterios de éxito, inventario de datos y política de privacidad.
+- [x] Fase 0: establecer línea base de uso, criterios de éxito, inventario de datos y política de privacidad.
 - [ ] Fase 1: perfeccionar control financiero, saldos conciliados, proyecciones, alertas y calidad de datos.
 - [ ] Fase 2: completar experiencia móvil y cobertura offline de la PWA.
 - [x] Fase 3: fortalecer Mexi como IA explicable y trazable.
@@ -828,6 +828,14 @@
 - [x] Verificar el alcance real de PWA offline, caché y barrera de sesión sin ampliar el almacenamiento local.
 - [x] Revisar rendimiento de compilación, tamaños de bundle y rutas críticas para priorizar correcciones de bajo riesgo.
 - [x] Documentar hallazgos, aplicar correcciones seguras y validar pruebas, compilación, responsive y PWA.
+
+# Roadmap de mejora futura — Fase 0: línea base
+
+- [x] Auditar los datos, módulos, preferencias y controles de privacidad existentes sin modificar registros financieros.
+- [x] Definir métricas privadas de cobertura y criterios de éxito medibles para el uso personal de Meximoney.
+- [x] Crear un inventario privado de datos y configuración, con enlaces a las áreas que requieren revisión.
+- [x] Documentar una política de privacidad operativa y los límites de las métricas de uso.
+- [x] Validar aislamiento, borrado integral, responsive, pruebas y publicación de la línea base.
 
 # Módulo ToDo — centro unificado de tareas
 

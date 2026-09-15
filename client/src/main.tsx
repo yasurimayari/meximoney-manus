@@ -92,5 +92,5 @@ createRoot(document.getElementById("root")!).render(
 );
 
 if ("serviceWorker" in navigator && window.isSecureContext) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?build=20260912-v90", { updateViaCache: "none" }).then(registration => registration.update()).catch(error => console.warn("[PWA] No fue posible registrar el modo offline.", error)));
+  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?build=20260914-v91", { updateViaCache: "none" }).then(registration => registration.update()).catch(error => console.warn("[PWA] No fue posible registrar el modo offline.", error)));
 }
