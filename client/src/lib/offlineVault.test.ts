@@ -7,7 +7,7 @@ describe("bóveda offline personal", () => {
       profile: { workspaceName: "Personal", currency: "MXN", birthDate: "1990-01-01", contactEmail: "persona@example.com", avatarUrl: "https://private/avatar", notes: "privado" },
       dashboard: { cashFlow: { income: 1 } },
       accounts: [{ id: 1 }], creditCards: [{ id: 2 }], debts: [{ id: 3 }], transactions: [{ id: 4 }], budgets: [{ id: 5 }], investments: [{ id: 6 }], calendarEvents: [{ id: 7 }],
-      categories: [], investmentOperations: [], goals: [], statements: [], fiscalRecords: [],
+      categories: [], investmentOperations: [], goals: [], statements: [], fiscalRecords: [], tasks: [{ id: 9, title: "Revisar presupuesto" }], travelPlans: [{ id: 10, name: "Viaje de trabajo" }],
       documents: [{ id: 8, name: "Factura", referenceUrl: "https://private/link", fileUrl: "https://private/file", fileKey: "documentos/privado.pdf", notes: "detalle privado" }],
     });
     expect(snapshot.profile).toMatchObject({ workspaceName: "Personal", currency: "MXN" });
@@ -17,5 +17,7 @@ describe("bóveda offline personal", () => {
     expect(snapshot.documents[0]).not.toHaveProperty("fileUrl");
     expect(snapshot.documents[0]).not.toHaveProperty("fileKey");
     expect(snapshot.transactions).toHaveLength(1);
+    expect(snapshot.tasks).toEqual([{ id: 9, title: "Revisar presupuesto" }]);
+    expect(snapshot.travelPlans).toEqual([{ id: 10, name: "Viaje de trabajo" }]);
   });
 });

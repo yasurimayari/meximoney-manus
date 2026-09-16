@@ -23,6 +23,8 @@ export type OfflineSnapshotSummary = {
   budgets: number;
   investments: number;
   calendarEvents: number;
+  tasks: number;
+  travelPlans: number;
 };
 
 export type OfflineSnapshot = {
@@ -43,6 +45,8 @@ export type OfflineSnapshot = {
   statements: unknown[];
   fiscalRecords: unknown[];
   documents: unknown[];
+  tasks: unknown[];
+  travelPlans: unknown[];
 };
 
 function openVaultDatabase(): Promise<IDBDatabase> {
@@ -101,6 +105,8 @@ export function createOfflineSnapshot(source: any): OfflineSnapshot {
     statements: source?.statements ?? [],
     fiscalRecords: source?.fiscalRecords ?? [],
     documents: (source?.documents ?? []).map(safeDocument),
+    tasks: source?.tasks ?? [],
+    travelPlans: source?.travelPlans ?? [],
   };
 }
 
@@ -114,6 +120,8 @@ function summaryFor(snapshot: OfflineSnapshot): OfflineSnapshotSummary {
     budgets: snapshot.budgets.length,
     investments: snapshot.investments.length,
     calendarEvents: snapshot.calendarEvents.length,
+    tasks: snapshot.tasks.length,
+    travelPlans: snapshot.travelPlans.length,
   };
 }
 

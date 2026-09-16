@@ -598,11 +598,11 @@
 # Roadmap de mejora futura
 
 - [x] Fase 0: establecer línea base de uso, criterios de éxito, inventario de datos y política de privacidad.
-- [ ] Fase 1: perfeccionar control financiero, saldos conciliados, proyecciones, alertas y calidad de datos.
-- [ ] Fase 2: completar experiencia móvil y cobertura offline de la PWA.
+- [x] Fase 1: perfeccionar control financiero, saldos conciliados, proyecciones, alertas y calidad de datos.
+- [x] Fase 2: completar experiencia móvil y cobertura offline de la PWA.
 - [x] Fase 3: fortalecer Mexi como IA explicable y trazable.
 - [ ] Fase 4: completar colaboración con gestor o contador, permisos y auditoría.
-- [ ] Fase 5: completar OCR, análisis de estacionalidad y hábitos opt-in; mantener voz fuera del alcance salvo nueva aprobación.
+- [x] Fase 5: completar OCR, análisis de estacionalidad y hábitos opt-in; mantener voz fuera del alcance salvo nueva aprobación.
 - [ ] Fase 6: evaluar automatización bancaria e integraciones externas después de validar las fases anteriores con uso real.
 
 - [x] Corregir que los gastos de la sección Presupuesto en Simulaciones se muestren en rojo y no en verde.
@@ -836,6 +836,14 @@
 - [x] Crear un inventario privado de datos y configuración, con enlaces a las áreas que requieren revisión.
 - [x] Documentar una política de privacidad operativa y los límites de las métricas de uso.
 - [x] Validar aislamiento, borrado integral, responsive, pruebas y publicación de la línea base.
+
+# Roadmap de mejora futura — Fase 1: móvil y offline
+
+- [x] Auditar rutas críticas, navegación móvil, bóveda offline y estados sin conexión sin modificar registros financieros.
+- [x] Definir qué consultas se pueden leer offline y qué acciones deben permanecer bloqueadas hasta recuperar conexión.
+- [x] Mejorar accesos, estados y recuperación de contexto en pantallas pequeñas para las rutas priorizadas.
+- [x] Ampliar de forma segura la lectura offline autorizada sin guardar archivos, respuestas API ni secretos.
+- [x] Validar seguridad, accesibilidad, pruebas, PWA y publicación de la consolidación móvil/offline.
 
 # Módulo ToDo — centro unificado de tareas
 
