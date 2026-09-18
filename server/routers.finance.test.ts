@@ -247,6 +247,85 @@ describe("finance.dashboard", () => {
     expect(inserted).toHaveBeenCalledWith(expect.objectContaining({ userId: 73, createdByUserId: 91, reviewStatus: "pending_review", status: "needs_review" }));
   });
 
+  it("impide que una persona colaboradora con permiso de revisión revise su propio borrador", async () => {
+    const movement = { id: 62, userId: 73, createdByUserId: 91, reviewStatus: "pending_review", status: "needs_review" };
+    mocks.resolveWorkspaceAccess.mockResolvedValue({ ownerId: 73, role: "manager", canCreateDrafts: true, canReview: true });
+    let selectCall = 0;
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [selectCall++ === 0 ? { accepted: true } : movement] }) }) }),
+    });
+    const caller = appRouter.createCaller(createContext(91));
+
+    await expect(caller.finance.workspace.reviewTransaction({ id: 62, approve: true, reason: null })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("exige un motivo cuando se devuelve un borrador", async () => {
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
+    });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.workspace.reviewTransaction({ id: 62, approve: false, reason: null })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("registra la devolución de la propietaria sin alterar importes ni saldos", async () => {
+    const movement = { id: 62, userId: 27, createdByUserId: 91, reviewStatus: "pending_review", status: "needs_review" };
+    const updated = vi.fn().mockResolvedValue([]);
+    const eventValues = vi.fn().mockResolvedValue([]);
+    let selectCall = 0;
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [selectCall++ === 0 ? { accepted: true } : movement] }) }) }),
+      transaction: async (callback: any) => callback({ update: () => ({ set: () => ({ where: updated }) }), insert: () => ({ values: eventValues }) }),
+    });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.workspace.reviewTransaction({ id: 62, approve: false, reason: "Falta confirmar la referencia bancaria." })).resolves.toEqual({ success: true });
+    expect(eventValues).toHaveBeenCalledWith(expect.objectContaining({ userId: 27, transactionId: 62, actorUserId: 27, actorRole: "owner", action: "returned", note: "Falta confirmar la referencia bancaria." }));
+    expect(updated).toHaveBeenCalledTimes(1);
+  });
+
+  it("registra la aprobación de la propietaria en el historial privado del movimiento", async () => {
+    const movement = { id: 63, userId: 27, createdByUserId: 91, reviewStatus: "pending_review", status: "needs_review" };
+    const eventValues = vi.fn().mockResolvedValue([]);
+    let selectCall = 0;
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [selectCall++ === 0 ? { accepted: true } : movement] }) }) }),
+      transaction: async (callback: any) => callback({ update: () => ({ set: () => ({ where: vi.fn().mockResolvedValue([]) }) }), insert: () => ({ values: eventValues }) }),
+    });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.workspace.reviewTransaction({ id: 63, approve: true, reason: null })).resolves.toEqual({ success: true });
+    expect(eventValues).toHaveBeenCalledWith(expect.objectContaining({ userId: 27, transactionId: 63, actorUserId: 27, action: "approved", note: null }));
+  });
+
+  it("impide que una persona colaboradora edite el borrador de otra persona", async () => {
+    const previous = { id: 66, userId: 73, createdByUserId: 92, reviewStatus: "draft", status: "needs_review" };
+    mocks.resolveWorkspaceAccess.mockResolvedValue({ ownerId: 73, role: "manager", canCreateDrafts: true, canReview: false });
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
+      transaction: async (callback: any) => callback({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [previous] }) }) }) }),
+    });
+    const caller = appRouter.createCaller(createContext(91));
+
+    await expect(caller.finance.workspace.transactionSave({ id: 66, type: "income", scope: "business", amountCents: 15000, currency: "USD", reportCurrency: "MXN", reportAmountCents: 270000, exchangeRateMicros: 18000000, exchangeRateDate: Date.now(), incomeNature: "business_revenue", entityId: null, projectId: null, accountId: null, categoryId: null, goalId: null, debtId: null, occurredAt: Date.now(), isEssential: false, status: "needs_review", transferGroupId: null, notes: "Cobro corregido" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("conserva pendiente el borrador colaborativo cuando la propietaria lo edita", async () => {
+    const previous = { id: 67, userId: 27, createdByUserId: 91, reviewStatus: "pending_review", status: "needs_review", reviewedByUserId: null, reviewedAt: null, creditCardId: null };
+    const savedWhere = vi.fn().mockResolvedValue([]);
+    const saved = vi.fn(() => ({ where: savedWhere }));
+    let transactionSelectCall = 0;
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
+      transaction: async (callback: any) => callback({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [transactionSelectCall++ === 0 ? previous : undefined].filter(Boolean) }) }) }), update: () => ({ set: saved }), delete: () => ({ where: vi.fn().mockResolvedValue([]) }) }),
+    });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.workspace.transactionSave({ id: 67, type: "income", scope: "business", amountCents: 15000, currency: "USD", reportCurrency: "MXN", reportAmountCents: 270000, exchangeRateMicros: 18000000, exchangeRateDate: Date.now(), incomeNature: "business_revenue", entityId: null, projectId: null, accountId: null, categoryId: null, goalId: null, debtId: null, occurredAt: Date.now(), isEssential: false, status: "confirmed", transferGroupId: null, notes: "Corrección de propietaria" })).resolves.toEqual({ success: true });
+    expect(saved).toHaveBeenCalledWith(expect.objectContaining({ createdByUserId: 91, reviewStatus: "pending_review", status: "needs_review", reviewedByUserId: null, reviewedAt: null }));
+    expect(savedWhere).toHaveBeenCalledTimes(1);
+  });
+
   it("permite a la propietaria revocar una colaboración sin afectar otro espacio", async () => {
     const where = vi.fn();
     const set = vi.fn(() => ({ where }));

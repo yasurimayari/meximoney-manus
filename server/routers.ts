@@ -44,6 +44,7 @@ import {
   financialProfiles,
   financialProjects,
   financialTransactions,
+  financialTransactionReviewEvents,
   investments,
   investmentOperations,
   monthlyReviewControls,
@@ -691,9 +692,18 @@ export const appRouter = router({
           
         }
         if (reduceDebtBalance && (!values.debtId || values.type !== "expense" || !isOwner)) throw new TRPCError({ code: "BAD_REQUEST", message: "La reducción automática requiere un gasto con financiación y una sesión de propietaria." });
-        const payload = { ...values, occurredAt: new Date(occurredAt), exchangeRateDate: asDate(exchangeRateDate), reviewStatus: isOwner ? "approved" as const : "pending_review" as const, status: isOwner ? values.status : "needs_review" as const, createdByUserId: ctx.user.id, reviewedByUserId: isOwner ? ctx.user.id : null, reviewedAt: isOwner ? new Date() : null };
+        const basePayload = { ...values, occurredAt: new Date(occurredAt), exchangeRateDate: asDate(exchangeRateDate), reviewStatus: isOwner ? "approved" as const : "pending_review" as const, status: isOwner ? values.status : "needs_review" as const, reviewedByUserId: isOwner ? ctx.user.id : null, reviewedAt: isOwner ? new Date() : null };
         await db.transaction(async tx => {
           const previous = id ? (await tx.select().from(financialTransactions).where(and(eq(financialTransactions.id, id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId))).limit(1))[0] : null;
+          if (!isOwner && id) {
+            if (!previous) throw new TRPCError({ code: "NOT_FOUND", message: "El borrador no pertenece a tu espacio." });
+            if (previous.createdByUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Sólo puedes editar tus propios borradores." });
+            if (previous.reviewStatus === "approved") throw new TRPCError({ code: "FORBIDDEN", message: "Un borrador aprobado sólo puede editarlo la propietaria." });
+          }
+          const preservesCollaboratorDraft = Boolean(isOwner && previous?.createdByUserId && previous.createdByUserId !== ctx.user.id && previous.reviewStatus !== "approved");
+          const payload = preservesCollaboratorDraft
+            ? { ...basePayload, createdByUserId: previous!.createdByUserId, reviewStatus: previous!.reviewStatus, status: previous!.status, reviewedByUserId: previous!.reviewedByUserId, reviewedAt: previous!.reviewedAt }
+            : { ...basePayload, createdByUserId: previous?.createdByUserId ?? ctx.user.id };
           const previousDebtPayment = previous ? (await tx.select().from(debtPayments).where(and(eq(debtPayments.userId, ctx.workspaceAccess.ownerId), eq(debtPayments.linkedTransactionId, previous.id))).limit(1))[0] : null;
           if (previousDebtPayment) {
             const [previousDebt] = await tx.select().from(debts).where(and(eq(debts.id, previousDebtPayment.debtId), eq(debts.userId, ctx.workspaceAccess.ownerId))).limit(1);
@@ -1451,10 +1461,17 @@ export const appRouter = router({
           return { success: true, ...result };
         }),
       }),
-      reviewTransaction: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive(), approve: z.boolean() })).mutation(async ({ ctx, input }) => {
+      reviewTransaction: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive(), approve: z.boolean(), reason: z.string().trim().min(3).max(1000).nullable().optional() }).superRefine((input, context) => { if (!input.approve && !input.reason) context.addIssue({ code: "custom", path: ["reason"], message: "Explica brevemente qué debe corregirse antes de devolver el borrador." }); })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner" && !ctx.workspaceAccess.canReview) throw new TRPCError({ code: "FORBIDDEN", message: "Tu rol no permite revisar movimientos." });
         const db = await requireDb();
-        await db.update(financialTransactions).set({ reviewStatus: input.approve ? "approved" : "draft", status: input.approve ? "confirmed" : "needs_review", reviewedByUserId: ctx.user.id, reviewedAt: new Date() }).where(and(eq(financialTransactions.id, input.id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId)));
+        const [movement] = await db.select().from(financialTransactions).where(and(eq(financialTransactions.id, input.id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (!movement) throw new TRPCError({ code: "NOT_FOUND", message: "El movimiento no pertenece a tu espacio privado." });
+        if (movement.reviewStatus === "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "El movimiento ya fue aprobado y no requiere una nueva revisión." });
+        if (ctx.workspaceAccess.role !== "owner" && movement.createdByUserId === ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Una persona colaboradora no puede revisar su propio borrador." });
+        await db.transaction(async tx => {
+          await tx.update(financialTransactions).set({ reviewStatus: input.approve ? "approved" : "draft", status: input.approve ? "confirmed" : "needs_review", reviewedByUserId: ctx.user.id, reviewedAt: new Date() }).where(and(eq(financialTransactions.id, input.id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId)));
+          await tx.insert(financialTransactionReviewEvents).values({ userId: ctx.workspaceAccess.ownerId, transactionId: movement.id, actorUserId: ctx.user.id, actorRole: ctx.workspaceAccess.role, action: input.approve ? "approved" : "returned", note: input.approve ? input.reason?.trim() || null : input.reason!.trim() });
+        });
         return { success: true };
       }),
     }),

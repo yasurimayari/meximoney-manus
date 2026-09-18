@@ -29,5 +29,6 @@ describe("deleteAllFinancialData", () => {
     expect(state.deletedTables).toContain("fiscalPeriodReviews");
     expect(state.deletedTables).toContain("workspaceAuditEvents");
     expect(state.deletedTables).toContain("collaborationInvites");
+    expect(state.deletedTables).toContain("financialTransactionReviewEvents");
   });
 });

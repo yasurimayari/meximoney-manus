@@ -300,6 +300,20 @@ export const financialTransactions = mysqlTable("financialTransactions", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const financialTransactionReviewEvents = mysqlTable("financialTransactionReviewEvents", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  transactionId: int("transactionId").notNull(),
+  actorUserId: int("actorUserId").notNull(),
+  actorRole: mysqlEnum("actorRole", ["owner", "manager", "reviewer"]).notNull(),
+  action: mysqlEnum("action", ["approved", "returned"]).notNull(),
+  note: varchar("note", { length: 1000 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("transaction_review_events_transaction_created_idx").on(table.transactionId, table.createdAt),
+  index("transaction_review_events_user_created_idx").on(table.userId, table.createdAt),
+]);
+
 export const bankStatementImports = mysqlTable("bankStatementImports", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

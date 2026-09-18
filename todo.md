@@ -864,3 +864,13 @@
 - [x] Registrar creación, actualización, aceptación y revocación de invitaciones con actor, recurso y fecha.
 - [x] Mostrar la bitácora sólo a la propietaria y conservar filtros/estados claros para revisar accesos.
 - [x] Validar aislamiento, borrado integral, permisos, TypeScript, pruebas, compilación, responsive y PWA antes del checkpoint.
+
+
+# Roadmap de mejora futura — Fase 4: revisión humana y trazabilidad
+
+- [x] Auditar la separación de funciones para evitar que una persona colaboradora revise su propio borrador o edite registros ajenos.
+- [x] Restringir la edición de colaboradoras a sus propios borradores no aprobados.
+- [x] Exigir un motivo breve al devolver un borrador y mantenerlo privado en el historial del movimiento.
+- [x] Registrar decisiones de aprobación o devolución por movimiento con actor, fecha y nota.
+- [x] Mostrar la trazabilidad de revisión de forma legible y responsive dentro de la bandeja privada.
+- [x] Validar roles, aislamiento, borrado integral, TypeScript, pruebas, compilación y PWA antes del checkpoint.
