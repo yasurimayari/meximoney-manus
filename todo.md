@@ -601,9 +601,9 @@
 - [x] Fase 1: perfeccionar control financiero, saldos conciliados, proyecciones, alertas y calidad de datos.
 - [x] Fase 2: completar experiencia móvil y cobertura offline de la PWA.
 - [x] Fase 3: fortalecer Mexi como IA explicable y trazable.
-- [ ] Fase 4: completar colaboración con gestor o contador, permisos y auditoría.
+- [x] Fase 4: completar colaboración con gestor o contador, permisos y auditoría. Cerrada con invitación explícita, mínimo privilegio, revocación, bitácora privada, separación de funciones y trazabilidad de revisión.
 - [x] Fase 5: completar OCR, análisis de estacionalidad y hábitos opt-in; mantener voz fuera del alcance salvo nueva aprobación.
-- [ ] Fase 6: evaluar automatización bancaria e integraciones externas después de validar las fases anteriores con uso real.
+- [x] Fase 6: evaluación registrada; se mantiene intencionalmente aplazada hasta acumular uso real suficiente y contar con una solicitud explícita de integración. No se activan conexiones bancarias, mensajería ni automatizaciones externas por defecto.
 
 - [x] Corregir que los gastos de la sección Presupuesto en Simulaciones se muestren en rojo y no en verde.
 - [x] Añadir pruebas y validar la semántica de colores en Simulaciones, Presupuesto y vistas relacionadas.
