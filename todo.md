@@ -853,3 +853,14 @@
 - [x] Crear la página ToDo en Resumen con vistas operativas inspiradas funcionalmente en TickTick, sin replicar su interfaz.
 - [x] Integrar un bloque de tareas prioritarias en Panel y enlaces contextuales desde áreas relacionadas.
 - [x] Añadir pruebas, validar responsive y publicar el módulo.
+
+
+# Roadmap de mejora futura — Fase 4: colaboración, permisos y auditoría
+
+- [x] Auditar la colaboración existente y documentar los límites reales de roles, invitaciones y revisión humana.
+- [x] Mostrar invitaciones pendientes únicamente a la cuenta autenticada cuyo correo coincide y permitir su aceptación explícita.
+- [x] Aplicar mínimo privilegio en el snapshot de Espacio: ocultar invitaciones de terceros a personas colaboradoras.
+- [x] Crear una bitácora privada de colaboración sin importes, secretos ni contenido financiero sensible.
+- [x] Registrar creación, actualización, aceptación y revocación de invitaciones con actor, recurso y fecha.
+- [x] Mostrar la bitácora sólo a la propietaria y conservar filtros/estados claros para revisar accesos.
+- [x] Validar aislamiento, borrado integral, permisos, TypeScript, pruebas, compilación, responsive y PWA antes del checkpoint.

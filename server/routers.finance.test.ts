@@ -59,6 +59,45 @@ describe("finance.dashboard", () => {
     mocks.getFinanceSnapshot.mockResolvedValue({ dashboard: {}, accounts: [], transactions: [] });
   });
 
+  it("impide que una persona no propietaria administre invitaciones", async () => {
+    mocks.resolveWorkspaceAccess.mockResolvedValue({ ownerId: 73, role: "reviewer", canCreateDrafts: false, canReview: true });
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
+    });
+    const caller = appRouter.createCaller(createContext(88));
+
+    await expect(caller.finance.workspace.invite({ email: "contadora@example.com", role: "reviewer", canCreateDrafts: false, canReview: true })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("acepta sólo una invitación pendiente dirigida al correo autenticado y deja bitácora", async () => {
+    const invite = { id: 19, ownerId: 73, invitedEmail: "user-88@example.com", role: "reviewer", canCreateDrafts: false, canReview: true, status: "invited" };
+    const updateWhere = vi.fn().mockResolvedValue([]);
+    const auditValues = vi.fn().mockResolvedValue([]);
+    const transaction = vi.fn(async callback => callback({
+      update: () => ({ set: () => ({ where: updateWhere }) }),
+      insert: () => ({ values: auditValues }),
+    }));
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [invite] }) }) }),
+      transaction,
+    });
+    const caller = appRouter.createCaller(createContext(88));
+
+    await expect(caller.finance.workspace.acceptInvite({ inviteId: 19 })).resolves.toEqual({ success: true });
+    expect(updateWhere).toHaveBeenCalledTimes(1);
+    expect(auditValues).toHaveBeenCalledWith(expect.objectContaining({ ownerId: 73, actorUserId: 88, action: "invite_accepted", resourceId: 19 }));
+  });
+
+  it("rechaza aceptar una invitación que no corresponde al correo autenticado", async () => {
+    const invite = { id: 19, ownerId: 73, invitedEmail: "other@example.com", status: "invited" };
+    mocks.requireDb.mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [invite] }) }) }),
+    });
+    const caller = appRouter.createCaller(createContext(88));
+
+    await expect(caller.finance.workspace.acceptInvite({ inviteId: 19 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
   it("consulta el resumen usando exclusivamente el identificador del usuario autenticado", async () => {
     const caller = appRouter.createCaller(createContext(27));
     await caller.finance.dashboard();
@@ -211,15 +250,18 @@ describe("finance.dashboard", () => {
   it("permite a la propietaria revocar una colaboración sin afectar otro espacio", async () => {
     const where = vi.fn();
     const set = vi.fn(() => ({ where }));
+    const auditValues = vi.fn().mockResolvedValue([]);
+    let selectCall = 0;
     mocks.requireDb.mockResolvedValue({
-      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
-      update: () => ({ set }),
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [selectCall++ === 0 ? { accepted: true } : { id: 81, ownerId: 27, role: "reviewer", status: "accepted" }] }) }) }),
+      transaction: async (callback: any) => callback({ update: () => ({ set }), insert: () => ({ values: auditValues }) }),
     });
     const caller = appRouter.createCaller(createContext(27));
 
     await expect(caller.finance.workspace.revokeInvite({ inviteId: 81 })).resolves.toEqual({ success: true });
     expect(set).toHaveBeenCalledWith({ status: "revoked" });
     expect(where).toHaveBeenCalledTimes(1);
+    expect(auditValues).toHaveBeenCalledWith(expect.objectContaining({ ownerId: 27, actorUserId: 27, action: "invite_revoked", resourceId: 81 }));
   });
 
   it("impide que un gestor revoque colaboraciones", async () => {

@@ -65,6 +65,7 @@ import {
   surplusAllocationPolicies,
   users,
   workspaceEntities,
+  workspaceAuditEvents,
   travelPlans,
   travelParticipants,
   travelItems,
@@ -638,23 +639,39 @@ export const appRouter = router({
         const db = await requireDb();
         const existing = await db.select().from(collaborationInvites).where(and(eq(collaborationInvites.ownerId, ctx.workspaceAccess.ownerId), eq(collaborationInvites.invitedEmail, input.email))).limit(1);
         if (existing[0]) {
-          await db.update(collaborationInvites).set({ role: input.role, canCreateDrafts: input.canCreateDrafts, canReview: input.canReview, invitedByUserId: ctx.user.id }).where(and(eq(collaborationInvites.id, existing[0].id), eq(collaborationInvites.ownerId, ctx.workspaceAccess.ownerId)));
+          const reactivated = existing[0].status === "revoked";
+          await db.transaction(async tx => {
+            await tx.update(collaborationInvites).set({ role: input.role, canCreateDrafts: input.canCreateDrafts, canReview: input.canReview, invitedByUserId: ctx.user.id, ...(reactivated ? { status: "invited" as const, acceptedByUserId: null, acceptedAt: null } : {}) }).where(and(eq(collaborationInvites.id, existing[0].id), eq(collaborationInvites.ownerId, ctx.workspaceAccess.ownerId)));
+            await tx.insert(workspaceAuditEvents).values({ ownerId: ctx.workspaceAccess.ownerId, actorUserId: ctx.user.id, action: reactivated ? "invite_reactivated" : "invite_permissions_updated", resourceType: "collaboration_invite", resourceId: existing[0].id, detail: `${input.role}; borradores ${input.canCreateDrafts ? "sí" : "no"}; revisión ${input.canReview ? "sí" : "no"}` });
+          });
           return { success: true, message: existing[0].status === "accepted" ? "Permisos de la persona colaboradora actualizados." : "Invitación existente actualizada." };
         }
-        await db.insert(collaborationInvites).values({ ownerId: ctx.workspaceAccess.ownerId, invitedEmail: input.email, role: input.role, canCreateDrafts: input.canCreateDrafts, canReview: input.canReview, invitedByUserId: ctx.user.id });
+        await db.transaction(async tx => {
+          const result = await tx.insert(collaborationInvites).values({ ownerId: ctx.workspaceAccess.ownerId, invitedEmail: input.email, role: input.role, canCreateDrafts: input.canCreateDrafts, canReview: input.canReview, invitedByUserId: ctx.user.id });
+          const inviteId = Number((result as any)?.[0]?.insertId ?? 0) || null;
+          await tx.insert(workspaceAuditEvents).values({ ownerId: ctx.workspaceAccess.ownerId, actorUserId: ctx.user.id, action: "invite_created", resourceType: "collaboration_invite", resourceId: inviteId, detail: `${input.role}; borradores ${input.canCreateDrafts ? "sí" : "no"}; revisión ${input.canReview ? "sí" : "no"}` });
+        });
         return { success: true, message: "Invitación creada. La persona debe registrarse con ese correo y aceptarla desde Meximoney." };
       }),
       acceptInvite: protectedProcedure.input(z.object({ inviteId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
         const invite = await db.select().from(collaborationInvites).where(and(eq(collaborationInvites.id, input.inviteId), eq(collaborationInvites.status, "invited"))).limit(1);
         if (!invite[0] || invite[0].invitedEmail !== ctx.user.email?.toLowerCase()) throw new TRPCError({ code: "FORBIDDEN", message: "Esta invitación no corresponde a tu cuenta." });
-        await db.update(collaborationInvites).set({ status: "accepted", acceptedByUserId: ctx.user.id, acceptedAt: new Date() }).where(eq(collaborationInvites.id, input.inviteId));
+        await db.transaction(async tx => {
+          await tx.update(collaborationInvites).set({ status: "accepted", acceptedByUserId: ctx.user.id, acceptedAt: new Date() }).where(and(eq(collaborationInvites.id, input.inviteId), eq(collaborationInvites.status, "invited")));
+          await tx.insert(workspaceAuditEvents).values({ ownerId: invite[0].ownerId, actorUserId: ctx.user.id, action: "invite_accepted", resourceType: "collaboration_invite", resourceId: invite[0].id, detail: `${invite[0].role}; acceso aceptado` });
+        });
         return { success: true };
       }),
       revokeInvite: workspaceFinanceProcedure.input(z.object({ inviteId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede revocar accesos." });
         const db = await requireDb();
-        await db.update(collaborationInvites).set({ status: "revoked" }).where(and(eq(collaborationInvites.id, input.inviteId), eq(collaborationInvites.ownerId, ctx.workspaceAccess.ownerId)));
+        const [invite] = await db.select().from(collaborationInvites).where(and(eq(collaborationInvites.id, input.inviteId), eq(collaborationInvites.ownerId, ctx.workspaceAccess.ownerId))).limit(1);
+        if (!invite) throw new TRPCError({ code: "NOT_FOUND", message: "La invitación no pertenece a tu espacio." });
+        if (invite.status !== "revoked") await db.transaction(async tx => {
+          await tx.update(collaborationInvites).set({ status: "revoked" }).where(and(eq(collaborationInvites.id, input.inviteId), eq(collaborationInvites.ownerId, ctx.workspaceAccess.ownerId)));
+          await tx.insert(workspaceAuditEvents).values({ ownerId: ctx.workspaceAccess.ownerId, actorUserId: ctx.user.id, action: "invite_revoked", resourceType: "collaboration_invite", resourceId: invite.id, detail: `${invite.role}; acceso revocado` });
+        });
         return { success: true };
       }),
       transactionSave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), debtId: z.number().int().positive().nullable().optional(), creditCardId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), type: z.enum(["income", "expense", "transfer_out", "transfer_in"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), reduceDebtBalance: z.boolean().optional().default(false), reportCurrency: z.string().length(3).nullable().optional(), reportAmountCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), occurredAt: z.number().int().positive(), isEssential: z.boolean(), transferGroupId: z.string().max(64).nullable().optional(), status: z.enum(["confirmed", "estimated", "needs_review"]), bankReference: z.string().trim().max(160).nullable().optional(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {

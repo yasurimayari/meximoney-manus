@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   accounts,
@@ -62,6 +62,7 @@ import {
   surplusAllocationPolicies,
   users,
   workspaceEntities,
+  workspaceAuditEvents,
   travelPlans,
   travelParticipants,
   travelItems,
@@ -191,7 +192,9 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const db = await requireDb();
   const access = await resolveWorkspaceAccess(userId);
   const ownerId = access.ownerId;
-  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, debtAdjustmentRows, creditCardRows, goalRows, taskRows, taskLinkRows, reviewRows, monthlyControlRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, financedAssetRows, milestoneRows, creditScoreRows, personalScoreRows, qualityAcknowledgementRows, surplusPolicyRows, travelPlanRows, travelItemRows, financialPlanRows, financialPlanLevelRows, financialPlanScenarioRows, financialPlanPeriodRows, financialPlanLinkRows] = await Promise.all([
+  const [currentUser] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+  const currentEmail = currentUser?.email?.toLowerCase() ?? null;
+  const [profile, accountRows, categoryRows, transactionRows, budgetRows, debtRows, debtPaymentRows, debtAdjustmentRows, creditCardRows, goalRows, taskRows, taskLinkRows, reviewRows, monthlyControlRows, statementRows, calendarColorRows, calendarEventRows, documentRows, decisionRows, entityRows, projectRows, exchangeRateRows, inviteRows, auditRows, pendingInviteRows, contactRows, receivableRows, receivablePaymentRows, fiscalRecordRows, fiscalPeriodReviewRows, templateRows, payableRows, payablePaymentRows, investmentRows, investmentOperationRows, financedAssetRows, milestoneRows, creditScoreRows, personalScoreRows, qualityAcknowledgementRows, surplusPolicyRows, travelPlanRows, travelItemRows, financialPlanRows, financialPlanLevelRows, financialPlanScenarioRows, financialPlanPeriodRows, financialPlanLinkRows] = await Promise.all([
     getProfile(ownerId),
     db.select().from(accounts).where(eq(accounts.userId, ownerId)),
     db.select().from(categories).where(eq(categories.userId, ownerId)),
@@ -215,6 +218,12 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     db.select().from(financialProjects).where(eq(financialProjects.ownerId, ownerId)),
     db.select().from(exchangeRates).where(eq(exchangeRates.ownerId, ownerId)),
     db.select().from(collaborationInvites).where(eq(collaborationInvites.ownerId, ownerId)),
+    access.role === "owner"
+      ? db.select().from(workspaceAuditEvents).where(eq(workspaceAuditEvents.ownerId, ownerId)).orderBy(desc(workspaceAuditEvents.createdAt)).limit(80)
+      : db.select().from(workspaceAuditEvents).where(eq(workspaceAuditEvents.id, -1)),
+    currentEmail
+      ? db.select().from(collaborationInvites).where(and(eq(collaborationInvites.invitedEmail, currentEmail), eq(collaborationInvites.status, "invited"))).orderBy(desc(collaborationInvites.createdAt))
+      : db.select().from(collaborationInvites).where(eq(collaborationInvites.id, -1)),
     db.select().from(financialContacts).where(eq(financialContacts.userId, ownerId)),
     db.select().from(receivables).where(eq(receivables.userId, ownerId)),
     db.select().from(receivablePayments).where(eq(receivablePayments.userId, ownerId)),
@@ -299,7 +308,9 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     entities: entityRows,
     projects: projectRows,
     exchangeRates: exchangeRateRows,
-    collaborators: inviteRows,
+    collaborators: access.role === "owner" ? inviteRows : [],
+    pendingInvites: access.role === "owner" ? [] : pendingInviteRows,
+    collaborationAudit: access.role === "owner" ? auditRows : [],
     contacts: contactRows,
     qualityAcknowledgements: qualityAcknowledgementRows,
     accounts: accountRows,
@@ -406,6 +417,8 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(categories).where(eq(categories.userId, userId));
     await tx.delete(accounts).where(eq(accounts.userId, userId));
     await tx.delete(financialProfiles).where(eq(financialProfiles.userId, userId));
+    await tx.delete(workspaceAuditEvents).where(eq(workspaceAuditEvents.ownerId, userId));
+    await tx.delete(collaborationInvites).where(eq(collaborationInvites.ownerId, userId));
     await tx.delete(financeNotifications).where(eq(financeNotifications.userId, userId));
     await tx.delete(notificationPreferences).where(eq(notificationPreferences.userId, userId));
     await tx.delete(privacyConsents).where(eq(privacyConsents.userId, userId));

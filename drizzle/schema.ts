@@ -181,6 +181,20 @@ export const collaborationInvites = mysqlTable("collaborationInvites", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const workspaceAuditEvents = mysqlTable("workspaceAuditEvents", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerId: int("ownerId").notNull(),
+  actorUserId: int("actorUserId").notNull(),
+  action: varchar("action", { length: 48 }).notNull(),
+  resourceType: varchar("resourceType", { length: 48 }).notNull(),
+  resourceId: int("resourceId"),
+  detail: varchar("detail", { length: 300 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("workspace_audit_owner_created_idx").on(table.ownerId, table.createdAt),
+  index("workspace_audit_actor_created_idx").on(table.actorUserId, table.createdAt),
+]);
+
 export const accounts = mysqlTable("accounts", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

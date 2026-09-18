@@ -19,7 +19,7 @@ vi.mock("drizzle-orm/mysql2", () => ({
 import { deleteAllFinancialData } from "./db";
 
 describe("deleteAllFinancialData", () => {
-  it("elimina los eventos privados de recuperación junto con los demás datos de la cuenta", async () => {
+  it("elimina los eventos privados de seguridad y colaboración junto con los demás datos de la cuenta", async () => {
     state.deletedTables.length = 0;
 
     await deleteAllFinancialData(44);
@@ -27,5 +27,7 @@ describe("deleteAllFinancialData", () => {
     expect(state.deletedTables).toContain("passwordResetEvents");
     expect(state.deletedTables).toContain("passwordResetTokens");
     expect(state.deletedTables).toContain("fiscalPeriodReviews");
+    expect(state.deletedTables).toContain("workspaceAuditEvents");
+    expect(state.deletedTables).toContain("collaborationInvites");
   });
 });

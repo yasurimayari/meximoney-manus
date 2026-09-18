@@ -421,6 +421,13 @@
       "when": 1789055888704,
       "tag": "0059_yellow_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "5",
+      "when": 1789692884126,
+      "tag": "0060_illegal_warbird",
+      "breakpoints": true
     }
   ]
 }
