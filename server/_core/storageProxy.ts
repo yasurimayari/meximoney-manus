@@ -1,17 +1,34 @@
 import type { Express } from "express";
 import { ENV } from "./env";
+import { sdk } from "./sdk";
+import { isPrivateStorageKeyOwned } from "../db";
+
+const PUBLIC_STORAGE_KEY = /^meximoney-pwa-icon_[a-z0-9]+\.png$/i;
 
 export function registerStorageProxy(app: Express) {
   app.get("/manus-storage/*", async (req, res) => {
     const key = (req.params as Record<string, string>)[0];
-    if (!key) {
-      res.status(400).send("Missing storage key");
+    if (!key || key.includes("..") || key.includes("\\")) {
+      res.status(400).send("Invalid storage key");
       return;
     }
 
     if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
       res.status(500).send("Storage proxy not configured");
       return;
+    }
+
+    if (!PUBLIC_STORAGE_KEY.test(key)) {
+      try {
+        const user = await sdk.authenticateRequest(req);
+        if (user.isCron || !(await isPrivateStorageKeyOwned(user.id, key))) {
+          res.status(403).send("Storage access denied");
+          return;
+        }
+      } catch {
+        res.status(401).send("Authentication required");
+        return;
+      }
     }
 
     try {
@@ -38,7 +55,7 @@ export function registerStorageProxy(app: Express) {
         return;
       }
 
-      res.set("Cache-Control", "no-store");
+      res.set("Cache-Control", "private, no-store");
       res.redirect(307, url);
     } catch (err) {
       console.error("[StorageProxy] failed:", err);

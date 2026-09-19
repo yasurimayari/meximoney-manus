@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { unlockOfflineSnapshot, type OfflineSnapshot } from "@/lib/offlineVault";
 import { ChevronLeft, ChevronRight, CloudOff, LockKeyhole, Search, ShieldCheck, Wifi } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -20,6 +21,7 @@ function haystack(item: any, fallback: string) {
 }
 
 export default function Offline() {
+  const { user } = useAuth();
   const [online, setOnline] = useState(() => navigator.onLine);
   const [pin, setPin] = useState("");
   const [snapshot, setSnapshot] = useState<OfflineSnapshot | null>(null);
@@ -36,7 +38,7 @@ export default function Offline() {
 
   const unlock = async () => {
     setUnlocking(true);
-    try { setSnapshot(await unlockOfflineSnapshot(pin)); setPin(""); } catch (error) { toast.error(error instanceof Error ? error.message : "No fue posible abrir la copia offline."); } finally { setUnlocking(false); }
+    try { setSnapshot(await unlockOfflineSnapshot(pin, user?.id)); setPin(""); } catch (error) { toast.error(error instanceof Error ? error.message : "No fue posible abrir la copia offline."); } finally { setUnlocking(false); }
   };
 
   if (!snapshot) return <main className="offline-shell"><section className="offline-card"><div className="offline-mark">M</div><p className="eyebrow">Meximoney personal</p><h1>Tu copia offline está protegida.</h1><p>Introduce el código local que definiste en este dispositivo. No se enviará a Internet.</p><div className="form-field mt-6"><label htmlFor="offline-unlock">Código local</label><Input id="offline-unlock" type="password" autoComplete="current-password" minLength={8} value={pin} onChange={event => setPin(event.target.value)} onKeyDown={event => event.key === "Enter" && unlock()} /></div><Button className="mt-5 w-full" disabled={unlocking || !pin} onClick={unlock}><LockKeyhole className="size-4" /> {unlocking ? "Desbloqueando…" : "Abrir copia offline"}</Button><div className="mt-5 flex items-center justify-between text-xs text-muted-foreground"><span className="inline-flex items-center gap-1">{online ? <Wifi className="size-3" /> : <CloudOff className="size-3" />}{online ? "Con conexión" : "Sin conexión"}</span><a className="font-semibold text-primary hover:underline" href="/">Abrir Meximoney en línea</a></div></section></main>;
@@ -70,7 +72,7 @@ function OfflineCollections({ snapshot, query }: { snapshot: OfflineSnapshot; qu
     { title: "Deudas", items: snapshot.debts as any[], amount: (item: any) => formatOfflineMoney(item.balanceCents, item.currency), detail: (item: any) => item.nextDueAt ? `Próximo pago: ${new Date(item.nextDueAt).toLocaleDateString("es-MX")}` : item.type ?? "Deuda" },
     { title: "Presupuestos", items: snapshot.budgets as any[], amount: (item: any) => formatOfflineMoney(item.plannedCents, "MXN"), detail: (item: any) => item.periodStart ? new Date(item.periodStart).toLocaleDateString("es-MX", { month: "long", year: "numeric" }) : item.type ?? "Presupuesto" },
     { title: "Inversiones", items: snapshot.investments as any[], amount: (item: any) => formatOfflineMoney(item.currentValueCents, item.currency), detail: (item: any) => item.institution ?? item.type ?? "Inversión" },
-    { title: "Objetivos", items: snapshot.goals as any[], amount: (item: any) => formatOfflineMoney(item.targetAmountCents, item.currency), detail: (item: any) => item.status ?? "Objetivo" },
+    { title: "Objetivos", items: snapshot.goals as any[], amount: (item: any) => formatOfflineMoney(item.targetCents, item.currency), detail: (item: any) => item.status ?? "Objetivo" },
     { title: "Tareas", items: snapshot.tasks as any[], amount: () => "Solo lectura", detail: (item: any) => item.status ?? item.priority ?? "Tarea" },
     { title: "Viajes", items: snapshot.travelPlans as any[], amount: () => "Solo lectura", detail: (item: any) => item.startsAt ? new Date(item.startsAt).toLocaleDateString("es-MX") : item.status ?? "Viaje" },
     { title: "Calendario", items: snapshot.calendarEvents as any[], amount: (item: any) => item.startsAt ? new Date(item.startsAt).toLocaleDateString("es-MX") : "Sin fecha", detail: (item: any) => item.eventType ?? "Evento" },

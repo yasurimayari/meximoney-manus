@@ -117,6 +117,43 @@ const calendarColorKeySchema = z.enum(["teal", "emerald", "sky", "indigo", "viol
 const importRowSchema = z.object({ accountId: z.number().int().positive().nullable().optional(), categoryId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), projectId: z.number().int().positive().nullable().optional(), type: z.enum(["income", "expense"]), scope: scopeSchema, amountCents: z.number().int().positive(), currency: z.string().length(3), reportCurrency: z.string().length(3).nullable().optional(), reportAmountCents: moneySchema.nullable().optional(), exchangeRateMicros: z.number().int().positive().nullable().optional(), exchangeRateDate: optionalDate, incomeNature: z.enum(["business_revenue", "salary_commission", "family_support", "owner_draw", "other"]), occurredAt: z.number().int().positive(), isEssential: z.boolean().default(false), status: z.enum(["confirmed", "estimated", "needs_review"]).default("confirmed"), bankReference: z.string().trim().max(160).nullable().optional(), notes: z.string().max(3000).nullable().optional(), allowPossibleDuplicate: z.boolean().default(false) });
 const statementRowSchema = z.object({ rowNumber: z.number().int().positive(), occurredAt: z.number().int().positive(), type: z.enum(["income", "expense"]), amountCents: z.number().int().positive(), currency: z.string().length(3), bankReference: z.string().trim().max(160).nullable().optional(), description: z.string().trim().max(500).nullable().optional(), rawData: z.string().max(4000).nullable().optional() });
 const manualOnlyNotice = "Meximoney trabaja solo con tus registros manuales. No tiene acceso a bancos ni puede ejecutar acciones financieras.";
+
+type OwnedReferenceSet = {
+  accountIds?: Array<number | null | undefined>;
+  categoryIds?: Array<number | null | undefined>;
+  goalIds?: Array<number | null | undefined>;
+  entityIds?: Array<number | null | undefined>;
+  projectIds?: Array<number | null | undefined>;
+  debtIds?: Array<number | null | undefined>;
+  creditCardIds?: Array<number | null | undefined>;
+  contactIds?: Array<number | null | undefined>;
+  transactionIds?: Array<number | null | undefined>;
+  taskIds?: Array<number | null | undefined>;
+  documentIds?: Array<number | null | undefined>;
+};
+
+async function assertOwnedReferences(db: any, ownerId: number, references: OwnedReferenceSet) {
+  const checks = [
+    { label: "cuenta", ids: references.accountIds, table: accounts, ownerColumn: accounts.userId },
+    { label: "categoría", ids: references.categoryIds, table: categories, ownerColumn: categories.userId },
+    { label: "objetivo", ids: references.goalIds, table: financialGoals, ownerColumn: financialGoals.userId },
+    { label: "entidad", ids: references.entityIds, table: workspaceEntities, ownerColumn: workspaceEntities.ownerId },
+    { label: "proyecto", ids: references.projectIds, table: financialProjects, ownerColumn: financialProjects.ownerId },
+    { label: "deuda", ids: references.debtIds, table: debts, ownerColumn: debts.userId },
+    { label: "tarjeta", ids: references.creditCardIds, table: creditCards, ownerColumn: creditCards.userId },
+    { label: "contacto", ids: references.contactIds, table: financialContacts, ownerColumn: financialContacts.userId },
+    { label: "movimiento", ids: references.transactionIds, table: financialTransactions, ownerColumn: financialTransactions.userId },
+    { label: "tarea", ids: references.taskIds, table: financeTasks, ownerColumn: financeTasks.userId },
+    { label: "documento", ids: references.documentIds, table: financeDocuments, ownerColumn: financeDocuments.userId },
+  ];
+  await Promise.all(checks.map(async ({ label, ids, table, ownerColumn }) => {
+    const uniqueIds = Array.from(new Set((ids ?? []).filter((id): id is number => typeof id === "number")));
+    if (!uniqueIds.length) return;
+    const rows = await db.select({ id: table.id }).from(table).where(and(eq(ownerColumn, ownerId), inArray(table.id, uniqueIds)));
+    if (rows.length !== uniqueIds.length) throw new TRPCError({ code: "BAD_REQUEST", message: `La referencia de ${label} no pertenece a tu espacio privado.` });
+  }));
+}
+
 const credentialInput = z.object({
   email: z.string().trim().email().max(320).transform(value => value.toLowerCase()),
   password: z.string().min(12, "La contraseña debe tener al menos 12 caracteres.").max(128),
@@ -135,7 +172,6 @@ function scoreFromSnapshot(snapshot: any, referenceDate: Date) {
   const debts = snapshot.debts.filter((debt: any) => (debt.status === "active" || debt.status === "review") && debt.currency === reportCurrency);
   const creditScore = snapshot.creditScoreRecords.filter((record: any) => new Date(record.reportedAt) <= referenceDate).sort((a: any, b: any) => new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime())[0] ?? null;
   const emergencyFundCents = snapshot.goals.filter((goal: any) => goal.type === "emergency" && goal.status === "active" && goal.currency === reportCurrency).reduce((sum: number, goal: any) => sum + goal.currentCents, 0);
-  const recentTransactionCount = snapshot.transactions.filter((transaction: any) => transaction.occurredAt >= new Date(referenceDate.getTime() - 7 * 24 * 60 * 60 * 1000) && transaction.occurredAt <= referenceDate).length;
   const principalPaidLast30DaysCents = snapshot.debtPayments.filter((payment: any) => payment.currency === reportCurrency && payment.paidAt >= new Date(referenceDate.getTime() - 30 * 24 * 60 * 60 * 1000) && payment.paidAt <= referenceDate).reduce((sum: number, payment: any) => sum + payment.principalCents, 0);
   return calculatePersonalScore({
     netWorthCents: snapshot.dashboard.netWorth.netWorthCents,
@@ -145,7 +181,8 @@ function scoreFromSnapshot(snapshot: any, referenceDate: Date) {
     emergencyFundCents,
     incomeCents: snapshot.dashboard.cashFlow.incomeCents,
     expenseCents: snapshot.dashboard.cashFlow.expenseCents,
-    recentTransactionCount,
+    recentTransactionCount: 0,
+    habitsOptIn: false,
     principalPaidLast30DaysCents,
     outstandingDebtCents: debts.reduce((sum: number, debt: any) => sum + debt.balanceCents, 0),
   });
@@ -463,6 +500,14 @@ export const appRouter = router({
       const referenceDate = input?.referenceDate ?? (Array.isArray(referenceHeader) ? referenceHeader[0] : referenceHeader);
       return referenceDate ? getFinanceSnapshot(ctx.user.id, mexicoCityReferenceMonth(referenceDate)) : getFinanceSnapshot(ctx.user.id);
     }),
+    offlineSnapshot: protectedProcedure.input(dashboardPeriodInput).query(async ({ ctx, input }) => {
+      const access = await resolveWorkspaceAccess(ctx.user.id);
+      if (access.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "La bóveda offline está disponible sólo para la propietaria del espacio." });
+      const request = ctx.req as typeof ctx.req & { get?: (name: string) => string | undefined };
+      const referenceHeader = request.get?.("x-meximoney-reference-date") ?? request.headers?.["x-meximoney-reference-date"];
+      const referenceDate = input?.referenceDate ?? (Array.isArray(referenceHeader) ? referenceHeader[0] : referenceHeader);
+      return referenceDate ? getFinanceSnapshot(ctx.user.id, mexicoCityReferenceMonth(referenceDate)) : getFinanceSnapshot(ctx.user.id);
+    }),
     workspace: router({
       get: protectedProcedure.query(({ ctx }) => {
         const request = ctx.req as typeof ctx.req & { get?: (name: string) => string | undefined };
@@ -679,6 +724,10 @@ export const appRouter = router({
         if (ctx.workspaceAccess.role !== "owner" && !ctx.workspaceAccess.canCreateDrafts) throw new TRPCError({ code: "FORBIDDEN", message: "Tu rol no permite crear borradores." });
         if (input.type === "transfer_out" || input.type === "transfer_in") throw new TRPCError({ code: "BAD_REQUEST", message: "Usa el formulario de traspaso entre cuentas para crear ambas partes de forma coherente." });
         const db = await requireDb(); const { id, occurredAt, exchangeRateDate, reduceDebtBalance, ...values } = input;
+        await assertOwnedReferences(db, ctx.workspaceAccess.ownerId, {
+          accountIds: [values.accountId], categoryIds: [values.categoryId], goalIds: [values.goalId], debtIds: [values.debtId],
+          creditCardIds: [values.creditCardId], contactIds: [values.contactId], entityIds: [values.entityId], projectIds: [values.projectId],
+        });
         if (values.contactId) {
           const contact = await db.select({ id: financialContacts.id }).from(financialContacts).where(and(eq(financialContacts.id, values.contactId), eq(financialContacts.userId, ctx.workspaceAccess.ownerId))).limit(1);
           if (!contact[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "El contacto seleccionado no pertenece a tu espacio privado." });
@@ -1440,12 +1489,18 @@ export const appRouter = router({
       imports: router({
         preview: workspaceFinanceProcedure.input(z.object({ rows: z.array(importRowSchema).min(1).max(300) })).mutation(async ({ ctx, input }) => {
           const db = await requireDb();
+          await assertOwnedReferences(db, ctx.workspaceAccess.ownerId, {
+            accountIds: input.rows.map(row => row.accountId), categoryIds: input.rows.map(row => row.categoryId), entityIds: input.rows.map(row => row.entityId), projectIds: input.rows.map(row => row.projectId),
+          });
           const existing = await db.select().from(financialTransactions).where(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId));
           return input.rows.map((row, index) => ({ index, possibleDuplicateIds: findPossibleDuplicates({ ...row, occurredAt: new Date(row.occurredAt), accountId: row.accountId ?? null, notes: row.notes ?? null }, existing), row }));
         }),
         confirm: workspaceFinanceProcedure.input(z.object({ rows: z.array(importRowSchema).min(1).max(300) })).mutation(async ({ ctx, input }) => {
           if (ctx.workspaceAccess.role !== "owner" && !ctx.workspaceAccess.canCreateDrafts) throw new TRPCError({ code: "FORBIDDEN", message: "Tu rol no permite confirmar importaciones." });
           const db = await requireDb();
+          await assertOwnedReferences(db, ctx.workspaceAccess.ownerId, {
+            accountIds: input.rows.map(row => row.accountId), categoryIds: input.rows.map(row => row.categoryId), entityIds: input.rows.map(row => row.entityId), projectIds: input.rows.map(row => row.projectId),
+          });
           const isOwner = ctx.workspaceAccess.role === "owner";
           const result = await db.transaction(async tx => {
             const existing = await tx.select().from(financialTransactions).where(eq(financialTransactions.userId, ctx.workspaceAccess.ownerId));
@@ -1751,7 +1806,7 @@ export const appRouter = router({
         await db.transaction(async tx => {
           if (transaction?.creditCardId && transaction.type === "expense") {
             const [card] = await tx.select().from(creditCards).where(and(eq(creditCards.id, transaction.creditCardId), eq(creditCards.userId, ctx.user.id))).limit(1);
-            if (card) await tx.update(creditCards).set({ balanceCents: Math.max(0, card.balanceCents - transaction.amountCents) }).where(and(eq(creditCards.id, card.id), eq(creditCards.userId, ctx.user.id)));
+            if (card) await tx.update(creditCards).set({ balanceCents: card.balanceCents - transaction.amountCents }).where(and(eq(creditCards.id, card.id), eq(creditCards.userId, ctx.user.id)));
           }
           await tx.update(financeTasks).set({ linkedTransactionId: null }).where(and(eq(financeTasks.userId, ctx.user.id), eq(financeTasks.linkedTransactionId, input.id)));
           await tx.delete(financialTransactions).where(and(eq(financialTransactions.id, input.id), eq(financialTransactions.userId, ctx.user.id)));
@@ -1766,7 +1821,7 @@ export const appRouter = router({
           for (const transaction of rows) {
             if (transaction.creditCardId && transaction.type === "expense") {
               const [card] = await tx.select().from(creditCards).where(and(eq(creditCards.id, transaction.creditCardId), eq(creditCards.userId, ctx.user.id))).limit(1);
-              if (card) await tx.update(creditCards).set({ balanceCents: Math.max(0, card.balanceCents - transaction.amountCents) }).where(and(eq(creditCards.id, card.id), eq(creditCards.userId, ctx.user.id)));
+              if (card) await tx.update(creditCards).set({ balanceCents: card.balanceCents - transaction.amountCents }).where(and(eq(creditCards.id, card.id), eq(creditCards.userId, ctx.user.id)));
             }
             await tx.update(financeTasks).set({ linkedTransactionId: null }).where(and(eq(financeTasks.userId, ctx.user.id), eq(financeTasks.linkedTransactionId, transaction.id)));
           }
@@ -2312,6 +2367,9 @@ export const appRouter = router({
       save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(1).max(180), origin: z.string().trim().max(140).nullable().optional(), destination: z.string().trim().max(140).nullable().optional(), purpose: z.string().trim().max(240).nullable().optional(), scope: scopeSchema, status: z.enum(["planned", "in_progress", "completed", "cancelled", "archived"]), startsAt: z.string().min(1), endsAt: z.string().nullable().optional(), budgetCents: z.number().int().min(0), currency: z.string().length(3), timeZone: timeZoneSchema.default("America/Mexico_City"), projectId: z.number().int().positive().nullable().optional(), entityId: z.number().int().positive().nullable().optional(), goalId: z.number().int().positive().nullable().optional(), contactId: z.number().int().positive().nullable().optional(), participantIds: z.array(z.number().int().positive()).max(100).optional(), notes: z.string().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
         const participantIds = normalizeParticipantIds(input.participantIds);
+        await assertOwnedReferences(db, ctx.user.id, {
+          projectIds: [input.projectId], entityIds: [input.entityId], goalIds: [input.goalId], contactIds: [input.contactId, ...(participantIds ?? [])],
+        });
         if (participantIds?.length) {
           const contacts = await db.select({ id: financialContacts.id, status: financialContacts.status }).from(financialContacts).where(and(eq(financialContacts.userId, ctx.user.id), inArray(financialContacts.id, participantIds)));
           const availableIds = new Set(contacts.filter(contact => contact.status !== "archived").map(contact => contact.id));
@@ -2340,6 +2398,10 @@ export const appRouter = router({
         const db = await requireDb();
         const plan = await db.select({ id: travelPlans.id }).from(travelPlans).where(and(eq(travelPlans.id, input.travelPlanId), eq(travelPlans.userId, ctx.user.id))).limit(1);
         if (!plan[0]) throw new TRPCError({ code: "NOT_FOUND", message: "El viaje no existe en tu espacio privado." });
+        await assertOwnedReferences(db, ctx.user.id, {
+          transactionIds: [input.transactionId], projectIds: [input.projectId], taskIds: [input.taskId], goalIds: [input.goalId], entityIds: [input.entityId],
+          contactIds: [input.contactId], documentIds: [input.documentId],
+        });
         if (input.categoryId) {
           const category = await db.select({ id: travelCategories.id }).from(travelCategories).where(and(eq(travelCategories.id, input.categoryId), eq(travelCategories.userId, ctx.user.id), eq(travelCategories.isActive, true))).limit(1);
           if (!category[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "La categoría no pertenece a tu espacio privado." });

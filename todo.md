@@ -605,6 +605,11 @@
 - [x] Fase 5: completar OCR, análisis de estacionalidad y hábitos opt-in; mantener voz fuera del alcance salvo nueva aprobación.
 - [x] Fase 6: evaluación registrada; se mantiene intencionalmente aplazada hasta acumular uso real suficiente y contar con una solicitud explícita de integración. No se activan conexiones bancarias, mensajería ni automatizaciones externas por defecto.
 
+- [x] Realizar una auditoría integral posterior al cierre de fases, distinguir hallazgos verificables de límites de sesión y documentar la matriz de completitud.
+- [x] Corregir aislamiento de referencias cruzadas, acceso a archivos privados, borrado integral, asociación de bóveda offline y lockout local sin habilitar mutaciones offline.
+- [x] Alinear cuentas, tarjetas, Score, analítica, presupuesto y exportaciones con movimientos confirmados y aprobados; añadir regresiones de saldos a favor, doble cálculo y datos pendientes.
+- [x] Reducir el bundle inicial mediante carga diferida de módulos privados y validar build, PWA, TypeScript y suite completa.
+
 - [x] Corregir que los gastos de la sección Presupuesto en Simulaciones se muestren en rojo y no en verde.
 - [x] Añadir pruebas y validar la semántica de colores en Simulaciones, Presupuesto y vistas relacionadas.
 

@@ -2,97 +2,91 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { lazy, Suspense } from "react";
 import NotFound from "@/pages/NotFound";
+import PasswordReset from "@/pages/PasswordReset";
+import Offline from "@/pages/Offline";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-import Records from "./pages/Records";
-import Planning from "./pages/Planning";
-import Quality from "./pages/Quality";
-import Analytics from "./pages/Analytics";
-import Reports from "./pages/Reports";
-import Calendar from "./pages/Calendar";
-import Statements from "./pages/Statements";
-import Workspace from "./pages/Workspace";
-import Review from "./pages/Review";
-import Notifications from "./pages/Notifications";
-import Contacts from "./pages/Contacts";
-import Investments from "./pages/Investments";
-import Patrimony from "./pages/Patrimony";
-import CreditCards from "./pages/CreditCards";
-import Fiscal from "./pages/Fiscal";
-import PasswordReset from "./pages/PasswordReset";
-import ChangePassword from "./pages/ChangePassword";
-import MonthlyControl from "./pages/MonthlyControl";
-import Simulations from "./pages/Simulations";
-import Accounts from "./pages/Accounts";
-import Offline from "./pages/Offline";
-import OfflineData from "./pages/OfflineData";
-import Projects from "./pages/Projects";
-import Score from "./pages/Score";
-import Travels from "./pages/Travels";
-import ToDo from "./pages/ToDo";
-import Habits from "./pages/Habits";
 import DashboardLayout from "./components/DashboardLayout";
 
-const Assistant = lazy(() => import("./pages/Assistant"));
+const Records = lazy(() => import("@/pages/Records"));
+const Planning = lazy(() => import("@/pages/Planning"));
+const Quality = lazy(() => import("@/pages/Quality"));
+const Analytics = lazy(() => import("@/pages/Analytics"));
+const Reports = lazy(() => import("@/pages/Reports"));
+const Calendar = lazy(() => import("@/pages/Calendar"));
+const Statements = lazy(() => import("@/pages/Statements"));
+const Workspace = lazy(() => import("@/pages/Workspace"));
+const Review = lazy(() => import("@/pages/Review"));
+const Notifications = lazy(() => import("@/pages/Notifications"));
+const Contacts = lazy(() => import("@/pages/Contacts"));
+const Investments = lazy(() => import("@/pages/Investments"));
+const Patrimony = lazy(() => import("@/pages/Patrimony"));
+const CreditCards = lazy(() => import("@/pages/CreditCards"));
+const Fiscal = lazy(() => import("@/pages/Fiscal"));
+const ChangePassword = lazy(() => import("@/pages/ChangePassword"));
+const MonthlyControl = lazy(() => import("@/pages/MonthlyControl"));
+const Simulations = lazy(() => import("@/pages/Simulations"));
+const Accounts = lazy(() => import("@/pages/Accounts"));
+const OfflineData = lazy(() => import("@/pages/OfflineData"));
+const Projects = lazy(() => import("@/pages/Projects"));
+const Score = lazy(() => import("@/pages/Score"));
+const Travels = lazy(() => import("@/pages/Travels"));
+const ToDo = lazy(() => import("@/pages/ToDo"));
+const Habits = lazy(() => import("@/pages/Habits"));
+const Home = lazy(() => import("@/pages/Home"));
+const Assistant = lazy(() => import("@/pages/Assistant"));
 
 function RouteLoader({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Cargando módulo…</div>}>{children}</Suspense>;
 }
 
+function PrivatePage({ children }: { children: React.ReactNode }) {
+  return <DashboardLayout><RouteLoader>{children}</RouteLoader></DashboardLayout>;
+}
+
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/restablecer-contrasena"} component={PasswordReset} />
-      <Route path={"/offline"} component={Offline} />
-      <Route path={"/seguridad/cambiar-contrasena"}><DashboardLayout><ChangePassword /></DashboardLayout></Route>
-      <Route path={"/datos-offline"}><DashboardLayout><OfflineData /></DashboardLayout></Route>
-      <Route path={"/"}><DashboardLayout><Home /></DashboardLayout></Route>
-      <Route path={"/todo"}><DashboardLayout><ToDo /></DashboardLayout></Route>
-      <Route path={"/habitos"}><DashboardLayout><Habits /></DashboardLayout></Route>
-      <Route path={"/movimientos"}><DashboardLayout><Records /></DashboardLayout></Route>
-      <Route path={"/cuentas"}><DashboardLayout><Accounts /></DashboardLayout></Route>
-      <Route path={"/planificacion"}><DashboardLayout><Planning /></DashboardLayout></Route>
-      <Route path={"/proyectos"}><DashboardLayout><Projects /></DashboardLayout></Route>
-      <Route path={"/viajes"}><DashboardLayout><Travels /></DashboardLayout></Route>
-      <Route path={"/score"}><DashboardLayout><Score /></DashboardLayout></Route>
-      <Route path={"/calidad"}><DashboardLayout><Quality /></DashboardLayout></Route>
-      <Route path={"/asistente"}><DashboardLayout><RouteLoader><Assistant /></RouteLoader></DashboardLayout></Route>
-      <Route path={"/analitica"}><DashboardLayout><Analytics /></DashboardLayout></Route>
-      <Route path={"/calendario"}><DashboardLayout><Calendar /></DashboardLayout></Route>
-      <Route path={"/estados"}><DashboardLayout><Statements /></DashboardLayout></Route>
-      <Route path={"/control-mensual"}><DashboardLayout><MonthlyControl /></DashboardLayout></Route>
-      <Route path={"/simulaciones"}><DashboardLayout><Simulations /></DashboardLayout></Route>
-      <Route path={"/exportar"}><DashboardLayout><Reports /></DashboardLayout></Route>
-      <Route path={"/espacio"}><DashboardLayout><Workspace /></DashboardLayout></Route>
-      <Route path={"/revision"}><DashboardLayout><Review /></DashboardLayout></Route>
-      <Route path={"/notificaciones"}><DashboardLayout><Notifications /></DashboardLayout></Route>
-      <Route path={"/contactos"}><DashboardLayout><Contacts /></DashboardLayout></Route>
-      <Route path={"/inversiones"}><DashboardLayout><Investments /></DashboardLayout></Route>
-      <Route path={"/patrimonio"}><DashboardLayout><Patrimony /></DashboardLayout></Route>
-      <Route path={"/tarjetas"}><DashboardLayout><CreditCards /></DashboardLayout></Route>
-      <Route path={"/fiscal"}><DashboardLayout><Fiscal /></DashboardLayout></Route>
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
+      <Route path="/restablecer-contrasena" component={PasswordReset} />
+      <Route path="/offline" component={Offline} />
+      <Route path="/seguridad/cambiar-contrasena"><PrivatePage><ChangePassword /></PrivatePage></Route>
+      <Route path="/datos-offline"><PrivatePage><OfflineData /></PrivatePage></Route>
+      <Route path="/"><PrivatePage><Home /></PrivatePage></Route>
+      <Route path="/todo"><PrivatePage><ToDo /></PrivatePage></Route>
+      <Route path="/habitos"><PrivatePage><Habits /></PrivatePage></Route>
+      <Route path="/movimientos"><PrivatePage><Records /></PrivatePage></Route>
+      <Route path="/cuentas"><PrivatePage><Accounts /></PrivatePage></Route>
+      <Route path="/planificacion"><PrivatePage><Planning /></PrivatePage></Route>
+      <Route path="/proyectos"><PrivatePage><Projects /></PrivatePage></Route>
+      <Route path="/viajes"><PrivatePage><Travels /></PrivatePage></Route>
+      <Route path="/score"><PrivatePage><Score /></PrivatePage></Route>
+      <Route path="/calidad"><PrivatePage><Quality /></PrivatePage></Route>
+      <Route path="/asistente"><PrivatePage><Assistant /></PrivatePage></Route>
+      <Route path="/analitica"><PrivatePage><Analytics /></PrivatePage></Route>
+      <Route path="/calendario"><PrivatePage><Calendar /></PrivatePage></Route>
+      <Route path="/estados"><PrivatePage><Statements /></PrivatePage></Route>
+      <Route path="/control-mensual"><PrivatePage><MonthlyControl /></PrivatePage></Route>
+      <Route path="/simulaciones"><PrivatePage><Simulations /></PrivatePage></Route>
+      <Route path="/exportar"><PrivatePage><Reports /></PrivatePage></Route>
+      <Route path="/espacio"><PrivatePage><Workspace /></PrivatePage></Route>
+      <Route path="/revision"><PrivatePage><Review /></PrivatePage></Route>
+      <Route path="/notificaciones"><PrivatePage><Notifications /></PrivatePage></Route>
+      <Route path="/contactos"><PrivatePage><Contacts /></PrivatePage></Route>
+      <Route path="/inversiones"><PrivatePage><Investments /></PrivatePage></Route>
+      <Route path="/patrimonio"><PrivatePage><Patrimony /></PrivatePage></Route>
+      <Route path="/tarjetas"><PrivatePage><CreditCards /></PrivatePage></Route>
+      <Route path="/fiscal"><PrivatePage><Fiscal /></PrivatePage></Route>
+      <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />

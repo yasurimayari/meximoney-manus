@@ -55,7 +55,7 @@ export function calculateBudgetVsActual(snapshot: any, reportCurrency: string): 
       });
     } else {
       (snapshot.transactions ?? []).forEach((transaction: any) => {
-        if (transaction.type !== type || transaction.reviewStatus !== "approved" || !isSameMonth(transaction.occurredAt, budget.periodStart) || !matchesBudgetScope(transaction, budget)) return;
+        if (transaction.type !== type || transaction.status !== "confirmed" || transaction.reviewStatus !== "approved" || !isSameMonth(transaction.occurredAt, budget.periodStart) || !matchesBudgetScope(transaction, budget)) return;
         if (budget.categoryId ? transaction.categoryId !== budget.categoryId : transaction.categoryId !== null) return;
         const amount = comparableTransactionAmountCents(transaction, reportCurrency);
         if (amount === null) {

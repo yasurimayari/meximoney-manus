@@ -10,6 +10,7 @@ describe("bóveda offline personal", () => {
       categories: [], investmentOperations: [], goals: [], statements: [], fiscalRecords: [], tasks: [{ id: 9, title: "Revisar presupuesto" }], travelPlans: [{ id: 10, name: "Viaje de trabajo" }],
       documents: [{ id: 8, name: "Factura", referenceUrl: "https://private/link", fileUrl: "https://private/file", fileKey: "documentos/privado.pdf", notes: "detalle privado" }],
     });
+    expect(snapshot.version).toBe(2);
     expect(snapshot.profile).toMatchObject({ workspaceName: "Personal", currency: "MXN" });
     expect(snapshot.profile).not.toHaveProperty("birthDate");
     expect(snapshot.profile).not.toHaveProperty("contactEmail");

@@ -15,13 +15,17 @@ function reportAmountCents(item: any, currency: string | null) {
   return null;
 }
 
+function isConfirmedApproved(item: any) {
+  return item.status === "confirmed" && item.reviewStatus === "approved";
+}
+
 export function buildMonthlySeries(snapshot: FinanceSnapshot, months: number, referenceDate = new Date()) {
   const now = referenceDate;
   const currency = reportCurrency(snapshot);
   const anchors = Array.from({ length: months }, (_, index) => new Date(now.getFullYear(), now.getMonth() - (months - 1 - index), 1));
   return anchors.map(anchor => {
     const key = monthKey(anchor);
-    const transactions = snapshot.transactions.filter((transaction: any) => monthKey(new Date(transaction.occurredAt)) === key);
+    const transactions = snapshot.transactions.filter((transaction: any) => isConfirmedApproved(transaction) && monthKey(new Date(transaction.occurredAt)) === key);
     const incomeCents = transactions.filter((transaction: any) => transaction.type === "income").reduce((total: number, transaction: any) => total + (reportAmountCents(transaction, currency) ?? 0), 0);
     const expenseCents = transactions.filter((transaction: any) => transaction.type === "expense").reduce((total: number, transaction: any) => total + (reportAmountCents(transaction, currency) ?? 0), 0);
     return {
@@ -42,7 +46,7 @@ export function buildExpenseCategories(snapshot: FinanceSnapshot) {
   const categoryNames = new Map<number, string>(snapshot.categories.map((category: any) => [category.id, category.name]));
   const values = new Map<string, number>();
   const currency = reportCurrency(snapshot);
-  snapshot.transactions.filter((transaction: any) => transaction.type === "expense").forEach((transaction: any) => {
+  snapshot.transactions.filter((transaction: any) => isConfirmedApproved(transaction) && transaction.type === "expense").forEach((transaction: any) => {
     const amountCents = reportAmountCents(transaction, currency);
     if (amountCents === null) return;
     const label = categoryNames.get(transaction.categoryId) || "Sin clasificar";

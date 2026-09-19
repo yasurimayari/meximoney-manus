@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
+import { clearOfflineVault, getOfflineVaultOwnerId } from "@/lib/offlineVault";
 import { notificationBadgeLabel, unreadNotificationCount } from "@/lib/notificationBadge";
 import { ArrowLeftRight, Award, BarChart3, BellRing, BotMessageSquare, CalendarDays, ChevronDown, ChevronRight, CircleCheckBig, CloudDownload, ContactRound, CreditCard, EyeOff, FileDown, FolderKanban, KeyRound, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck, ReceiptText, Calculator, Plane, ListChecks, HeartPulse } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
@@ -177,7 +178,7 @@ function DashboardLayoutContent({
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
-  const { state, toggleSidebar } = useSidebar();
+  const { state, toggleSidebar, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const [openNavigationGroups, setOpenNavigationGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(primaryMenuGroups.map(group => [group.label, true])));
@@ -186,6 +187,23 @@ function DashboardLayoutContent({
   const isMobile = useIsMobile();
   const { data: notificationData } = trpc.finance.notifications.get.useQuery(undefined, { enabled: Boolean(user) });
   const unreadNotifications = notificationData ? unreadNotificationCount(notificationData.notifications) : 0;
+
+  const navigate = (path: string) => {
+    setOpenMobile(false);
+    setLocation(path);
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    getOfflineVaultOwnerId().then(ownerId => {
+      if (ownerId && ownerId !== user.id) void clearOfflineVault();
+    }).catch(() => undefined);
+  }, [user?.id]);
+
+  const handleLogout = async () => {
+    await clearOfflineVault().catch(() => undefined);
+    await logout();
+  };
 
   useEffect(() => {
     if (isCollapsed) {
@@ -262,7 +280,7 @@ function DashboardLayoutContent({
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      onClick={() => setLocation(item.path)}
+                      onClick={() => navigate(item.path)}
                       tooltip={isNotificationsItem && unreadNotifications ? `${item.label}: ${notificationLabel}` : item.label}
                       aria-label={isNotificationsItem ? `${item.label}. ${notificationLabel}` : item.label}
                       className={`h-10 transition-all font-normal`}
@@ -301,35 +319,35 @@ function DashboardLayoutContent({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => setLocation("/calidad")} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => navigate("/calidad")} className="cursor-pointer">
                   <CircleCheckBig className="mr-2 h-4 w-4" />
                   <span>Calidad, perfil y privacidad</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLocation("/seguridad/cambiar-contrasena")} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => navigate("/seguridad/cambiar-contrasena")} className="cursor-pointer">
                   <KeyRound className="mr-2 h-4 w-4" />
                   <span>Cambiar contraseña</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLocation("/notificaciones")} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => navigate("/notificaciones")} className="cursor-pointer">
                   <BellRing className="mr-2 h-4 w-4" />
                   <span>Notificaciones</span>
                   {unreadNotifications ? <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[0.62rem] font-bold text-primary-foreground">{notificationBadgeLabel(unreadNotifications)}</span> : null}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLocation("/datos-offline")} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => navigate("/datos-offline")} className="cursor-pointer">
                   <CloudDownload className="mr-2 h-4 w-4" />
                   <span>Datos offline</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLocation("/espacio")} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => navigate("/espacio")} className="cursor-pointer">
                   <Settings2 className="mr-2 h-4 w-4" />
                   <span>Espacio</span>
                 </DropdownMenuItem>
                 {accountMenuItems.map(item => (
-                  <DropdownMenuItem key={item.path} onClick={() => setLocation(item.path)} className="cursor-pointer">
+                  <DropdownMenuItem key={item.path} onClick={() => navigate(item.path)} className="cursor-pointer">
                     <item.icon className="mr-2 h-4 w-4" />
                     <span>{item.label}</span>
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuItem
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="mr-2 h-4 w-4" />

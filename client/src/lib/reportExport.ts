@@ -14,6 +14,10 @@ function download(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function isConfirmedApproved(transaction: any) {
+  return transaction.status === "confirmed" && transaction.reviewStatus === "approved";
+}
+
 export function buildTransactionsCsv(snapshot: any) {
   const categories = new Map(snapshot.categories.map((category: any) => [category.id, category.name]));
   const accounts = new Map(snapshot.accounts.map((account: any) => [account.id, account.name]));
@@ -42,12 +46,15 @@ export function buildFinancialReportSummary(snapshot: any) {
   const periodStart = new Date(snapshot.dashboard?.periodStart || new Date());
   const periodEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 1);
   const reportAmount = (transaction: any) => transaction.reportCurrency === reportCurrency && typeof transaction.reportAmountCents === "number" ? transaction.reportAmountCents : transaction.currency === reportCurrency ? transaction.amountCents : null;
-  const periodTransactions = snapshot.transactions.filter((transaction: any) => new Date(transaction.occurredAt) >= periodStart && new Date(transaction.occurredAt) < periodEnd);
+  const periodTransactions = snapshot.transactions.filter((transaction: any) => isConfirmedApproved(transaction) && new Date(transaction.occurredAt) >= periodStart && new Date(transaction.occurredAt) < periodEnd);
   const incomeCents = periodTransactions.filter((transaction: any) => transaction.type === "income").reduce((total: number, transaction: any) => total + (reportAmount(transaction) ?? 0), 0);
   const expenseCents = periodTransactions.filter((transaction: any) => transaction.type === "expense").reduce((total: number, transaction: any) => total + (reportAmount(transaction) ?? 0), 0);
   const pendingConversionCount = periodTransactions.filter((transaction: any) => (transaction.type === "income" || transaction.type === "expense") && reportAmount(transaction) === null).length;
   const activeAccounts = snapshot.accounts.filter((account: any) => account.status === "active" && account.currency === reportCurrency);
-  const activeDebts = snapshot.debts.filter((debt: any) => (debt.status === "active" || debt.status === "review") && debt.currency === reportCurrency);
+  const activeDebts = [
+    ...snapshot.debts.filter((debt: any) => (debt.status === "active" || debt.status === "review") && debt.currency === reportCurrency),
+    ...(snapshot.creditCards ?? []).filter((card: any) => card.status === "active" && card.currency === reportCurrency && Number(card.balanceCents ?? 0) > 0),
+  ];
   const cashFlow = { incomeCents, expenseCents, netCashFlowCents: incomeCents - expenseCents, pendingConversionCount };
   const netWorth: { assetCents: number; liabilityCents: number; netWorthCents: number } = { assetCents: activeAccounts.reduce((total: number, account: any) => total + account.currentValueCents, 0), liabilityCents: activeDebts.reduce((total: number, debt: any) => total + debt.balanceCents, 0), netWorthCents: 0 };
   const liquidity = { liquidCents: activeAccounts.filter((account: any) => account.isLiquid).reduce((total: number, account: any) => total + account.currentValueCents, 0) };
@@ -107,7 +114,7 @@ export async function exportFinancialPdf(snapshot: any) {
   document.text("Movimientos recientes", 44, y);
   y += 22;
   document.setFontSize(9);
-  const recent = snapshot.transactions.slice().sort((a: any, b: any) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()).slice(0, 16);
+  const recent = snapshot.transactions.filter(isConfirmedApproved).slice().sort((a: any, b: any) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()).slice(0, 16);
   const entities = new Map((snapshot.entities ?? []).map((entity: any) => [entity.id, entity.shortCode || entity.name]));
   const projects = new Map((snapshot.projects ?? []).map((project: any) => [project.id, project.name]));
   if (recent.length === 0) {

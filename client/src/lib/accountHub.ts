@@ -62,10 +62,10 @@ function movementAmountDelta(transaction: any) {
   return transaction.type === "income" || transaction.type === "transfer_in" ? amountCents : transaction.type === "expense" || transaction.type === "transfer_out" ? -amountCents : 0;
 }
 
-export function deriveAccountBalance(account: { id: number; currentValueCents: number | string; valuationDate?: Date | string | null }, transactions: any[]): DerivedAccountBalance {
+export function deriveAccountBalance(account: { id: number; currentValueCents: number | string; manualValueCents?: number | string | null; valuationDate?: Date | string | null }, transactions: any[]): DerivedAccountBalance {
   const referenceDate = account.valuationDate ?? null;
   const referenceTime = referenceDate ? new Date(referenceDate).getTime() : Number.NaN;
-  const referenceBalanceCents = Number(account.currentValueCents ?? 0);
+  const referenceBalanceCents = Number(account.manualValueCents ?? account.currentValueCents ?? 0);
   const accountMovements = transactions.filter(transaction => transaction.accountId === account.id && isConfirmedMovement(transaction));
   const reconstructedFromHistory = referenceBalanceCents === 0 && accountMovements.length > 0;
   const movements = accountMovements.filter(transaction => reconstructedFromHistory || Number.isNaN(referenceTime) || new Date(transaction.occurredAt).getTime() >= referenceTime);

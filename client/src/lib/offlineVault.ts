@@ -1,17 +1,27 @@
 const OFFLINE_DATABASE = "meximoney-offline-vault";
 const OFFLINE_STORE = "vault";
 const OFFLINE_RECORD_ID = "personal-finance-snapshot";
+const OFFLINE_SCHEMA_VERSION = 2;
 const ITERATIONS = 250_000;
+const MAX_FAILED_ATTEMPTS = 5;
+const MAX_LOCK_MS = 15 * 60 * 1000;
 const PWA_ICON_PATH = "/manus-storage/meximoney-pwa-icon_d935fd19.png";
 
 type EncryptedOfflineRecord = {
   id: string;
-  version: 1;
+  version: number;
+  ownerUserId: number;
   createdAt: string;
   salt: number[];
   iv: number[];
   ciphertext: number[];
-  summary: OfflineSnapshotSummary;
+  failedAttempts: number;
+  lockedUntil: number | null;
+};
+
+export type OfflineVaultStatus = {
+  ownerUserId: number;
+  cachedAt: string;
 };
 
 export type OfflineSnapshotSummary = {
@@ -28,7 +38,7 @@ export type OfflineSnapshotSummary = {
 };
 
 export type OfflineSnapshot = {
-  version: 1;
+  version: 2;
   cachedAt: string;
   profile: Record<string, unknown> | null;
   dashboard: unknown;
@@ -51,9 +61,11 @@ export type OfflineSnapshot = {
 
 function openVaultDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(OFFLINE_DATABASE, 1);
+    const request = indexedDB.open(OFFLINE_DATABASE, OFFLINE_SCHEMA_VERSION);
     request.onerror = () => reject(request.error ?? new Error("No fue posible abrir el almacenamiento local."));
-    request.onupgradeneeded = () => request.result.createObjectStore(OFFLINE_STORE, { keyPath: "id" });
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(OFFLINE_STORE)) request.result.createObjectStore(OFFLINE_STORE, { keyPath: "id" });
+    };
     request.onsuccess = () => resolve(request.result);
   });
 }
@@ -74,6 +86,15 @@ async function getRecord() {
   }
 }
 
+async function putRecord(record: EncryptedOfflineRecord) {
+  const database = await openVaultDatabase();
+  try {
+    await requestResult(database.transaction(OFFLINE_STORE, "readwrite").objectStore(OFFLINE_STORE).put(record));
+  } finally {
+    database.close();
+  }
+}
+
 function safeProfile(profile: any) {
   if (!profile) return null;
   const { avatarKey, avatarUrl, birthDate, contactEmail, residenceCity, residenceCountry, taxResidence, notes, ...safe } = profile;
@@ -88,7 +109,7 @@ function safeDocument(document: any) {
 export function createOfflineSnapshot(source: any): OfflineSnapshot {
   const cachedAt = new Date().toISOString();
   return {
-    version: 1,
+    version: 2,
     cachedAt,
     profile: safeProfile(source?.profile),
     dashboard: source?.dashboard ?? null,
@@ -110,7 +131,7 @@ export function createOfflineSnapshot(source: any): OfflineSnapshot {
   };
 }
 
-function summaryFor(snapshot: OfflineSnapshot): OfflineSnapshotSummary {
+export function offlineSnapshotSummary(snapshot: OfflineSnapshot) {
   return {
     cachedAt: snapshot.cachedAt,
     accounts: snapshot.accounts.length,
@@ -140,39 +161,50 @@ function requireSecureLocalEnvironment() {
   if (!globalThis.isSecureContext || !globalThis.crypto?.subtle || !globalThis.indexedDB) throw new Error("La bóveda offline requiere un navegador moderno y una conexión HTTPS segura.");
 }
 
-export async function saveOfflineSnapshot(source: any, pin: string) {
+export async function saveOfflineSnapshot(source: any, pin: string, ownerUserId: number) {
   requireSecureLocalEnvironment();
   if (pin.length < 8) throw new Error("Usa un código local de al menos 8 caracteres.");
+  if (!Number.isInteger(ownerUserId) || ownerUserId <= 0) throw new Error("No se pudo vincular la copia con tu cuenta.");
   const snapshot = createOfflineSnapshot(source);
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(pin, salt);
   const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: cryptoBuffer(iv) }, key, new TextEncoder().encode(JSON.stringify(snapshot))));
-  const record: EncryptedOfflineRecord = { id: OFFLINE_RECORD_ID, version: 1, createdAt: snapshot.cachedAt, salt: Array.from(salt), iv: Array.from(iv), ciphertext: Array.from(ciphertext), summary: summaryFor(snapshot) };
-  const database = await openVaultDatabase();
-  try {
-    await requestResult(database.transaction(OFFLINE_STORE, "readwrite").objectStore(OFFLINE_STORE).put(record));
-  } finally {
-    database.close();
-  }
+  const record: EncryptedOfflineRecord = { id: OFFLINE_RECORD_ID, version: OFFLINE_SCHEMA_VERSION, ownerUserId, createdAt: snapshot.cachedAt, salt: Array.from(salt), iv: Array.from(iv), ciphertext: Array.from(ciphertext), failedAttempts: 0, lockedUntil: null };
+  await putRecord(record);
   cachePersonalAppShell();
-  return record.summary;
+  return offlineSnapshotSummary(snapshot);
 }
 
-export async function getOfflineVaultSummary() {
-  return (await getRecord())?.summary ?? null;
+export async function getOfflineVaultStatus(): Promise<OfflineVaultStatus | null> {
+  const record = await getRecord();
+  if (!record || record.version !== OFFLINE_SCHEMA_VERSION || !record.ownerUserId) return null;
+  return { ownerUserId: record.ownerUserId, cachedAt: record.createdAt };
 }
 
-export async function unlockOfflineSnapshot(pin: string): Promise<OfflineSnapshot> {
+export async function getOfflineVaultOwnerId() {
+  return (await getOfflineVaultStatus())?.ownerUserId ?? null;
+}
+
+export async function unlockOfflineSnapshot(pin: string, expectedOwnerUserId?: number): Promise<OfflineSnapshot> {
   requireSecureLocalEnvironment();
   const record = await getRecord();
-  if (!record) throw new Error("No hay una copia offline guardada en este dispositivo.");
+  if (!record || record.version !== OFFLINE_SCHEMA_VERSION) throw new Error("La copia offline necesita actualizarse desde Meximoney en línea.");
+  if (expectedOwnerUserId && record.ownerUserId !== expectedOwnerUserId) throw new Error("Esta copia offline pertenece a otra cuenta y fue bloqueada para protegerla.");
+  if (record.lockedUntil && record.lockedUntil > Date.now()) {
+    const seconds = Math.ceil((record.lockedUntil - Date.now()) / 1000);
+    throw new Error(`La bóveda está temporalmente bloqueada. Inténtalo de nuevo en ${seconds} segundos.`);
+  }
   try {
     const key = await deriveKey(pin, new Uint8Array(record.salt));
     const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: cryptoBuffer(record.iv) }, key, cryptoBuffer(record.ciphertext));
     return JSON.parse(new TextDecoder().decode(decrypted)) as OfflineSnapshot;
   } catch {
-    throw new Error("El código local no coincide o la copia offline no puede abrirse.");
+    const failedAttempts = record.failedAttempts + 1;
+    const shouldLock = failedAttempts >= MAX_FAILED_ATTEMPTS;
+    const lockDuration = shouldLock ? Math.min(MAX_LOCK_MS, 30_000 * 2 ** Math.min(failedAttempts - MAX_FAILED_ATTEMPTS, 5)) : 0;
+    await putRecord({ ...record, failedAttempts, lockedUntil: shouldLock ? Date.now() + lockDuration : null });
+    throw new Error(shouldLock ? "Código incorrecto. La bóveda se bloqueó temporalmente por demasiados intentos." : "El código local no coincide o la copia offline no puede abrirse.");
   }
 }
 

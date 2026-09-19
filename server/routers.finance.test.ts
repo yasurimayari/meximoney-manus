@@ -242,7 +242,7 @@ describe("finance.dashboard", () => {
       transaction: async (callback: any) => callback({ select: () => ({ from: () => ({ where: () => [] }) }), insert: () => ({ values: inserted }), update: () => ({ set: () => ({ where: vi.fn() }) }) }),
     });
     const caller = appRouter.createCaller(createContext(91));
-    await caller.finance.workspace.transactionSave({ type: "income", scope: "business", amountCents: 15000, currency: "USD", reportCurrency: "MXN", reportAmountCents: 270000, exchangeRateMicros: 18000000, exchangeRateDate: Date.now(), incomeNature: "business_revenue", entityId: 4, projectId: null, accountId: null, categoryId: null, goalId: null, debtId: null, occurredAt: Date.now(), isEssential: false, status: "confirmed", transferGroupId: null, notes: "Cobro" });
+    await caller.finance.workspace.transactionSave({ type: "income", scope: "business", amountCents: 15000, currency: "USD", reportCurrency: "MXN", reportAmountCents: 270000, exchangeRateMicros: 18000000, exchangeRateDate: Date.now(), incomeNature: "business_revenue", entityId: null, projectId: null, accountId: null, categoryId: null, goalId: null, debtId: null, occurredAt: Date.now(), isEssential: false, status: "confirmed", transferGroupId: null, notes: "Cobro" });
 
     expect(inserted).toHaveBeenCalledWith(expect.objectContaining({ userId: 73, createdByUserId: 91, reviewStatus: "pending_review", status: "needs_review" }));
   });
@@ -349,6 +349,17 @@ describe("finance.dashboard", () => {
     const caller = appRouter.createCaller(createContext(91));
 
     await expect(caller.finance.workspace.revokeInvite({ inviteId: 81 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rechaza una referencia financiera que no pertenece al espacio antes de guardar", async () => {
+    const ownershipQuery = {
+      limit: vi.fn().mockResolvedValue([{ accepted: true }]),
+      then: (resolve: (value: unknown[]) => unknown, reject?: (reason: unknown) => unknown) => Promise.resolve([]).then(resolve, reject),
+    };
+    mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ownershipQuery }) }) });
+    const caller = appRouter.createCaller(createContext(27));
+
+    await expect(caller.finance.workspace.transactionSave({ type: "income", scope: "personal", amountCents: 1500, currency: "MXN", reportCurrency: "MXN", reportAmountCents: 1500, exchangeRateMicros: null, exchangeRateDate: null, incomeNature: "other", accountId: 999, categoryId: null, goalId: null, debtId: null, creditCardId: null, contactId: null, entityId: null, projectId: null, occurredAt: Date.now(), isEssential: false, status: "confirmed", transferGroupId: null, notes: "Referencia ajena" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("actualiza costo y valor de una posición existente al guardar una aportación", async () => {

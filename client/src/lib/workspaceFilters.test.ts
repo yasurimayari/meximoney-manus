@@ -54,7 +54,7 @@ describe("filterWorkspaceSnapshot", () => {
   });
 
   it("calcula el resumen del PDF únicamente desde las partidas filtradas y convertidas", () => {
-    const summary = buildFinancialReportSummary({ profile: { currency: "MXN" }, dashboard: { periodStart: new Date("2026-08-01"), reportCurrency: "MXN" }, accounts: [], debts: [], transactions: [{ occurredAt: new Date("2026-08-04"), type: "income", amountCents: 1000, currency: "MXN", reportCurrency: "MXN", reportAmountCents: 1000 }, { occurredAt: new Date("2026-08-04"), type: "income", amountCents: 2000, currency: "EUR", reportCurrency: "MXN", reportAmountCents: null }] });
+    const summary = buildFinancialReportSummary({ profile: { currency: "MXN" }, dashboard: { periodStart: new Date("2026-08-01"), reportCurrency: "MXN" }, accounts: [], debts: [], creditCards: [], transactions: [{ occurredAt: new Date("2026-08-04"), type: "income", amountCents: 1000, currency: "MXN", reportCurrency: "MXN", reportAmountCents: 1000, status: "confirmed", reviewStatus: "approved" }, { occurredAt: new Date("2026-08-04"), type: "income", amountCents: 2000, currency: "EUR", reportCurrency: "MXN", reportAmountCents: null, status: "confirmed", reviewStatus: "approved" }] });
     expect(summary.cashFlow.incomeCents).toBe(1000);
     expect(summary.cashFlow.pendingConversionCount).toBe(1);
   });

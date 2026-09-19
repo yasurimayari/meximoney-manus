@@ -61,6 +61,13 @@ describe("movimientos del centro de cuentas", () => {
     expect(balance).toMatchObject({ referenceBalanceCents: 0, movementDeltaCents: 125000, currentBalanceCents: 125000, includedMovementCount: 3, reconstructedFromHistory: true });
   });
 
+  it("usa la base manual cuando el snapshot ya trae el saldo efectivo calculado", () => {
+    const balance = deriveAccountBalance({ id: 13, currentValueCents: 150000, manualValueCents: 100000, valuationDate: new Date("2026-08-01T12:00:00Z") }, [
+      { accountId: 13, type: "income", amountCents: 50000, occurredAt: new Date("2026-08-02T12:00:00Z"), status: "confirmed", reviewStatus: "approved" },
+    ]);
+    expect(balance).toMatchObject({ referenceBalanceCents: 100000, currentBalanceCents: 150000, movementDeltaCents: 50000 });
+  });
+
   it("distingue con una señal visible los saldos favorables de cuentas y obligaciones", () => {
     expect(balanceSignal(1200)).toEqual({ tone: "positive", label: "Saldo positivo" });
     expect(balanceSignal(-1200)).toEqual({ tone: "negative", label: "Saldo negativo" });

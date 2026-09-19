@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   accounts,
@@ -42,6 +42,7 @@ import {
   financialProjects,
   financialTransactions,
   financialTransactionReviewEvents,
+  localCredentials,
   investments,
   investmentOperations,
   InsertUser,
@@ -166,6 +167,18 @@ export async function requireDb() {
   return db;
 }
 
+export async function isPrivateStorageKeyOwned(userId: number, key: string) {
+  const db = await requireDb();
+  const [profile, document, ocr, report, attachment] = await Promise.all([
+    db.select({ id: financialProfiles.id }).from(financialProfiles).where(and(eq(financialProfiles.userId, userId), eq(financialProfiles.avatarKey, key))).limit(1),
+    db.select({ id: financeDocuments.id }).from(financeDocuments).where(and(eq(financeDocuments.userId, userId), eq(financeDocuments.fileKey, key))).limit(1),
+    db.select({ id: documentOcrExtractions.id }).from(documentOcrExtractions).where(and(eq(documentOcrExtractions.userId, userId), eq(documentOcrExtractions.sourceFileKey, key))).limit(1),
+    db.select({ id: creditReports.id }).from(creditReports).where(and(eq(creditReports.userId, userId), eq(creditReports.fileKey, key))).limit(1),
+    db.select({ id: assistantNoteAttachments.id }).from(assistantNoteAttachments).where(and(eq(assistantNoteAttachments.userId, userId), eq(assistantNoteAttachments.fileKey, key))).limit(1),
+  ]);
+  return Boolean(profile[0] || document[0] || ocr[0] || report[0] || attachment[0]);
+}
+
 export async function getProfile(userId: number) {
   const db = await requireDb();
   const rows = await db.select().from(financialProfiles).where(eq(financialProfiles.userId, userId)).limit(1);
@@ -254,7 +267,17 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
   const { start, end } = monthBounds(referenceDate);
   const reportCurrency = (profile?.currency || "MXN").toUpperCase();
   const cashFlow = withNetCashFlow(summarizeCashFlowInReportCurrency(transactionRows, start, end, reportCurrency));
-  const reportCurrencyAccounts = accountRows.filter(item => item.currency === reportCurrency);
+  const effectiveAccountRows = accountRows.map(account => {
+    const referenceBalanceCents = Number(account.currentValueCents ?? 0);
+    const referenceTime = account.valuationDate ? new Date(account.valuationDate).getTime() : Number.NaN;
+    const accountMovements = transactionRows.filter(transaction => transaction.accountId === account.id && transaction.status === "confirmed" && transaction.reviewStatus === "approved");
+    const reconstructFromHistory = referenceBalanceCents === 0 && accountMovements.length > 0;
+    const movementDeltaCents = accountMovements
+      .filter(transaction => reconstructFromHistory || Number.isNaN(referenceTime) || new Date(transaction.occurredAt).getTime() >= referenceTime)
+      .reduce((total, transaction) => total + (transaction.type === "income" || transaction.type === "transfer_in" ? transaction.amountCents : transaction.type === "expense" || transaction.type === "transfer_out" ? -transaction.amountCents : 0), 0);
+    return { ...account, manualValueCents: account.currentValueCents, currentValueCents: referenceBalanceCents + movementDeltaCents };
+  });
+  const reportCurrencyAccounts = effectiveAccountRows.filter(item => item.currency === reportCurrency);
   const reportCurrencyInvestments = investmentRows.map(item => ({ item, valueCents: comparableInvestmentValueCents(item, reportCurrency) })).filter((item): item is { item: typeof investmentRows[number]; valueCents: number } => item.valueCents !== null).map(({ item, valueCents }) => ({ ...item, currency: reportCurrency, currentValueCents: valueCents, isLiquid: false }));
   const investmentNetWorthAssets = reportCurrencyInvestments.map(item => ({ currentValueCents: item.currentValueCents, status: "active" as const }));
   const reportCurrencyDebts = [...debtRows, ...creditCardRows.filter(card => card.status !== "closed").map(card => ({ ...card, balanceCents: card.balanceCents, status: "active" as const }))].filter(item => item.currency === reportCurrency);
@@ -319,7 +342,7 @@ export async function getFinanceSnapshot(userId: number, referenceDate = new Dat
     collaborationAudit: access.role === "owner" ? auditRows : [],
     contacts: contactRows,
     qualityAcknowledgements: qualityAcknowledgementRows,
-    accounts: accountRows,
+    accounts: effectiveAccountRows,
     categories: categoryRows,
     transactions: transactionRows,
     transactionReviewEvents: visibleTransactionReviewEvents,
@@ -374,6 +397,7 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(financialHabitCheckins).where(eq(financialHabitCheckins.userId, userId));
     await tx.delete(financialHabits).where(eq(financialHabits.userId, userId));
     await tx.delete(financialHabitPreferences).where(eq(financialHabitPreferences.userId, userId));
+    await tx.delete(localCredentials).where(eq(localCredentials.userId, userId));
     await tx.delete(assistantChatHistory).where(eq(assistantChatHistory.userId, userId));
     await tx.delete(assistantNoteAttachments).where(eq(assistantNoteAttachments.userId, userId));
     await tx.delete(assistantNotes).where(eq(assistantNotes.userId, userId));
@@ -425,8 +449,11 @@ export async function deleteAllFinancialData(userId: number) {
     await tx.delete(categories).where(eq(categories.userId, userId));
     await tx.delete(accounts).where(eq(accounts.userId, userId));
     await tx.delete(financialProfiles).where(eq(financialProfiles.userId, userId));
-    await tx.delete(workspaceAuditEvents).where(eq(workspaceAuditEvents.ownerId, userId));
-    await tx.delete(collaborationInvites).where(eq(collaborationInvites.ownerId, userId));
+    await tx.delete(exchangeRates).where(eq(exchangeRates.ownerId, userId));
+    await tx.delete(financialProjects).where(eq(financialProjects.ownerId, userId));
+    await tx.delete(workspaceEntities).where(eq(workspaceEntities.ownerId, userId));
+    await tx.delete(workspaceAuditEvents).where(or(eq(workspaceAuditEvents.ownerId, userId), eq(workspaceAuditEvents.actorUserId, userId)));
+    await tx.delete(collaborationInvites).where(or(eq(collaborationInvites.ownerId, userId), eq(collaborationInvites.invitedByUserId, userId), eq(collaborationInvites.acceptedByUserId, userId)));
     await tx.delete(financeNotifications).where(eq(financeNotifications.userId, userId));
     await tx.delete(notificationPreferences).where(eq(notificationPreferences.userId, userId));
     await tx.delete(privacyConsents).where(eq(privacyConsents.userId, userId));

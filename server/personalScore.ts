@@ -7,6 +7,7 @@ export type PersonalScoreInput = {
   incomeCents: number;
   expenseCents: number;
   recentTransactionCount: number;
+  habitsOptIn?: boolean;
   principalPaidLast30DaysCents: number;
   outstandingDebtCents: number;
 };
@@ -82,7 +83,7 @@ export function calculatePersonalScore(input: PersonalScoreInput): PersonalScore
     creditScorePoints: creditScorePoints(input.creditScore),
     emergencyFundPoints: Math.min(150, Math.max(0, Math.round((input.emergencyFundCents / 60_000_00) * 150))),
     cashFlowPoints: input.incomeCents > 0 && input.incomeCents > input.expenseCents ? 100 : 0,
-    habitPoints: input.recentTransactionCount > 0 ? 100 : 0,
+    habitPoints: input.habitsOptIn === true && input.recentTransactionCount > 0 ? 100 : 0,
     debtPaymentPoints: payment.points,
   };
   const totalScore = Object.values(factors).reduce((total, points) => total + points, 0);
