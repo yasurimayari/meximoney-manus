@@ -5,7 +5,7 @@ const OFFLINE_SCHEMA_VERSION = 2;
 const ITERATIONS = 250_000;
 const MAX_FAILED_ATTEMPTS = 5;
 const MAX_LOCK_MS = 15 * 60 * 1000;
-const PWA_ICON_PATH = "/manus-storage/meximoney-pwa-icon_d935fd19.png";
+const PWA_ICON_PATH = "/manus-storage/richeon-pwa-icon-192_11693d42.png";
 
 type EncryptedOfflineRecord = {
   id: string;

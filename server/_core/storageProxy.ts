@@ -3,7 +3,7 @@ import { sdk } from "./sdk";
 import { isPrivateStorageKeyOwned } from "../db";
 import { storageGetSignedUrl } from "../storage";
 
-const PUBLIC_STORAGE_KEY = /^meximoney-pwa-icon_[a-z0-9]+\.png$/i;
+const PUBLIC_STORAGE_KEY = /^richeon-pwa-icon-(?:192|512|180)_[a-z0-9]+\.png$/i;
 
 export function registerStorageProxy(app: Express) {
   app.get("/manus-storage/*", async (req, res) => {

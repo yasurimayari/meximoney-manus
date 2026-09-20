@@ -1,4 +1,4 @@
-const PWA_ICON_PATH = "/manus-storage/meximoney-pwa-icon_d935fd19.png";
+const PWA_ICON_PATH = "/manus-storage/richeon-pwa-icon-192_11693d42.png";
 const PWA_NOTIFICATIONS_ENABLED_KEY = "meximoney:pwa-notifications-enabled";
 
 export type PwaNotificationPermission = NotificationPermission | "unsupported";

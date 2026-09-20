@@ -1,9 +1,13 @@
-const CACHE_NAME = "meximoney-personal-shell-v95";
-const PWA_ICON_PATH = "/manus-storage/meximoney-pwa-icon_d935fd19.png";
-const APP_SHELL = ["/offline", "/manifest.webmanifest", PWA_ICON_PATH];
+const CACHE_NAME = "meximoney-personal-shell-v96";
+const PWA_ICON_PATHS = [
+  "/manus-storage/richeon-pwa-icon-192_11693d42.png",
+  "/manus-storage/richeon-pwa-icon-512_1feed5d4.png",
+  "/manus-storage/richeon-pwa-icon-180_f8b383eb.png",
+];
+const APP_SHELL = ["/offline", "/manifest.webmanifest", ...PWA_ICON_PATHS];
 
 function isCacheablePath(url) {
-  return url.origin === self.location.origin && !url.pathname.startsWith("/api/") && (!url.pathname.startsWith("/manus-storage/") || url.pathname === PWA_ICON_PATH);
+  return url.origin === self.location.origin && !url.pathname.startsWith("/api/") && (!url.pathname.startsWith("/manus-storage/") || PWA_ICON_PATHS.includes(url.pathname));
 }
 
 self.addEventListener("install", event => {
