@@ -52,7 +52,6 @@ const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
-const PUBLISHED_HOST = "mexifinance-stkndi6z.manus.space";
 
 export default function DashboardLayout({
   children,
@@ -73,8 +72,6 @@ export default function DashboardLayout({
   if (loading) {
     return <DashboardLayoutSkeleton />
   }
-
-  if (import.meta.env.DEV || window.location.hostname.endsWith(".manus.computer")) return <PreviewRedirect />;
 
   if (!user) {
     return (
@@ -117,14 +114,6 @@ export default function DashboardLayout({
   );
 }
 
-function PreviewRedirect() {
-  useEffect(() => {
-    const redirect = window.setTimeout(() => window.location.replace(`https://${PUBLISHED_HOST}${window.location.pathname}${window.location.search}${window.location.hash}`), 900);
-    return () => window.clearTimeout(redirect);
-  }, []);
-  return <div className="auth-gate"><div className="auth-shell"><section className="auth-intro"><div className="auth-wordmark"><span className="auth-logo">M</span><span>Meximoney</span></div><p className="eyebrow">Vista temporal de desarrollo</p><h1>Abriendo el acceso <em>publicado.</em></h1><p>Esta dirección técnica utiliza una sesión independiente y no debe utilizarse para acceder a tus datos. Te dirigiremos al dominio publicado de Meximoney.</p><a href={`https://${PUBLISHED_HOST}`} className="mt-6 inline-flex rounded-lg border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20">Abrir Meximoney publicado ahora</a></section></div></div>;
-}
-
 function LocalAuthCard() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
@@ -163,7 +152,7 @@ function LocalAuthCard() {
     {mode === "login" ? <a href="/restablecer-contrasena" className="mt-3 block text-center text-sm font-semibold text-primary underline-offset-4 hover:underline">¿Olvidaste tu contraseña?</a> : null}
     <p className="mt-4 text-center text-sm text-muted-foreground">{mode === "login" ? <>¿Es tu primera vez? <button type="button" className="font-semibold text-primary underline-offset-4 hover:underline" onClick={() => setMode("register")}>Crear cuenta</button></> : <>¿Ya tienes cuenta? <button type="button" className="font-semibold text-primary underline-offset-4 hover:underline" onClick={() => setMode("login")}>Iniciar sesión</button></>}</p>
     <div className="auth-card-footer"><span>0 conexiones bancarias</span><i /> <span>0 pagos ejecutados</span></div>
-    <details className="mt-5 rounded-xl border border-primary/15 bg-primary/[0.035] p-3 text-left text-xs leading-5 text-muted-foreground"><summary className="cursor-pointer font-semibold text-primary">Instalar Meximoney en tu móvil</summary><p className="mt-2">En iPhone, abre el dominio publicado en <strong>Safari</strong>, toca Compartir y elige «Añadir a pantalla de inicio». En Android, abre el mismo enlace en Chrome y elige «Instalar aplicación». No uses la vista previa de Manus para instalarla; es un contenedor técnico independiente.</p><p className="mt-2">La primera apertura será en línea. Una vez dentro, configura de forma voluntaria tu copia cifrada en <strong>Yasuri → Datos offline</strong> para consultar información sin Internet.</p></details>
+    <details className="mt-5 rounded-xl border border-primary/15 bg-primary/[0.035] p-3 text-left text-xs leading-5 text-muted-foreground"><summary className="cursor-pointer font-semibold text-primary">Instalar Meximoney en tu móvil</summary><p className="mt-2">En iPhone, abre el dominio publicado en <strong>Safari</strong>, toca Compartir y elige «Añadir a pantalla de inicio». En Android, abre el mismo enlace en Chrome y elige «Instalar aplicación».</p><p className="mt-2">La primera apertura será en línea. Una vez dentro, configura de forma voluntaria tu copia cifrada en <strong>Yasuri → Datos offline</strong> para consultar información sin Internet.</p></details>
   </section>;
 }
 

@@ -106,6 +106,7 @@ import { sdk } from "./_core/sdk";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 
+const PUBLISHED_HOST = "mexi.richeon.app";
 const scopeSchema = z.enum(["personal", "business", "mixed"]);
 const timeZoneSchema = z.string().trim().min(1).max(64).refine(value => { try { new Intl.DateTimeFormat("en-US", { timeZone: value }).format(); return true; } catch { return false; } }, "Zona horaria IANA inválida");
 const creditCardScopeSchema = z.enum(["personal", "pfae", "business", "mixed"]);
@@ -421,7 +422,7 @@ export const appRouter = router({
       await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, record[0].userId));
       await db.insert(passwordResetTokens).values({ userId: record[0].userId, tokenHash, expiresAt: new Date(Date.now() + 30 * 60 * 1000) });
       const host = ctx.req.get("host");
-      const baseUrl = host === "mexifinance-stkndi6z.manus.space" ? `https://${host}` : "https://mexifinance-stkndi6z.manus.space";
+      const baseUrl = host === PUBLISHED_HOST ? `https://${host}` : `https://${PUBLISHED_HOST}`;
       try {
         await sendPasswordResetEmail({ to: record[0].email, resetUrl: `${baseUrl}/restablecer-contrasena?token=${encodeURIComponent(rawToken)}` });
         await db.insert(passwordResetEvents).values({ userId: record[0].userId, eventType: "email_sent" });
@@ -532,7 +533,7 @@ export const appRouter = router({
         const db = await requireDb();
         const { entities, ...profile } = input;
         await db.transaction(async tx => {
-          await tx.insert(financialProfiles).values({ userId: ctx.workspaceAccess.ownerId, ...profile, onboardingCompleted: true, onboardingStep: 4 }).onDuplicateKeyUpdate({ set: { ...profile, onboardingCompleted: true, onboardingStep: 4 } });
+          await tx.insert(financialProfiles).values({ userId: ctx.workspaceAccess.ownerId, ...profile, onboardingCompleted: true, onboardingStep: 4 }).onConflictDoUpdate({ target: financialProfiles.userId, set: { ...profile, onboardingCompleted: true, onboardingStep: 4 } });
           const currentEntities = await tx.select({ id: workspaceEntities.id }).from(workspaceEntities).where(eq(workspaceEntities.ownerId, ctx.workspaceAccess.ownerId));
           if (currentEntities.length === 0) await tx.insert(workspaceEntities).values(entities.map(entity => ({ ownerId: ctx.workspaceAccess.ownerId, ...entity })));
         });
@@ -555,7 +556,7 @@ export const appRouter = router({
         await db.transaction(async tx => {
           let projectId = id;
           if (projectId) await tx.update(financialProjects).set(payload).where(and(eq(financialProjects.id, projectId), eq(financialProjects.ownerId, ctx.workspaceAccess.ownerId)));
-          else { const result = await tx.insert(financialProjects).values({ ownerId: ctx.workspaceAccess.ownerId, ...payload }); projectId = Number(result[0].insertId); }
+          else { const [result] = await tx.insert(financialProjects).values({ ownerId: ctx.workspaceAccess.ownerId, ...payload }).returning({ id: financialProjects.id }); projectId = result.id; }
           if (!projectId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No fue posible asociar el proyecto al objetivo." });
           if (previousGoalId && previousGoalId !== goalId) await tx.update(financialGoals).set({ projectId: null }).where(and(eq(financialGoals.userId, ctx.workspaceAccess.ownerId), eq(financialGoals.id, previousGoalId), eq(financialGoals.projectId, projectId)));
           if (goalId) await tx.update(financialGoals).set({ projectId }).where(and(eq(financialGoals.userId, ctx.workspaceAccess.ownerId), eq(financialGoals.id, goalId)));
@@ -1553,7 +1554,7 @@ export const appRouter = router({
         if (requiresPersonalProfileConsent(input, input.personalProfileConsent)) throw new TRPCError({ code: "BAD_REQUEST", message: "Confirma el consentimiento para guardar datos personales privados." });
         const db = await requireDb();
         const { futureTaxDueAt, birthDate, ...profileValues } = input;
-        await db.insert(financialProfiles).values({ userId: ctx.user.id, ...profileValues, birthDate: asDate(birthDate), futureTaxDueAt: asDate(futureTaxDueAt) }).onDuplicateKeyUpdate({ set: { ...profileValues, birthDate: asDate(birthDate), futureTaxDueAt: asDate(futureTaxDueAt) } });
+        await db.insert(financialProfiles).values({ userId: ctx.user.id, ...profileValues, birthDate: asDate(birthDate), futureTaxDueAt: asDate(futureTaxDueAt) }).onConflictDoUpdate({ target: financialProfiles.userId, set: { ...profileValues, birthDate: asDate(birthDate), futureTaxDueAt: asDate(futureTaxDueAt) } });
         return { success: true };
       }),
       uploadAvatar: privateFinanceProcedure.input(z.object({ dataUrl: z.string().min(32).max(1_600_000), confirmedPersonalDataConsent: z.literal(true) })).mutation(async ({ ctx, input }) => {
@@ -1564,7 +1565,7 @@ export const appRouter = router({
         const extension = match[1] === "image/jpeg" ? "jpg" : match[1].split("/")[1];
         const uploaded = await storagePut(`profiles/${ctx.user.id}/avatar.${extension}`, bytes, match[1]);
         const db = await requireDb();
-        await db.insert(financialProfiles).values({ userId: ctx.user.id, avatarKey: uploaded.key, avatarUrl: uploaded.url, personalProfileConsent: true }).onDuplicateKeyUpdate({ set: { avatarKey: uploaded.key, avatarUrl: uploaded.url, personalProfileConsent: true } });
+        await db.insert(financialProfiles).values({ userId: ctx.user.id, avatarKey: uploaded.key, avatarUrl: uploaded.url, personalProfileConsent: true }).onConflictDoUpdate({ target: financialProfiles.userId, set: { avatarKey: uploaded.key, avatarUrl: uploaded.url, personalProfileConsent: true } });
         return { url: uploaded.url };
       }),
       removeAvatar: privateFinanceProcedure.mutation(async ({ ctx }) => {
@@ -1598,14 +1599,12 @@ export const appRouter = router({
       }),
       savePreferences: privateFinanceProcedure.input(z.object({ inAppEnabled: z.boolean(), calendarEnabled: z.boolean(), documentsEnabled: z.boolean(), debtsEnabled: z.boolean(), reviewsEnabled: z.boolean(), budgetEnabled: z.boolean(), taxReserveEnabled: z.boolean(), travelsEnabled: z.boolean(), reminderDays: z.number().int().min(1).max(30), creditUtilizationThresholdPercent: z.number().int().min(1).max(100) })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
-        await db.insert(notificationPreferences).values({ userId: ctx.user.id, ...input }).onDuplicateKeyUpdate({ set: input });
+        await db.insert(notificationPreferences).values({ userId: ctx.user.id, ...input }).onConflictDoUpdate({ target: notificationPreferences.userId, set: input });
         return { success: true };
       }),
       setTelegramDaily: privateFinanceProcedure.input(z.object({ enabled: z.boolean() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
-        const [storedPreferences] = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, ctx.user.id)).limit(1);
-        if (input.enabled && !storedPreferences?.telegramScheduleCronTaskUid) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Telegram aún no tiene una programación diaria válida. La integración se habilitará cuando termine su configuración segura." });
-        await db.insert(notificationPreferences).values({ userId: ctx.user.id, telegramEnabled: input.enabled }).onDuplicateKeyUpdate({ set: { telegramEnabled: input.enabled } });
+        await db.insert(notificationPreferences).values({ userId: ctx.user.id, telegramEnabled: input.enabled }).onConflictDoUpdate({ target: notificationPreferences.userId, set: { telegramEnabled: input.enabled } });
         return { success: true };
       }),
       markRead: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
@@ -1756,7 +1755,7 @@ export const appRouter = router({
       }),
       savePreferences: privateFinanceProcedure.input(z.object({ enabled: z.boolean(), showOnDashboard: z.boolean() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
-        await db.insert(financialHabitPreferences).values({ userId: ctx.user.id, ...input }).onDuplicateKeyUpdate({ set: { ...input } });
+        await db.insert(financialHabitPreferences).values({ userId: ctx.user.id, ...input }).onConflictDoUpdate({ target: financialHabitPreferences.userId, set: { ...input } });
         return { success: true, ...input };
       }),
       saveHabit: privateFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), title: z.string().trim().min(1).max(140), cadence: z.enum(["daily", "weekly", "monthly"]), color: z.enum(["teal", "emerald", "sky", "indigo", "violet", "amber", "rose"]) })).mutation(async ({ ctx, input }) => {
@@ -1767,14 +1766,14 @@ export const appRouter = router({
           await db.update(financialHabits).set(payload).where(and(eq(financialHabits.id, id), eq(financialHabits.userId, ctx.user.id)));
           return { id, ...payload };
         }
-        const [created] = await db.insert(financialHabits).values({ userId: ctx.user.id, ...payload }).$returningId();
+        const [created] = await db.insert(financialHabits).values({ userId: ctx.user.id, ...payload }).returning({ id: financialHabits.id });
         return { id: created.id, ...payload };
       }),
       checkIn: privateFinanceProcedure.input(z.object({ habitId: z.number().int().positive(), completedAt: z.number().int().positive().optional(), note: z.string().trim().max(500).nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
         const [habit] = await db.select({ id: financialHabits.id, isActive: financialHabits.isActive }).from(financialHabits).where(and(eq(financialHabits.id, input.habitId), eq(financialHabits.userId, ctx.user.id))).limit(1);
         if (!habit || !habit.isActive) throw new TRPCError({ code: "NOT_FOUND", message: "El hábito no está activo." });
-        const [created] = await db.insert(financialHabitCheckins).values({ userId: ctx.user.id, habitId: input.habitId, completedAt: new Date(input.completedAt ?? Date.now()), note: input.note ?? null }).$returningId();
+        const [created] = await db.insert(financialHabitCheckins).values({ userId: ctx.user.id, habitId: input.habitId, completedAt: new Date(input.completedAt ?? Date.now()), note: input.note ?? null }).returning({ id: financialHabitCheckins.id });
         return { id: created.id, success: true };
       }),
       removeCheckin: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
@@ -1846,7 +1845,7 @@ export const appRouter = router({
           await db.update(financeDocuments).set(payload).where(and(eq(financeDocuments.id, id), eq(financeDocuments.userId, ctx.user.id)));
           return { success: true, id: existing.id };
         }
-        const [created] = await db.insert(financeDocuments).values({ userId: ctx.user.id, ...payload }).$returningId();
+        const [created] = await db.insert(financeDocuments).values({ userId: ctx.user.id, ...payload }).returning({ id: financeDocuments.id });
         return { success: true, id: created.id };
       }),
       remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
@@ -1869,7 +1868,7 @@ export const appRouter = router({
           try {
             const signedUrl = await storageGetSignedUrl(document.fileKey);
             const extraction = await extractDocumentOcr({ signedUrl, mimeType: document.fileMimeType as "application/pdf" | "image/jpeg" | "image/png", fileName: document.fileName || document.name });
-            const [stored] = await db.insert(documentOcrExtractions).values({ userId: ctx.user.id, documentId: document.id, sourceFileKey: document.fileKey, provider: OCR_PROVIDER, extraction }).$returningId();
+            const [stored] = await db.insert(documentOcrExtractions).values({ userId: ctx.user.id, documentId: document.id, sourceFileKey: document.fileKey, provider: OCR_PROVIDER, extraction }).returning({ id: documentOcrExtractions.id });
             return { id: stored.id, extraction };
           } catch (error) {
             const message = error instanceof Error ? error.message.slice(0, 950) : "No se pudo procesar el archivo.";
@@ -2096,8 +2095,8 @@ export const appRouter = router({
           await db.update(financialPlans).set(payload).where(and(eq(financialPlans.id, id), eq(financialPlans.userId, ctx.workspaceAccess.ownerId)));
           return { success: true, id };
         }
-        const result = await db.insert(financialPlans).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
-        return { success: true, id: Number(result[0].insertId) };
+        const [result] = await db.insert(financialPlans).values({ userId: ctx.workspaceAccess.ownerId, ...payload }).returning({ id: financialPlans.id });
+        return { success: true, id: result.id };
       }),
       remove: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede eliminar planes financieros." });
@@ -2383,8 +2382,8 @@ export const appRouter = router({
             if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "El viaje no pertenece a tu espacio privado." });
             await tx.update(travelPlans).set(payload).where(and(eq(travelPlans.id, savedPlanId), eq(travelPlans.userId, ctx.user.id)));
           } else {
-            const inserted = await tx.insert(travelPlans).values({ userId: ctx.user.id, ...payload });
-            savedPlanId = Number(inserted[0].insertId);
+            const [inserted] = await tx.insert(travelPlans).values({ userId: ctx.user.id, ...payload }).returning({ id: travelPlans.id });
+            savedPlanId = inserted.id;
           }
           if (participantIds !== undefined && savedPlanId) {
             await tx.delete(travelParticipants).where(and(eq(travelParticipants.travelPlanId, savedPlanId), eq(travelParticipants.userId, ctx.user.id)));
@@ -2441,9 +2440,9 @@ export const appRouter = router({
         create: privateFinanceProcedure.input(z.object({ title: z.string().trim().min(1).max(180), content: z.string().max(20000), tag: z.enum(["general", "impuestos", "inversiones", "presupuesto", "deudas", "patrimonio", "proyectos", "personal"]) })).mutation(async ({ ctx, input }) => {
           const db = await requireDb();
           const payload = { title: input.title, content: input.content, tag: input.tag, tagColor: assistantNoteColorByTag[input.tag] ?? "slate" };
-          const result = await db.insert(assistantNotes).values({ userId: ctx.user.id, ...payload });
+          const [result] = await db.insert(assistantNotes).values({ userId: ctx.user.id, ...payload }).returning({ id: assistantNotes.id });
           const now = new Date();
-          const id = Number(result[0].insertId);
+          const id = result.id;
           return { id, note: { id, userId: ctx.user.id, ...payload, isPinned: false, archivedAt: null, createdAt: now, updatedAt: now, attachments: [] } };
         }),
         save: privateFinanceProcedure.input(z.object({ id: z.number().int().positive(), title: z.string().trim().min(1).max(180), content: z.string().max(20000), tag: z.enum(["general", "impuestos", "inversiones", "presupuesto", "deudas", "patrimonio", "proyectos", "personal"]) })).mutation(async ({ ctx, input }) => {
@@ -2467,8 +2466,8 @@ export const appRouter = router({
             if (!noteRow) throw new TRPCError({ code: "NOT_FOUND", message: "La nota no pertenece a tu espacio privado." });
             const decoded = decodeAssistantAttachment(input);
             const { key, url } = await storagePut(`assistant-notes/${ctx.user.id}/${input.noteId}/${randomUUID()}-${decoded.safeFileName}`, decoded.bytes, decoded.mimeType);
-            const result = await db.insert(assistantNoteAttachments).values({ userId: ctx.user.id, noteId: input.noteId, fileKey: key, fileUrl: url, fileName: decoded.safeFileName, fileMimeType: decoded.mimeType, fileSizeBytes: decoded.bytes.byteLength });
-            return { id: Number(result[0].insertId), url, fileName: decoded.safeFileName };
+            const [result] = await db.insert(assistantNoteAttachments).values({ userId: ctx.user.id, noteId: input.noteId, fileKey: key, fileUrl: url, fileName: decoded.safeFileName, fileMimeType: decoded.mimeType, fileSizeBytes: decoded.bytes.byteLength }).returning({ id: assistantNoteAttachments.id });
+            return { id: result.id, url, fileName: decoded.safeFileName };
           }),
           remove: privateFinanceProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { const db = await requireDb(); await db.delete(assistantNoteAttachments).where(and(eq(assistantNoteAttachments.id, input.id), eq(assistantNoteAttachments.userId, ctx.user.id))); return { success: true }; }),
         }),

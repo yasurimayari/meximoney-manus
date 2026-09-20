@@ -1,11 +1,10 @@
 import { trpc } from "@/lib/trpc";
-import { COOKIE_NAME, UNAUTHED_ERR_MSG } from '@shared/const';
+import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
-import { startLogin } from "./const";
 import { mexicoCityReferenceDate } from "./lib/dashboardPeriod";
 import "./index.css";
 
@@ -19,7 +18,20 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
-  startLogin();
+  // An expired/invalid session must land on Meximoney's own login form
+  // (LocalAuthCard, rendered by DashboardLayout when there is no user), not
+  // on any external OAuth portal. A full navigation to "/" also clears the
+  // stale session token cached in sessionStorage's next read.
+  try {
+    sessionStorage.removeItem("meximoney-local-session");
+  } catch {
+    // sessionStorage unavailable
+  }
+  if (window.location.pathname === "/") {
+    window.location.reload();
+  } else {
+    window.location.assign("/");
+  }
 };
 
 queryClient.getQueryCache().subscribe(event => {
@@ -45,29 +57,13 @@ const trpcClient = trpc.createClient({
       transformer: superjson,
       headers() {
         const localReferenceDate = mexicoCityReferenceDate();
-        // A local email/password login keeps this signed token only for the
-        // current tab. It prevents the preview runtime's Manus token from
-        // taking precedence over the user's own Meximoney session.
+        // Forward the local session explicitly for browsers/contexts that
+        // block third-party or iframe cookies (Safari ITP, private
+        // browsing, in-app WebViews). The session cookie set on login still
+        // works everywhere else and takes priority server-side.
         try {
           const localToken = sessionStorage.getItem("meximoney-local-session");
           if (localToken) return { "X-Meximoney-Session": localToken, "X-Meximoney-Reference-Date": localReferenceDate };
-        } catch {
-          // sessionStorage unavailable
-        }
-        // Preview auto-login fallback: when the browser blocks iframe cookies
-        // (Safari ITP / private browsing / WebView), the runtime mirrors the
-        // session into sessionStorage so we can forward it as a Bearer token.
-        // The regular OAuth cookie flow keeps working and takes priority server-side.
-        try {
-          const raw = sessionStorage.getItem("manus-cookie");
-          if (raw) {
-            const prefix = `${COOKIE_NAME}=`;
-            const pair = raw.split(";").find(s => s.trim().startsWith(prefix));
-            const token = pair?.trim().slice(prefix.length);
-              if (token) {
-                return { Authorization: `Bearer ${token}`, "X-Meximoney-Reference-Date": localReferenceDate };
-            }
-          }
         } catch {
           // sessionStorage unavailable
         }

@@ -1,1 +1,0 @@
-ALTER TABLE `creditCards` MODIFY COLUMN `scope` enum('personal','pfae','business','mixed') NOT NULL DEFAULT 'personal';

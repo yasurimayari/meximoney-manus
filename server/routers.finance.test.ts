@@ -193,7 +193,7 @@ describe("finance.dashboard", () => {
   });
 
   it("guarda una nota del diario únicamente bajo la usuaria autenticada", async () => {
-    const values = vi.fn().mockResolvedValue([{ insertId: 91 }]);
+    const values = vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 91 }]) });
     const insert = vi.fn().mockReturnValue({ values });
     mocks.requireDb.mockResolvedValue({ select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }), insert });
     const caller = appRouter.createCaller(createContext(27));
@@ -688,7 +688,7 @@ describe("finance.dashboard", () => {
     expect(set).toHaveBeenCalledWith(expect.objectContaining({ status: "cancelled", currentCents: 2_000_00, targetCents: 45_000_00 }));
   });
   it("crea hábitos voluntarios sólo para la usuaria autenticada", async () => {
-    const values = vi.fn(() => ({ $returningId: async () => [{ id: 44 }] }));
+    const values = vi.fn(() => ({ returning: async () => [{ id: 44 }] }));
     mocks.requireDb.mockResolvedValue({
       select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),
       insert: () => ({ values }),
@@ -698,7 +698,7 @@ describe("finance.dashboard", () => {
     expect(values).toHaveBeenCalledWith(expect.objectContaining({ userId: 27, title: "Revisar pagos próximos", cadence: "weekly", color: "teal" }));
   });
   it("registra una acción de hábito únicamente si pertenece a la usuaria autenticada y está activa", async () => {
-    const checkinValues = vi.fn(() => ({ $returningId: async () => [{ id: 78 }] }));
+    const checkinValues = vi.fn(() => ({ returning: async () => [{ id: 78 }] }));
     const answers = [[{ accepted: true }], [{ id: 44, isActive: true }]];
     mocks.requireDb.mockResolvedValue({
       select: () => ({ from: () => ({ where: () => ({ limit: async () => answers.shift() ?? [] }) }) }),

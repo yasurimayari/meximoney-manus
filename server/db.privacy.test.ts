@@ -4,7 +4,7 @@ const state = vi.hoisted(() => ({
   deletedTables: [] as string[],
 }));
 
-vi.mock("drizzle-orm/mysql2", () => ({
+vi.mock("drizzle-orm/postgres-js", () => ({
   drizzle: vi.fn(() => ({
     transaction: async (callback: (tx: { delete: (table: { [key: symbol]: string }) => { where: () => Promise<void> } }) => Promise<void>) => callback({
       delete: table => ({

@@ -1,20 +1,27 @@
-// Preconfigured storage helpers for Manus WebDev templates
-// Uploads via Forge Server presigned URL to S3 (PUT direct).
-// Downloads return /manus-storage/{key} paths served via 307 redirect.
+// Storage helpers backed by Supabase Storage.
+// Uploads and downloads go through the Supabase service-role client, so files
+// stay private by default; reads are served via short-lived signed URLs
+// (see /manus-storage/{key} in server/_core/storageProxy.ts).
 
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ENV } from "./_core/env";
 
-function getForgeConfig() {
-  const forgeUrl = ENV.forgeApiUrl;
-  const forgeKey = ENV.forgeApiKey;
+let cachedClient: SupabaseClient | null = null;
 
-  if (!forgeUrl || !forgeKey) {
+function getStorageClient(): SupabaseClient {
+  if (!ENV.supabaseUrl || !ENV.supabaseServiceRoleKey) {
     throw new Error(
-      "Storage config missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY",
+      "Storage config missing: set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY",
     );
   }
 
-  return { forgeUrl: forgeUrl.replace(/\/+$/, ""), forgeKey };
+  if (!cachedClient) {
+    cachedClient = createClient(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
+      auth: { persistSession: false },
+    });
+  }
+
+  return cachedClient;
 }
 
 function normalizeKey(relKey: string): string {
@@ -28,44 +35,24 @@ function appendHashSuffix(relKey: string): string {
   return `${relKey.slice(0, lastDot)}_${hash}${relKey.slice(lastDot)}`;
 }
 
+function toUint8Array(data: Buffer | Uint8Array | string): Uint8Array {
+  return typeof data === "string" ? new TextEncoder().encode(data) : data;
+}
+
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream",
 ): Promise<{ key: string; url: string }> {
-  const { forgeUrl, forgeKey } = getForgeConfig();
+  const client = getStorageClient();
   const key = appendHashSuffix(normalizeKey(relKey));
 
-  // 1. Get presigned PUT URL from Forge
-  const presignUrl = new URL("v1/storage/presign/put", forgeUrl + "/");
-  presignUrl.searchParams.set("path", key);
+  const { error } = await client.storage
+    .from(ENV.supabaseStorageBucket)
+    .upload(key, toUint8Array(data), { contentType, upsert: false });
 
-  const presignResp = await fetch(presignUrl, {
-    headers: { Authorization: `Bearer ${forgeKey}` },
-  });
-
-  if (!presignResp.ok) {
-    const msg = await presignResp.text().catch(() => presignResp.statusText);
-    throw new Error(`Storage presign failed (${presignResp.status}): ${msg}`);
-  }
-
-  const { url: s3Url } = (await presignResp.json()) as { url: string };
-  if (!s3Url) throw new Error("Forge returned empty presign URL");
-
-  // 2. PUT file directly to S3
-  const blob =
-    typeof data === "string"
-      ? new Blob([data], { type: contentType })
-      : new Blob([data as any], { type: contentType });
-
-  const uploadResp = await fetch(s3Url, {
-    method: "PUT",
-    headers: { "Content-Type": contentType },
-    body: blob,
-  });
-
-  if (!uploadResp.ok) {
-    throw new Error(`Storage upload to S3 failed (${uploadResp.status})`);
+  if (error) {
+    throw new Error(`Storage upload failed: ${error.message}`);
   }
 
   return { key, url: `/manus-storage/${key}` };
@@ -77,21 +64,16 @@ export async function storageGet(relKey: string): Promise<{ key: string; url: st
 }
 
 export async function storageGetSignedUrl(relKey: string): Promise<string> {
-  const { forgeUrl, forgeKey } = getForgeConfig();
+  const client = getStorageClient();
   const key = normalizeKey(relKey);
 
-  const getUrl = new URL("v1/storage/presign/get", forgeUrl + "/");
-  getUrl.searchParams.set("path", key);
+  const { data, error } = await client.storage
+    .from(ENV.supabaseStorageBucket)
+    .createSignedUrl(key, 300);
 
-  const resp = await fetch(getUrl, {
-    headers: { Authorization: `Bearer ${forgeKey}` },
-  });
-
-  if (!resp.ok) {
-    const msg = await resp.text().catch(() => resp.statusText);
-    throw new Error(`Storage signed URL failed (${resp.status}): ${msg}`);
+  if (error || !data?.signedUrl) {
+    throw new Error(`Storage signed URL failed: ${error?.message ?? "empty response"}`);
   }
 
-  const { url } = (await resp.json()) as { url: string };
-  return url;
+  return data.signedUrl;
 }

@@ -1,1 +1,0 @@
-ALTER TABLE `financialProjects` MODIFY COLUMN `entityId` int;

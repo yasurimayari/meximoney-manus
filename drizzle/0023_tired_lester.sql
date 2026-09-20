@@ -1,1 +1,0 @@
-ALTER TABLE `passwordResetEvents` MODIFY COLUMN `eventType` enum('requested','email_sent','email_failed','password_reset','password_changed') NOT NULL;

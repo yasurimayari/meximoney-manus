@@ -1,7 +1,7 @@
 import type { Express } from "express";
-import { ENV } from "./env";
 import { sdk } from "./sdk";
 import { isPrivateStorageKeyOwned } from "../db";
+import { storageGetSignedUrl } from "../storage";
 
 const PUBLIC_STORAGE_KEY = /^meximoney-pwa-icon_[a-z0-9]+\.png$/i;
 
@@ -13,15 +13,10 @@ export function registerStorageProxy(app: Express) {
       return;
     }
 
-    if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-      res.status(500).send("Storage proxy not configured");
-      return;
-    }
-
     if (!PUBLIC_STORAGE_KEY.test(key)) {
       try {
         const user = await sdk.authenticateRequest(req);
-        if (user.isCron || !(await isPrivateStorageKeyOwned(user.id, key))) {
+        if (!(await isPrivateStorageKeyOwned(user.id, key))) {
           res.status(403).send("Storage access denied");
           return;
         }
@@ -32,29 +27,7 @@ export function registerStorageProxy(app: Express) {
     }
 
     try {
-      const forgeUrl = new URL(
-        "v1/storage/presign/get",
-        ENV.forgeApiUrl.replace(/\/+$/, "") + "/",
-      );
-      forgeUrl.searchParams.set("path", key);
-
-      const forgeResp = await fetch(forgeUrl, {
-        headers: { Authorization: `Bearer ${ENV.forgeApiKey}` },
-      });
-
-      if (!forgeResp.ok) {
-        const body = await forgeResp.text().catch(() => "");
-        console.error(`[StorageProxy] forge error: ${forgeResp.status} ${body}`);
-        res.status(502).send("Storage backend error");
-        return;
-      }
-
-      const { url } = (await forgeResp.json()) as { url: string };
-      if (!url) {
-        res.status(502).send("Empty signed URL from backend");
-        return;
-      }
-
+      const url = await storageGetSignedUrl(key);
       res.set("Cache-Control", "private, no-store");
       res.redirect(307, url);
     } catch (err) {

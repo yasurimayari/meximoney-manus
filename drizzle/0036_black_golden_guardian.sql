@@ -1,1 +1,0 @@
-ALTER TABLE `recurringTemplates` ADD `creditCardId` int;

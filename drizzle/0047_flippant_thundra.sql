@@ -1,1 +1,0 @@
-ALTER TABLE `monthlyFinancialStatements` ADD `archivedAt` timestamp;

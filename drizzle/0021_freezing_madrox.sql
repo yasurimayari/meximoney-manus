@@ -1,1 +1,0 @@
-ALTER TABLE `investments` ADD `goalId` int;

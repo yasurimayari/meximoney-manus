@@ -1,1 +1,0 @@
-ALTER TABLE `creditReports` ADD `reportedScore` int;

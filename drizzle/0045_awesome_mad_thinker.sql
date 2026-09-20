@@ -1,1 +1,0 @@
-ALTER TABLE `debts` ADD `moratoriumLastAppliedAt` timestamp;
