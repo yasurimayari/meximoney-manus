@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { inferImportMapping, inferImportType, parseImportAmount, parseImportDate, parseSpreadsheet, type ImportColumn, type ImportMapping, type SpreadsheetRow } from "@/lib/importSpreadsheet";
+import { amountFromDebitCredit, inferImportMapping, inferImportType, parseImportAmount, parseImportDate, parseSpreadsheet, type ImportColumn, type ImportMapping, type SpreadsheetRow } from "@/lib/importSpreadsheet";
 import { formatDate, formatMoney } from "@/lib/finance";
 import { trpc } from "@/lib/trpc";
 import { FileCheck2, FileUp, RefreshCw, SearchCheck, Upload, X } from "lucide-react";
@@ -10,7 +10,9 @@ import { toast } from "sonner";
 const mappingFields: Array<{ key: ImportColumn; label: string; required?: boolean }> = [
   { key: "date", label: "Fecha", required: true },
   { key: "description", label: "Descripción" },
-  { key: "amount", label: "Importe", required: true },
+  { key: "amount", label: "Importe (con signo)" },
+  { key: "debit", label: "Cargo" },
+  { key: "credit", label: "Abono" },
   { key: "type", label: "Tipo" },
   { key: "bankReference", label: "Referencia" },
 ];
@@ -92,12 +94,28 @@ export function BankStatementReconciliationPanel({ accounts, autoOpen = false }:
 
   function buildRows() {
     if (!accountId || !selectedAccountRecord) throw new Error("Selecciona la cuenta a la que pertenece el estado de cuenta.");
-    if (!mapping.date || !mapping.amount) throw new Error("Asigna las columnas de fecha e importe antes de importar.");
-    const rows = rawRows.map((row, index) => {
+    // Muchos bancos mexicanos (HSBC entre ellos) no traen un "Importe" único
+    // con signo, sino Cargo/Abono en columnas separadas -- ambos formatos se
+    // auto-detectan y aceptan.
+    const usesDebitCredit = Boolean(mapping.debit || mapping.credit);
+    if (!mapping.date || (!mapping.amount && !usesDebitCredit)) throw new Error("Asigna las columnas de fecha e importe (o Cargo/Abono) antes de importar.");
+    const rows = rawRows.flatMap((row, index) => {
       const occurredAt = parseImportDate(row[mapping.date!]);
+      if (usesDebitCredit) {
+        const parsed = amountFromDebitCredit(mapping.debit ? row[mapping.debit] : null, mapping.credit ? row[mapping.credit] : null);
+        if (!parsed) return []; // fila sin cargo ni abono (saldo, encabezado repetido, etc.) -- no es un movimiento, se omite
+        if (!occurredAt) throw new Error(`La fila ${index + 2} tiene un importe pero no una fecha válida.`);
+        return [{
+          rowNumber: index + 2, occurredAt: occurredAt.getTime(), type: parsed.type, amountCents: parsed.amountCents,
+          currency: selectedAccountRecord.currency,
+          bankReference: mapping.bankReference ? String(row[mapping.bankReference] ?? "").trim() || null : null,
+          description: mapping.description ? String(row[mapping.description] ?? "").trim() || null : null,
+          rawData: JSON.stringify(row),
+        }];
+      }
       const amountCents = parseImportAmount(row[mapping.amount!]);
       if (!occurredAt || amountCents <= 0) throw new Error(`La fila ${index + 2} no tiene una fecha o importe válido.`);
-      return {
+      return [{
         rowNumber: index + 2,
         occurredAt: occurredAt.getTime(),
         type: inferImportType(row, mapping),
@@ -106,8 +124,9 @@ export function BankStatementReconciliationPanel({ accounts, autoOpen = false }:
         bankReference: mapping.bankReference ? String(row[mapping.bankReference] ?? "").trim() || null : null,
         description: mapping.description ? String(row[mapping.description] ?? "").trim() || null : null,
         rawData: JSON.stringify(row),
-      };
+      }];
     });
+    if (!rows.length) throw new Error("No se encontró ningún movimiento con importe, cargo o abono en el archivo.");
     const dates = rows.map(row => row.occurredAt).sort((a, b) => a - b);
     return { rows, periodStart: dates[0], periodEnd: dates[dates.length - 1] };
   }
