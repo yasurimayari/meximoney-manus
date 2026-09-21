@@ -27,7 +27,7 @@ import { trpc } from "@/lib/trpc";
 import { clearOfflineVault, getOfflineVaultOwnerId } from "@/lib/offlineVault";
 import { notificationBadgeLabel, unreadNotificationCount } from "@/lib/notificationBadge";
 import { richeonModules } from "@/lib/richeonModules";
-import { BellRing, BotMessageSquare, ChevronDown, ChevronRight, CircleCheckBig, CloudDownload, EyeOff, FileDown, KeyRound, LockKeyhole, LogOut, PanelLeft, ShieldCheck, Settings2, ClipboardCheck } from "lucide-react";
+import { BellRing, BotMessageSquare, ChevronDown, ChevronRight, CircleCheckBig, CloudDownload, EyeOff, FileDown, KeyRound, LockKeyhole, LogOut, Moon, PanelLeft, Search, ShieldCheck, Settings2, Sun, ClipboardCheck } from "lucide-react";
 import { IconContext } from "@phosphor-icons/react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -35,6 +35,7 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import Onboarding from "@/pages/Onboarding";
 import { Button } from "./ui/button";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const primaryMenuItems = richeonModules.flatMap(module => module.routes.map(route => ({ ...route, moduleId: module.id })));
 
@@ -383,7 +384,7 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset className="min-w-0">
-        {isMobile && (
+        {isMobile ? (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
@@ -396,9 +397,59 @@ function DashboardLayoutContent({
               </div>
             </div>
           </div>
+        ) : (
+          <DesktopTopbar unreadNotifications={unreadNotifications} navigate={navigate} />
         )}
         <main className="min-w-0 flex-1 p-4 lg:p-7"><div className="mx-auto min-w-0 max-w-7xl">{children}</div></main>
       </SidebarInset>
     </>
+  );
+}
+
+function DesktopTopbar({ unreadNotifications, navigate }: { unreadNotifications: number; navigate: (path: string) => void }) {
+  const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const [searchValue, setSearchValue] = useState("");
+  const handleLogout = async () => {
+    await clearOfflineVault().catch(() => undefined);
+    await logout();
+  };
+
+  return (
+    <div className="topbar">
+      <form className="coreview-search" onSubmit={event => event.preventDefault()}>
+        <Search className="size-4 shrink-0" />
+        <input value={searchValue} onChange={event => setSearchValue(event.target.value)} onKeyDown={event => { if (event.key === "Enter") event.preventDefault(); }} placeholder="Buscar transacciones, proyectos, clientes, o hacer una pregunta a Richi…" />
+        <kbd>⌘K</kbd>
+      </form>
+      <div className="topbar-actions">
+        <button type="button" className="topbar-icon-button" aria-label="Notificaciones" onClick={() => navigate("/notificaciones")}>
+          <BellRing className="size-[1.1rem]" />
+          {unreadNotifications ? <span className="topbar-icon-badge" aria-hidden="true" /> : null}
+        </button>
+        {toggleTheme ? (
+          <button type="button" className="topbar-icon-button" aria-label="Cambiar tema" onClick={toggleTheme}>
+            {theme === "dark" ? <Sun className="size-[1.1rem]" /> : <Moon className="size-[1.1rem]" />}
+          </button>
+        ) : null}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="topbar-profile">
+              <Avatar className="h-8 w-8 border shrink-0"><AvatarFallback className="text-xs font-medium">{user?.name?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+              <span className="topbar-profile-text"><strong>{user?.name || "-"}</strong><small>{user?.email || "-"}</small></span>
+              <ChevronDown className="size-3.5 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => navigate("/calidad")} className="cursor-pointer"><CircleCheckBig className="mr-2 h-4 w-4" /><span>Calidad, perfil y privacidad</span></DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/seguridad/cambiar-contrasena")} className="cursor-pointer"><KeyRound className="mr-2 h-4 w-4" /><span>Cambiar contraseña</span></DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/notificaciones")} className="cursor-pointer"><BellRing className="mr-2 h-4 w-4" /><span>Notificaciones</span></DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/datos-offline")} className="cursor-pointer"><CloudDownload className="mr-2 h-4 w-4" /><span>Datos offline</span></DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/espacio")} className="cursor-pointer"><Settings2 className="mr-2 h-4 w-4" /><span>Espacio</span></DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive"><LogOut className="mr-2 h-4 w-4" /><span>Cerrar sesión</span></DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
   );
 }

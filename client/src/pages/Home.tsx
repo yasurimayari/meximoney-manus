@@ -16,7 +16,7 @@ import { creditCardUtilizationAlerts } from "../../../shared/creditCardSummary";
 import { buildExpenseCategories, buildMonthlySeries } from "@/lib/financeAnalytics";
 import { richeonModules } from "@/lib/richeonModules";
 import { IconContext } from "@phosphor-icons/react";
-import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CalendarClock, CheckCircle2, CircleDollarSign, HeartPulse, Landmark, ListTodo, Plus, ReceiptText, Search, ShieldCheck, Target, WalletCards } from "lucide-react";
+import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CalendarClock, CheckCircle2, CircleDollarSign, HeartPulse, Landmark, ListTodo, PieChart as PieChartIcon, Plus, ReceiptText, ShieldCheck, Target, TrendingUp, WalletCards } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { habitMetrics } from "@/lib/habitMetrics";
@@ -41,7 +41,6 @@ export default function Home() {
   const { user } = useAuth();
   const [workspaceFilters, setWorkspaceFilters] = useState(emptyWorkspaceFilters);
   const [richiMessages, setRichiMessages] = useState<Message[]>([]);
-  const [searchValue, setSearchValue] = useState("");
   const richiChat = trpc.finance.assistant.chat.useMutation({
     onSuccess: response => setRichiMessages(previous => [...previous, { role: "assistant", content: response.content }]),
     onError: error => setRichiMessages(previous => [...previous, { role: "assistant", content: `No pude preparar la respuesta: ${error.message}` }]),
@@ -91,14 +90,10 @@ export default function Home() {
   const expenseCategories = buildExpenseCategories(data);
   const expenseCategoriesTotal = expenseCategories.reduce((total, item) => total + item.value, 0);
 
-  return <div className="space-y-8">
-    <div className="coreview-topbar">
+  return <div className="space-y-9">
+    <div className="coreview-greeting">
       <div><p className="eyebrow">Espacio privado · {currency}</p><h1 className="mt-1 text-3xl font-semibold tracking-[-0.04em]">Hola, {user?.name?.split(" ")[0] || "de nuevo"}</h1><p className="mt-1 text-sm text-muted-foreground">Aquí tienes un resumen de tu situación financiera.</p></div>
-      <form className="coreview-search" onSubmit={event => event.preventDefault()}>
-        <Search className="size-4 shrink-0" />
-        <input value={searchValue} onChange={event => setSearchValue(event.target.value)} onKeyDown={event => { if (event.key === "Enter") event.preventDefault(); }} placeholder="Buscar transacciones, proyectos, o hacer una pregunta a Richi…" />
-        <kbd>⌘K</kbd>
-      </form>
+      <span className="period-chip">{formatDate(data.dashboard.periodStart, { month: "long", year: "numeric" })}</span>
     </div>
 
     <WorkspaceFilterBar snapshot={data} filters={workspaceFilters} onChange={setWorkspaceFilters} />
@@ -126,7 +121,12 @@ export default function Home() {
           <div className="card-title-row"><div><h2>Resumen financiero</h2><p>Tu flujo de caja y distribución de gastos en una sola vista.</p></div><Link className="text-link text-white/80" href="/movimientos">Ver movimientos</Link></div>
           <div className="coreview-dark-grid">
             {monthlySeries.every(item => item.ingresos === 0 && item.gastos === 0) ? (
-              <p className="text-sm text-white/55">Aún no hay ingresos o gastos comparables en los últimos meses.</p>
+              <div className="coreview-empty-chart">
+                <span className="coreview-empty-chart-icon"><TrendingUp className="size-5" /></span>
+                <strong>Aún no hay flujo que mostrar</strong>
+                <p>Registra tu primer ingreso o gasto y esta tendencia empieza a dibujarse.</p>
+                <Link href="/movimientos" className="coreview-empty-chart-cta">Registrar un movimiento</Link>
+              </div>
             ) : (
               <ChartContainer config={flowChartConfig} className="h-[220px] w-full">
                 <AreaChart data={monthlySeries}>
@@ -145,7 +145,12 @@ export default function Home() {
               </ChartContainer>
             )}
             {expenseCategories.length === 0 ? (
-              <p className="text-sm text-white/55">Clasifica gastos para ver su distribución.</p>
+              <div className="coreview-empty-chart">
+                <span className="coreview-empty-chart-icon"><PieChartIcon className="size-5" /></span>
+                <strong>Sin gastos clasificados</strong>
+                <p>Asigna una categoría a tus gastos para ver su distribución aquí.</p>
+                <Link href="/movimientos" className="coreview-empty-chart-cta">Clasificar gastos</Link>
+              </div>
             ) : (
               <div className="coreview-donut-wrap">
                 <ChartContainer config={{}} className="h-[150px] w-[150px] shrink-0">
