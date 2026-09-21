@@ -6,6 +6,9 @@ export const passwordResetEventsChannelEnum = pgEnum("passwordResetEvents_channe
 export const financialProfilesTaxRegimeEnum = pgEnum("financialProfiles_taxRegime", ["pfae_general", "resico", "other", "not_applicable"]);
 export const financialProfilesExchangeRatePolicyEnum = pgEnum("financialProfiles_exchangeRatePolicy", ["manual", "manual_confirmed", "unconverted"]);
 export const financialProfilesRiskToleranceEnum = pgEnum("financialProfiles_riskTolerance", ["low", "medium_low", "medium", "medium_high", "high"]);
+export const financialProfilesFinancialKnowledgeLevelEnum = pgEnum("financialProfiles_financialKnowledgeLevel", ["beginner", "intermediate", "advanced"]);
+export const financialProfilesCommunicationStyleEnum = pgEnum("financialProfiles_communicationStyle", ["direct", "detailed", "motivational"]);
+export const financialProfilesRiskScenarioAnswerEnum = pgEnum("financialProfiles_riskScenarioAnswer", ["retiro", "espero", "invierto_mas"]);
 export const workspaceEntitiesLegalFormEnum = pgEnum("workspaceEntities_legalForm", ["individual", "pfae", "sa_de_cv", "sapi", "sl", "llc", "holding", "other"]);
 export const workspaceEntitiesStatusEnum = pgEnum("workspaceEntities_status", ["active", "paused", "inactive", "planned", "dissolved"]);
 export const workspaceEntitiesTaxRegimeEnum = pgEnum("workspaceEntities_taxRegime", ["pfae_general", "resico", "corporate", "not_applicable", "other"]);
@@ -178,6 +181,19 @@ export const financialProfiles = pgTable("financialProfiles", {
   futureTaxDueAt: timestamp("futureTaxDueAt"),
   riskTolerance: financialProfilesRiskToleranceEnum("riskTolerance"),
   notes: text("notes"),
+  // Perfil Financiero Inteligente (PFI) — onboarding conversacional guiado por Richi.
+  financialKnowledgeLevel: financialProfilesFinancialKnowledgeLevelEnum("financialKnowledgeLevel"),
+  communicationStyle: financialProfilesCommunicationStyleEnum("communicationStyle"),
+  occupationTags: text("occupationTags").array(),
+  incomeSourceTags: text("incomeSourceTags").array(),
+  residenceCountries: text("residenceCountries").array(),
+  activeCurrencies: text("activeCurrencies").array(),
+  hasActiveDebtsDeclared: boolean("hasActiveDebtsDeclared"),
+  approxDebtCount: integer("approxDebtCount"),
+  approxAccountCount: integer("approxAccountCount"),
+  riskScenario1Answer: financialProfilesRiskScenarioAnswerEnum("riskScenario1Answer"),
+  riskScenario2Answer: financialProfilesRiskScenarioAnswerEnum("riskScenario2Answer"),
+  activeModules: text("activeModules").array().notNull().default([]),
   updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
 });
 
@@ -197,6 +213,7 @@ export const notificationPreferences = pgTable("notificationPreferences", {
   telegramEnabled: boolean("telegramEnabled").notNull().default(false),
   telegramScheduleCronTaskUid: varchar("telegramScheduleCronTaskUid", { length: 65 }),
   telegramLastDigestDate: varchar("telegramLastDigestDate", { length: 10 }),
+  emailEnabled: boolean("emailEnabled").notNull().default(false),
   updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
 }, table => [index("notification_preferences_telegram_task_uid_idx").on(table.telegramScheduleCronTaskUid)]);
 
@@ -230,6 +247,7 @@ export const workspaceEntities = pgTable("workspaceEntities", {
   status: workspaceEntitiesStatusEnum("status").notNull().default("active"),
   functionalCurrency: varchar("functionalCurrency", { length: 3 }).notNull().default("MXN"),
   taxRegime: workspaceEntitiesTaxRegimeEnum("taxRegime").notNull().default("not_applicable"),
+  activityDescription: varchar("activityDescription", { length: 220 }),
   startedAt: timestamp("startedAt"),
   plannedConversionAt: timestamp("plannedConversionAt"),
   predecessorEntityId: integer("predecessorEntityId"),

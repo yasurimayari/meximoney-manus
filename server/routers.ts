@@ -91,6 +91,7 @@ import { getOpenFiscalReviewReminder } from "../shared/fiscalReview";
 import { creditCardAlertCandidates } from "./creditCardAlerts";
 import { payableAlertCandidates, upcomingTravelAlertCandidates } from "./scheduledAlertCandidates";
 import { extractQuickCaptureDraft } from "./quickCapture";
+import { derivePfiActiveModules, derivePfiRiskTolerance } from "./pfi";
 import { askClaudeForMexiAnalysis, formatMexiAnalysis } from "./claude";
 import { extractDocumentOcr, OCR_PROVIDER } from "./documentOcr";
 import { MEXI_OPERATIONAL_POLICY } from "./mexiPolicy";
@@ -226,6 +227,14 @@ const workspaceFinanceProcedure = protectedProcedure.use(async ({ ctx, next }) =
   if (!consent[0]?.accepted) {
     throw new TRPCError({ code: "FORBIDDEN", message: "La propietaria debe aceptar el almacenamiento manual antes de compartir o modificar información financiera." });
   }
+  return next({ ctx: { workspaceAccess } });
+});
+
+// Igual que workspaceFinanceProcedure, sin la exigencia previa de consentimiento
+// -- el propio Perfil Financiero Inteligente es lo que lo recolecta (pantalla
+// 13), así que sus mutaciones no pueden depender de que ya exista.
+const onboardingProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const workspaceAccess = await resolveWorkspaceAccess(ctx.user.id);
   return next({ ctx: { workspaceAccess } });
 });
 
@@ -519,27 +528,72 @@ export const appRouter = router({
       quickCapture: workspaceFinanceProcedure.input(z.object({ text: z.string().trim().min(4).max(800), defaultCurrency: z.string().trim().length(3) })).mutation(async ({ input }) => {
         return extractQuickCaptureDraft(input.text, input.defaultCurrency);
       }),
-      onboarding: workspaceFinanceProcedure.input(z.object({
-        workspaceName: z.string().trim().min(2).max(140),
-        currency: z.string().length(3),
-        residenceCountry: z.string().trim().min(2).max(80),
-        taxResidence: z.string().trim().min(2).max(120),
-        taxRegime: z.enum(["pfae_general", "resico", "other", "not_applicable"]),
-        exchangeRatePolicy: z.enum(["manual", "manual_confirmed", "unconverted"]),
-        humanReviewRequired: z.boolean(),
-        entities: z.array(z.object({ name: z.string().trim().min(2).max(180), shortCode: z.string().trim().max(32).nullable().optional(), countryCode: z.string().length(2), legalForm: z.enum(["individual", "pfae", "sa_de_cv", "sapi", "sl", "llc", "holding", "other"]), status: z.enum(["active", "paused", "inactive", "planned", "dissolved"]), functionalCurrency: z.string().length(3), taxRegime: z.enum(["pfae_general", "resico", "corporate", "not_applicable", "other"]), notes: z.string().max(3000).nullable().optional() })).min(1).max(12),
-      })).mutation(async ({ ctx, input }) => {
-        if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede completar el onboarding del espacio." });
-        const db = await requireDb();
-        const { entities, ...profile } = input;
-        await db.transaction(async tx => {
-          await tx.insert(financialProfiles).values({ userId: ctx.workspaceAccess.ownerId, ...profile, onboardingCompleted: true, onboardingStep: 4 }).onConflictDoUpdate({ target: financialProfiles.userId, set: { ...profile, onboardingCompleted: true, onboardingStep: 4 } });
-          const currentEntities = await tx.select({ id: workspaceEntities.id }).from(workspaceEntities).where(eq(workspaceEntities.ownerId, ctx.workspaceAccess.ownerId));
-          if (currentEntities.length === 0) await tx.insert(workspaceEntities).values(entities.map(entity => ({ ownerId: ctx.workspaceAccess.ownerId, ...entity })));
-        });
-        return { success: true };
+      pfi: router({
+        // Perfil Financiero Inteligente: onboarding conversacional de 15 pantallas
+        // guiado por Richi. Cada pantalla llama saveStep al continuar -- eso es lo
+        // que hace real "puedes pausar y seguir después" del documento de diseño.
+        // Usa onboardingProcedure (no workspaceFinanceProcedure): exigir el
+        // consentimiento de antemano no tiene sentido cuando es este mismo flujo
+        // el que lo recolecta, en la pantalla 13.
+        saveStep: onboardingProcedure.input(z.object({
+          step: z.number().int().min(0).max(14),
+          patch: z.object({
+            displayName: z.string().trim().min(1).max(140).optional(),
+            financialKnowledgeLevel: z.enum(["beginner", "intermediate", "advanced"]).optional(),
+            occupationTags: z.array(z.enum(["self_employed", "business", "employee", "retired", "no_income", "other"])).max(6).optional(),
+            residenceCountry: z.string().trim().min(2).max(80).optional(),
+            residenceCountries: z.array(z.string().trim().min(2).max(80)).min(1).max(8).optional(),
+            currency: z.string().length(3).optional(),
+            activeCurrencies: z.array(z.string().length(3)).min(1).max(8).optional(),
+            incomeSourceTags: z.array(z.enum(["salary", "pension", "business", "rental", "investment", "family_support", "other"])).max(7).optional(),
+            hasActiveDebtsDeclared: z.boolean().optional(),
+            approxDebtCount: z.number().int().min(0).max(999).nullable().optional(),
+            approxAccountCount: z.number().int().min(0).max(999).nullable().optional(),
+            taxRegime: z.enum(["pfae_general", "resico", "other", "not_applicable"]).optional(),
+            riskScenario1Answer: z.enum(["retiro", "espero", "invierto_mas"]).optional(),
+            riskScenario2Answer: z.enum(["retiro", "espero", "invierto_mas"]).optional(),
+            communicationStyle: z.enum(["direct", "detailed", "motivational"]).optional(),
+          }),
+        })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede completar el onboarding del espacio." });
+          const db = await requireDb();
+          const { patch } = input;
+          const set: Record<string, unknown> = { ...patch, onboardingStep: input.step };
+          if (patch.riskScenario1Answer && patch.riskScenario2Answer) {
+            set.riskTolerance = derivePfiRiskTolerance(patch.riskScenario1Answer, patch.riskScenario2Answer);
+          }
+          await db.insert(financialProfiles).values({ userId: ctx.workspaceAccess.ownerId, ...set }).onConflictDoUpdate({ target: financialProfiles.userId, set });
+          return { success: true };
+        }),
+        // Recibe negocios, objetivos y canales de aviso completos porque sus
+        // mutaciones dedicadas (entitySave, goals.save, notifications.savePreferences)
+        // sí exigen consentimiento previo -- y este es el momento en que recién
+        // se otorga, dentro de la misma transacción.
+        complete: onboardingProcedure.input(z.object({
+          businesses: z.array(z.object({ name: z.string().trim().min(2).max(180), activityDescription: z.string().trim().max(220).nullable().optional(), countryCode: z.string().length(2), functionalCurrency: z.string().length(3) })).max(12).default([]),
+          goals: z.array(z.object({ name: z.string().trim().min(1).max(160), targetCents: z.number().int().positive(), targetDate: z.number().int().positive().nullable().optional(), currency: z.string().length(3) })).max(3).default([]),
+          channels: z.object({ inApp: z.boolean(), telegram: z.boolean(), email: z.boolean() }),
+        })).mutation(async ({ ctx, input }) => {
+          if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede completar el onboarding del espacio." });
+          const db = await requireDb();
+          const [profile] = await db.select().from(financialProfiles).where(eq(financialProfiles.userId, ctx.workspaceAccess.ownerId)).limit(1);
+          const activeModules = derivePfiActiveModules({
+            occupationTags: profile?.occupationTags ?? null,
+            hasActiveDebtsDeclared: profile?.hasActiveDebtsDeclared ?? null,
+            goalCount: input.goals.length,
+          });
+          await db.transaction(async tx => {
+            await tx.insert(privacyConsents).values({ userId: ctx.workspaceAccess.ownerId, purpose: "almacenamiento_manual_financiero", accepted: true, policyVersion: "pfi-onboarding-v1" });
+            await tx.insert(privacyConsents).values({ userId: ctx.workspaceAccess.ownerId, purpose: "pfi_admin_access_disclosure", accepted: true, policyVersion: "pfi-onboarding-v1" });
+            if (input.businesses.length) await tx.insert(workspaceEntities).values(input.businesses.map(business => ({ ownerId: ctx.workspaceAccess.ownerId, name: business.name, countryCode: business.countryCode, legalForm: "individual" as const, status: "active" as const, functionalCurrency: business.functionalCurrency, taxRegime: "not_applicable" as const, activityDescription: business.activityDescription ?? null })));
+            if (input.goals.length) await tx.insert(financialGoals).values(input.goals.map(goal => ({ userId: ctx.workspaceAccess.ownerId, name: goal.name, type: "other" as const, scope: "personal" as const, targetCents: goal.targetCents, currentCents: 0, monthlyContributionCents: 0, currency: goal.currency, targetDate: asDate(goal.targetDate), priority: "medium" as const, status: "active" as const })));
+            await tx.insert(notificationPreferences).values({ userId: ctx.workspaceAccess.ownerId, inAppEnabled: input.channels.inApp, telegramEnabled: input.channels.telegram, emailEnabled: input.channels.email }).onConflictDoUpdate({ target: notificationPreferences.userId, set: { inAppEnabled: input.channels.inApp, telegramEnabled: input.channels.telegram, emailEnabled: input.channels.email } });
+            await tx.insert(financialProfiles).values({ userId: ctx.workspaceAccess.ownerId, onboardingCompleted: true, onboardingStep: 14, activeModules }).onConflictDoUpdate({ target: financialProfiles.userId, set: { onboardingCompleted: true, onboardingStep: 14, activeModules } });
+          });
+          return { success: true, activeModules };
+        }),
       }),
-      entitySave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(2).max(180), shortCode: z.string().trim().max(32).nullable().optional(), countryCode: z.string().length(2), legalForm: z.enum(["individual", "pfae", "sa_de_cv", "sapi", "sl", "llc", "holding", "other"]), status: z.enum(["active", "paused", "inactive", "planned", "dissolved"]), functionalCurrency: z.string().length(3), taxRegime: z.enum(["pfae_general", "resico", "corporate", "not_applicable", "other"]), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      entitySave: workspaceFinanceProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(2).max(180), shortCode: z.string().trim().max(32).nullable().optional(), countryCode: z.string().length(2), legalForm: z.enum(["individual", "pfae", "sa_de_cv", "sapi", "sl", "llc", "holding", "other"]), status: z.enum(["active", "paused", "inactive", "planned", "dissolved"]), functionalCurrency: z.string().length(3), taxRegime: z.enum(["pfae_general", "resico", "corporate", "not_applicable", "other"]), activityDescription: z.string().trim().max(220).nullable().optional(), notes: z.string().max(3000).nullable().optional() })).mutation(async ({ ctx, input }) => {
         if (ctx.workspaceAccess.role !== "owner") throw new TRPCError({ code: "FORBIDDEN", message: "Solo la propietaria puede administrar entidades." });
         const db = await requireDb(); const { id, ...values } = input;
         if (id) await db.update(workspaceEntities).set(values).where(and(eq(workspaceEntities.id, id), eq(workspaceEntities.ownerId, ctx.workspaceAccess.ownerId)));
@@ -1597,7 +1651,7 @@ export const appRouter = router({
         if (pending.length) await db.insert(financeNotifications).values(pending.map(candidate => ({ userId: ctx.user.id, ...candidate })));
         return { createdCount: pending.length, skipped: null };
       }),
-      savePreferences: privateFinanceProcedure.input(z.object({ inAppEnabled: z.boolean(), calendarEnabled: z.boolean(), documentsEnabled: z.boolean(), debtsEnabled: z.boolean(), reviewsEnabled: z.boolean(), budgetEnabled: z.boolean(), taxReserveEnabled: z.boolean(), travelsEnabled: z.boolean(), reminderDays: z.number().int().min(1).max(30), creditUtilizationThresholdPercent: z.number().int().min(1).max(100) })).mutation(async ({ ctx, input }) => {
+      savePreferences: privateFinanceProcedure.input(z.object({ inAppEnabled: z.boolean(), calendarEnabled: z.boolean(), documentsEnabled: z.boolean(), debtsEnabled: z.boolean(), reviewsEnabled: z.boolean(), budgetEnabled: z.boolean(), taxReserveEnabled: z.boolean(), travelsEnabled: z.boolean(), emailEnabled: z.boolean().optional(), reminderDays: z.number().int().min(1).max(30), creditUtilizationThresholdPercent: z.number().int().min(1).max(100) })).mutation(async ({ ctx, input }) => {
         const db = await requireDb();
         await db.insert(notificationPreferences).values({ userId: ctx.user.id, ...input }).onConflictDoUpdate({ target: notificationPreferences.userId, set: input });
         return { success: true };
