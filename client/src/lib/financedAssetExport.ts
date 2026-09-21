@@ -112,7 +112,7 @@ export function exportFinancedAssetDetail(kind: "csv" | "xlsx" | "pdf", input: F
   let y = 46;
   const header = (continued = false) => {
     document.setFillColor(0, 91, 81); document.rect(0, 0, width, continued ? 48 : 108, "F");
-    document.setTextColor(255, 255, 255); document.setFont("helvetica", "bold"); document.setFontSize(17); document.text(continued ? "Activo financiado · continuación" : "Meximoney · Detalle del activo financiado", 42, 37);
+    document.setTextColor(255, 255, 255); document.setFont("helvetica", "bold"); document.setFontSize(17); document.text(continued ? "Activo financiado · continuación" : "Richeon · Detalle del activo financiado", 42, 37);
     if (!continued) { document.setFont("helvetica", "normal"); document.setFontSize(9); document.text(input.asset.name, 42, 59); document.text(`${typeLabels[input.asset.type ?? ""] ?? "Activo"}${input.asset.institution ? ` · ${input.asset.institution}` : ""} · ${input.asset.currency}`, 42, 77); document.text(`Generado el ${new Date().toLocaleDateString("es-MX")} · Datos manuales`, 42, 93); }
     y = continued ? 76 : 138;
   };
@@ -134,6 +134,6 @@ export function exportFinancedAssetDetail(kind: "csv" | "xlsx" | "pdf", input: F
   if (!input.projection.rows.length) writeLine("Estado", "Sin proyección disponible");
   input.projection.rows.forEach(row => writeLine(`Cuota ${row.installment}`, `Inicial ${money(row.openingBalanceCents).toFixed(2)} · interés ${money(row.regularInterestCents).toFixed(2)} · pago ${money(row.plannedPaymentCents).toFixed(2)} · capital ${money(row.principalCents).toFixed(2)} · final ${money(row.closingBalanceCents).toFixed(2)} ${input.debt.currency}`));
   const pageCount = document.getNumberOfPages();
-  for (let page = 1; page <= pageCount; page += 1) { document.setPage(page); document.setTextColor(90, 107, 104); document.setFont("helvetica", "normal"); document.setFontSize(7.2); document.text(`Meximoney · Página ${page} de ${pageCount} · Información manual para revisión`, width - 42, height - 24, { align: "right" }); }
+  for (let page = 1; page <= pageCount; page += 1) { document.setPage(page); document.setTextColor(90, 107, 104); document.setFont("helvetica", "normal"); document.setFontSize(7.2); document.text(`Richeon · Página ${page} de ${pageCount} · Información manual para revisión`, width - 42, height - 24, { align: "right" }); }
   document.save(`${filename}.pdf`);
 }

@@ -26,7 +26,7 @@ export function buildFiscalInformativeCsv({ snapshot, records, period, summary, 
   const documents = new Map((snapshot.documents ?? []).map((item: any) => [item.id, item.name]));
   const receivables = new Map((snapshot.receivables ?? []).map((item: any) => [item.id, item]));
   const rows: unknown[][] = [
-    ["Meximoney — Exportación PFAE informativa"],
+    ["Richeon — Exportación PFAE informativa"],
     ["Periodo", period],
     ["Alcance manual", scopeLabel],
     ["Aviso", "Datos manuales informativos. No calcula impuestos, no genera CFDI y no constituye una declaración ante el SAT."],

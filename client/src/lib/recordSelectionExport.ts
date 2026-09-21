@@ -45,7 +45,7 @@ export function exportSelectedRecords(kind: "excel" | "pdf", rows: SelectedRecor
     pdf.setTextColor(255, 255, 255);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(16);
-    pdf.text(continuation ? "Movimientos seleccionados · continuación" : "Meximoney · Movimientos seleccionados", 38, continuation ? 32 : 36);
+    pdf.text(continuation ? "Movimientos seleccionados · continuación" : "Richeon · Movimientos seleccionados", 38, continuation ? 32 : 36);
     if (!continuation) {
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(8.5);
@@ -91,7 +91,7 @@ export function exportSelectedRecords(kind: "excel" | "pdf", rows: SelectedRecor
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(7.5);
     pdf.setTextColor(89, 106, 104);
-    pdf.text(`Meximoney · Página ${page} de ${pages}`, width - 38, height - 22, { align: "right" });
+    pdf.text(`Richeon · Página ${page} de ${pages}`, width - 38, height - 22, { align: "right" });
   }
   pdf.save(`meximoney-seleccion-${date}.pdf`);
 }

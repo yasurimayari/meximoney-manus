@@ -32,7 +32,7 @@ export function clearPwaNotificationsEnabled() {
 export function pwaInboxNotificationContent(createdCount: number) {
   const count = Math.max(0, Math.floor(createdCount));
   return {
-    title: "Meximoney",
+    title: "Richeon",
     body: count === 1 ? "Tienes 1 recordatorio nuevo para revisar." : `Tienes ${count} recordatorios nuevos para revisar.`,
   };
 }

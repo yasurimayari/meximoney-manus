@@ -64,7 +64,7 @@ export function exportRecordSearchResults(kind: "csv" | "pdf", results: RecordSe
   let y = 112;
   const addHeader = (continuation = false) => {
     pdf.setFillColor(0, 91, 81); pdf.rect(0, 0, width, continuation ? 52 : 94, "F");
-    pdf.setTextColor(255, 255, 255); pdf.setFont("helvetica", "bold"); pdf.setFontSize(17); pdf.text(continuation ? "Resultados de búsqueda · continuación" : "Meximoney · Resultados de búsqueda", 42, continuation ? 32 : 39);
+    pdf.setTextColor(255, 255, 255); pdf.setFont("helvetica", "bold"); pdf.setFontSize(17); pdf.text(continuation ? "Resultados de búsqueda · continuación" : "Richeon · Resultados de búsqueda", 42, continuation ? 32 : 39);
     if (!continuation) { pdf.setFont("helvetica", "normal"); pdf.setFontSize(8.5); pdf.text(`${rows.length} resultado${rows.length === 1 ? "" : "s"} · ${description}`, 42, 59); pdf.text(`Generado el ${new Date().toLocaleDateString("es-MX")} · Consulta de solo lectura`, 42, 76); }
     y = continuation ? 78 : 116;
   };
@@ -83,6 +83,6 @@ export function exportRecordSearchResults(kind: "csv" | "pdf", results: RecordSe
     y += rowHeight;
   });
   const pages = pdf.getNumberOfPages();
-  for (let page = 1; page <= pages; page += 1) { pdf.setPage(page); pdf.setFont("helvetica", "normal"); pdf.setFontSize(7.5); pdf.setTextColor(89, 106, 104); pdf.text(`Meximoney · Página ${page} de ${pages}`, width - 42, height - 24, { align: "right" }); }
+  for (let page = 1; page <= pages; page += 1) { pdf.setPage(page); pdf.setFont("helvetica", "normal"); pdf.setFontSize(7.5); pdf.setTextColor(89, 106, 104); pdf.text(`Richeon · Página ${page} de ${pages}`, width - 42, height - 24, { align: "right" }); }
   pdf.save(`meximoney-busqueda-${date}.pdf`);
 }

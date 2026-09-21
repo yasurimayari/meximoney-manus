@@ -45,7 +45,7 @@ export default function OfflineData() {
   };
 
   const remove = async () => {
-    if (!window.confirm("¿Eliminar la copia offline cifrada de este dispositivo? No se borrará ningún dato de Meximoney en línea.")) return;
+    if (!window.confirm("¿Eliminar la copia offline cifrada de este dispositivo? No se borrará ningún dato de Richeon en línea.")) return;
     await clearOfflineVault();
     await consent.mutateAsync({ accepted: false, policyVersion });
     setSummary(null); setStatus(null);

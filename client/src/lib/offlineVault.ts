@@ -189,7 +189,7 @@ export async function getOfflineVaultOwnerId() {
 export async function unlockOfflineSnapshot(pin: string, expectedOwnerUserId?: number): Promise<OfflineSnapshot> {
   requireSecureLocalEnvironment();
   const record = await getRecord();
-  if (!record || record.version !== OFFLINE_SCHEMA_VERSION) throw new Error("La copia offline necesita actualizarse desde Meximoney en línea.");
+  if (!record || record.version !== OFFLINE_SCHEMA_VERSION) throw new Error("La copia offline necesita actualizarse desde Richeon en línea.");
   if (expectedOwnerUserId && record.ownerUserId !== expectedOwnerUserId) throw new Error("Esta copia offline pertenece a otra cuenta y fue bloqueada para protegerla.");
   if (record.lockedUntil && record.lockedUntil > Date.now()) {
     const seconds = Math.ceil((record.lockedUntil - Date.now()) / 1000);

@@ -59,5 +59,5 @@ export function buildTravelIcs(plan: { id: number; name: string; origin?: string
     if (!start || !end) return [];
     return [`BEGIN:VEVENT\nUID:meximoney-travel-${plan.id}-${item.id}@meximoney\nDTSTAMP:${formatIcsDate(new Date())}\nDTSTART;TZID=${escapeIcs(plan.timeZone ?? "America/Mexico_City")}:${start}\nDTEND;TZID=${escapeIcs(plan.timeZone ?? "America/Mexico_City")}:${end}\nSUMMARY:${escapeIcs(`${plan.name} · ${item.title}`)}\nLOCATION:${escapeIcs(item.location ?? `${plan.origin ?? ""} → ${plan.destination ?? ""}`)}\nDESCRIPTION:${escapeIcs(item.notes ?? "")}\nEND:VEVENT`];
   });
-  return `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Meximoney//Viajes//ES\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n${events.join("\n")}\nEND:VCALENDAR\n`;
+  return `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Richeon//Viajes//ES\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n${events.join("\n")}\nEND:VCALENDAR\n`;
 }

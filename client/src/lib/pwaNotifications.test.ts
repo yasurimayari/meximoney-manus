@@ -3,8 +3,8 @@ import { pwaInboxNotificationContent, shouldShowPwaInboxNotification } from "./p
 
 describe("pwaInboxNotificationContent", () => {
   it("mantiene el aviso genérico y sólo expone el conteo de recordatorios", () => {
-    expect(pwaInboxNotificationContent(1)).toEqual({ title: "Meximoney", body: "Tienes 1 recordatorio nuevo para revisar." });
-    expect(pwaInboxNotificationContent(3)).toEqual({ title: "Meximoney", body: "Tienes 3 recordatorios nuevos para revisar." });
+    expect(pwaInboxNotificationContent(1)).toEqual({ title: "Richeon", body: "Tienes 1 recordatorio nuevo para revisar." });
+    expect(pwaInboxNotificationContent(3)).toEqual({ title: "Richeon", body: "Tienes 3 recordatorios nuevos para revisar." });
     expect(pwaInboxNotificationContent(3).body).not.toMatch(/\$|MXN|Santander|deuda|saldo|movimiento/i);
   });
 

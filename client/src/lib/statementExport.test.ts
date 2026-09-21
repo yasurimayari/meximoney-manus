@@ -8,7 +8,7 @@ describe("statementExport", () => {
   it("construye un libro de Balance General con metadatos y saldos", () => {
     const book = buildStatementWorkbook("balance", statement, metadata);
     const rows = book.Sheets["Balance General"];
-    expect(rows?.["A1"]?.v).toBe("Meximoney");
+    expect(rows?.["A1"]?.v).toBe("Richeon");
     expect(rows?.["B2"]?.v).toBe("2026-09");
     expect(rows?.["A7"]?.v).toBe("Activos");
     expect(rows?.["B7"]?.v).toContain("9,000.00");

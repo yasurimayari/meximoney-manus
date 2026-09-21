@@ -97,7 +97,7 @@ export default function Score() {
       <div>
         <p className="eyebrow">Indicadores explicables</p>
         <h1 className="page-title">Score financiero</h1>
-        <p className="page-subtitle">Tu score crediticio se registra manualmente. El SPF resume datos ya confirmados en Meximoney; no predice ni consulta Buró.</p>
+        <p className="page-subtitle">Tu score crediticio se registra manualmente. El SPF resume datos ya confirmados en Richeon; no predice ni consulta Buró.</p>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => setCreditOpen(true)}><Plus className="mr-2 size-4"/>Score crediticio</Button>
@@ -128,7 +128,7 @@ export default function Score() {
       <Card className="surface-card overflow-hidden">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><CreditCard className="size-4 text-primary"/>Score crediticio manual</CardTitle>
-          <CardDescription>Dato que tú capturas desde tu fuente de consulta; Meximoney no accede a Buró.</CardDescription>
+          <CardDescription>Dato que tú capturas desde tu fuente de consulta; Richeon no accede a Buró.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {latestCredit ? <LatestCreditScore score={latestCredit.score} reportedAt={latestCredit.reportedAt} source={latestCredit.source}/> : <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Aún no has agregado un score crediticio. Este factor se mantiene pendiente, no se estima.</p>}
@@ -199,7 +199,7 @@ function CreditScoreScale({ currentScore }: { currentScore?: number | null }) {
         </div>;
       })}
     </div>
-    {currentScore !== undefined && currentScore !== null && currentRange.key === "unclassified" ? <p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px] leading-5 text-slate-700">Este valor no cae en un intervalo publicado por Buró de Crédito. Meximoney no le asigna un color ni una categoría.</p> : null}
+    {currentScore !== undefined && currentScore !== null && currentRange.key === "unclassified" ? <p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px] leading-5 text-slate-700">Este valor no cae en un intervalo publicado por Buró de Crédito. Richeon no le asigna un color ni una categoría.</p> : null}
     <a className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" href={creditScoreSourceUrl} target="_blank" rel="noreferrer">Ver rangos publicados por Buró de Crédito <ExternalLink className="size-3"/></a>
   </section>;
 }
@@ -249,7 +249,7 @@ function CreditReportSection({ reports, saving, onAdd, onEdit, onArchive, onRest
   const isConsultationDue = nextConsultation ? nextConsultation.getTime() <= Date.now() : true;
   return <Card className="surface-card">
     <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div><CardTitle className="flex items-center gap-2 text-base"><FileText className="size-4 text-primary"/>Informes crediticios</CardTitle><CardDescription>Guarda tus informes PDF del Buró de Crédito y Círculo de Crédito. Meximoney sólo almacena el archivo y sus metadatos; no interpreta su contenido.</CardDescription></div>
+      <div><CardTitle className="flex items-center gap-2 text-base"><FileText className="size-4 text-primary"/>Informes crediticios</CardTitle><CardDescription>Guarda tus informes PDF del Buró de Crédito y Círculo de Crédito. Richeon sólo almacena el archivo y sus metadatos; no interpreta su contenido.</CardDescription></div>
       <div className="flex flex-wrap items-center gap-2"><div className="inline-flex rounded-lg border bg-background p-1" aria-label="Vista de informes"><Button type="button" size="icon" variant={viewMode === "cards" ? "secondary" : "ghost"} aria-label="Vista de tarjetas" title="Vista de tarjetas" onClick={() => setViewMode("cards")}><Grid2X2 className="size-4"/></Button><Button type="button" size="icon" variant={viewMode === "list" ? "secondary" : "ghost"} aria-label="Vista de lista" title="Vista de lista" onClick={() => setViewMode("list")}><List className="size-4"/></Button></div><Button className="btn-primary shrink-0" onClick={onAdd}><Plus className="mr-2 size-4"/>Subir informe</Button></div>
     </CardHeader>
       <CardContent className="space-y-4">

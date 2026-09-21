@@ -149,7 +149,7 @@ export function exportInvestmentHistory(kind: "csv" | "xlsx" | "pdf", rows: Inve
   const addHeader = (continuation = false) => {
     document.setFillColor(0, 91, 81); document.rect(0, 0, width, continuation ? 50 : 92, "F");
     document.setTextColor(255, 255, 255); document.setFont("helvetica", "bold"); document.setFontSize(17);
-    document.text(continuation ? "Historial de inversiones · continuación" : "Meximoney · Historial de inversiones", 42, continuation ? 31 : 38);
+    document.text(continuation ? "Historial de inversiones · continuación" : "Richeon · Historial de inversiones", 42, continuation ? 31 : 38);
     if (!continuation) { document.setFont("helvetica", "normal"); document.setFontSize(8.5); document.text(`${summary.positionCount} posiciones · ${summary.recordCount} registros · ${summary.currencies.join(" / ") || "Sin moneda"}`, 42, 60); document.text(`Generado el ${new Date().toLocaleDateString("es-MX")} · Datos registrados manualmente`, 42, 76); }
     y = continuation ? 76 : 118; document.setFillColor(238, 245, 243); document.rect(42, y - 16, width - 84, 19, "F"); document.setFont("helvetica", "bold"); document.setFontSize(7.5); document.setTextColor(44, 75, 71);
     document.text("FECHA", 50, y - 4); document.text("POSICIÓN / CONTEXTO", 106, y - 4); document.text("MOVIMIENTO", 350, y - 4); document.text("IMPORTE", width - 50, y - 4, { align: "right" }); y += 14;
@@ -171,6 +171,6 @@ export function exportInvestmentHistory(kind: "csv" | "xlsx" | "pdf", rows: Inve
     document.text(row.Fecha || "Sin fecha", 50, y); document.text(positionLines, 106, y); document.text(row.Operación, 350, y); document.text(new Intl.NumberFormat("es-MX", { style: "currency", currency: row.Moneda, minimumFractionDigits: 2 }).format(row.Importe), width - 50, y, { align: "right" });
     document.setFont("helvetica", "normal"); document.setTextColor(90, 107, 104); document.setFontSize(7.5); if (contextLines.length) document.text(contextLines, 106, y + positionLines.length * 9 + 2); if (noteLines.length) document.text(noteLines, 106, y + Math.max(positionLines.length * 9 + contextLines.length * 9, 12) + 8); y += rowHeight;
   });
-  const pageCount = document.getNumberOfPages(); for (let page = 1; page <= pageCount; page += 1) { document.setPage(page); document.setFont("helvetica", "normal"); document.setFontSize(7.5); document.setTextColor(90, 107, 104); document.text(`Meximoney · Página ${page} de ${pageCount}`, width - 42, height - 24, { align: "right" }); }
+  const pageCount = document.getNumberOfPages(); for (let page = 1; page <= pageCount; page += 1) { document.setPage(page); document.setFont("helvetica", "normal"); document.setFontSize(7.5); document.setTextColor(90, 107, 104); document.text(`Richeon · Página ${page} de ${pageCount}`, width - 42, height - 24, { align: "right" }); }
   document.save(`meximoney-historial-inversiones-${date}.pdf`);
 }

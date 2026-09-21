@@ -147,7 +147,7 @@ export default function Assistant() {
     <div className="assistant-page">
       <header className="page-heading">
         <div>
-          <p className="eyebrow">Mexi IA · asistente privado</p>
+          <p className="eyebrow">Richi · asistente privado</p>
           <h1>Entiende tus finanzas con trazabilidad.</h1>
           <p>Analiza tus registros manuales mediante Claude, conserva tus consultas y te permite desarrollar ideas en un diario privado. No busca en internet ni ejecuta acciones financieras.</p>
         </div>
@@ -156,10 +156,10 @@ export default function Assistant() {
         <section className="assistant-chat-card">
           <div className="assistant-chat-header">
             <div className="assistant-avatar"><Sparkles className="size-4" /></div>
-            <div><strong>Mexi IA</strong></div>
-            <label className="assistant-context-filter"><span>Notas para Mexi IA</span><select value={selectedNoteTag} onChange={event => setSelectedNoteTag(event.target.value as NoteTag | "all")} aria-label="Filtrar notas para Mexi IA"><option value="all">Todas las etiquetas</option>{noteTags.map(tag => <option value={tag.value} key={tag.value}>{tag.label}</option>)}</select></label>
+            <div><strong>Richi</strong></div>
+            <label className="assistant-context-filter"><span>Notas para Richi</span><select value={selectedNoteTag} onChange={event => setSelectedNoteTag(event.target.value as NoteTag | "all")} aria-label="Filtrar notas para Richi"><option value="all">Todas las etiquetas</option>{noteTags.map(tag => <option value={tag.value} key={tag.value}>{tag.label}</option>)}</select></label>
           </div>
-          <AIChatBox messages={messages} onSendMessage={send} isLoading={chat.isPending} height="610px" placeholder="Pregunta sobre tus datos manuales…" emptyStateMessage="Mexi IA está lista para revisar tus registros manuales con Claude." suggestedPrompts={suggestedPrompts} className="assistant-chat" />
+          <AIChatBox messages={messages} onSendMessage={send} isLoading={chat.isPending} height="610px" placeholder="Pregunta sobre tus datos manuales…" emptyStateMessage="Richi está lista para revisar tus registros manuales con Claude." suggestedPrompts={suggestedPrompts} className="assistant-chat" />
         </section>
 
         <aside className="assistant-sidebar">

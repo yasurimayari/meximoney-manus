@@ -26,7 +26,9 @@ import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
 import { clearOfflineVault, getOfflineVaultOwnerId } from "@/lib/offlineVault";
 import { notificationBadgeLabel, unreadNotificationCount } from "@/lib/notificationBadge";
-import { ArrowLeftRight, Award, BarChart3, BellRing, BotMessageSquare, CalendarDays, ChevronDown, ChevronRight, CircleCheckBig, CloudDownload, ContactRound, CreditCard, EyeOff, FileDown, FolderKanban, KeyRound, Landmark, LayoutDashboard, LockKeyhole, LogOut, PanelLeft, PiggyBank, ShieldCheck, Target, BookOpenCheck, Settings2, ClipboardCheck, ReceiptText, Calculator, Plane, ListChecks, HeartPulse } from "lucide-react";
+import { richeonModules } from "@/lib/richeonModules";
+import { BellRing, BotMessageSquare, ChevronDown, ChevronRight, CircleCheckBig, CloudDownload, EyeOff, FileDown, KeyRound, LockKeyhole, LogOut, PanelLeft, ShieldCheck, Settings2, ClipboardCheck } from "lucide-react";
+import { IconContext } from "@phosphor-icons/react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -34,14 +36,7 @@ import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import Onboarding from "@/pages/Onboarding";
 import { Button } from "./ui/button";
 
-const primaryMenuGroups = [
-  { label: "Resumen", items: [{ icon: LayoutDashboard, label: "Panel", path: "/" }, { icon: ListChecks, label: "ToDo", path: "/todo" }, { icon: HeartPulse, label: "Hábitos", path: "/habitos" }, { icon: BarChart3, label: "Analítica", path: "/analitica" }, { icon: BookOpenCheck, label: "Estados", path: "/estados" }, { icon: Award, label: "Score", path: "/score" }, { icon: Calculator, label: "Simulaciones", path: "/simulaciones" }] },
-  { label: "Registro", items: [{ icon: ArrowLeftRight, label: "Registros", path: "/movimientos" }, { icon: Landmark, label: "Cuentas", path: "/cuentas" }, { icon: CreditCard, label: "Tarjetas", path: "/tarjetas" }, { icon: ContactRound, label: "Contactos", path: "/contactos" }] },
-  { label: "Dinero", items: [{ icon: PiggyBank, label: "Ahorro e inversiones", path: "/inversiones" }, { icon: Landmark, label: "Patrimonio", path: "/patrimonio" }] },
-  { label: "Planificación", items: [{ icon: Target, label: "Planificación", path: "/planificacion" }, { icon: Plane, label: "Viajes", path: "/viajes" }, { icon: FolderKanban, label: "Proyectos", path: "/proyectos" }, { icon: CalendarDays, label: "Calendario", path: "/calendario" }, { icon: CircleCheckBig, label: "Control mensual", path: "/control-mensual" }] },
-  { label: "Gestión", items: [{ icon: ReceiptText, label: "Libro PFAE", path: "/fiscal" }, { icon: BotMessageSquare, label: "Asistente", path: "/asistente" }] },
-];
-const primaryMenuItems = primaryMenuGroups.flatMap(group => group.items);
+const primaryMenuItems = richeonModules.flatMap(module => module.routes.map(route => ({ ...route, moduleId: module.id })));
 
 const accountMenuItems = [
   { icon: FileDown, label: "Exportar", path: "/exportar" },
@@ -80,7 +75,7 @@ export default function DashboardLayout({
         <div className="auth-orbit auth-orbit-two" />
         <div className="auth-shell">
           <section className="auth-intro">
-            <div className="auth-wordmark"><span className="auth-logo">M</span><span>Meximoney</span></div>
+            <div className="auth-wordmark"><span className="auth-logo">R</span><span>Richeon</span></div>
             <p className="eyebrow">Finanzas manuales · espacio privado</p>
             <h1>Tu dinero, tu ritmo,<br /><em>tu claridad.</em></h1>
             <p>Organiza y analiza tus finanzas personales y empresariales sin conectar bancos, compartir credenciales ni ejecutar pagos.</p>
@@ -152,7 +147,7 @@ function LocalAuthCard() {
     {mode === "login" ? <a href="/restablecer-contrasena" className="mt-3 block text-center text-sm font-semibold text-primary underline-offset-4 hover:underline">¿Olvidaste tu contraseña?</a> : null}
     <p className="mt-4 text-center text-sm text-muted-foreground">{mode === "login" ? <>¿Es tu primera vez? <button type="button" className="font-semibold text-primary underline-offset-4 hover:underline" onClick={() => setMode("register")}>Crear cuenta</button></> : <>¿Ya tienes cuenta? <button type="button" className="font-semibold text-primary underline-offset-4 hover:underline" onClick={() => setMode("login")}>Iniciar sesión</button></>}</p>
     <div className="auth-card-footer"><span>0 conexiones bancarias</span><i /> <span>0 pagos ejecutados</span></div>
-    <details className="mt-5 rounded-xl border border-primary/15 bg-primary/[0.035] p-3 text-left text-xs leading-5 text-muted-foreground"><summary className="cursor-pointer font-semibold text-primary">Instalar Meximoney en tu móvil</summary><p className="mt-2">En iPhone, abre el dominio publicado en <strong>Safari</strong>, toca Compartir y elige «Añadir a pantalla de inicio». En Android, abre el mismo enlace en Chrome y elige «Instalar aplicación».</p><p className="mt-2">La primera apertura será en línea. Una vez dentro, configura de forma voluntaria tu copia cifrada en <strong>Yasuri → Datos offline</strong> para consultar información sin Internet.</p></details>
+    <details className="mt-5 rounded-xl border border-primary/15 bg-primary/[0.035] p-3 text-left text-xs leading-5 text-muted-foreground"><summary className="cursor-pointer font-semibold text-primary">Instalar Richeon en tu móvil</summary><p className="mt-2">En iPhone, abre el dominio publicado en <strong>Safari</strong>, toca Compartir y elige «Añadir a pantalla de inicio». En Android, abre el mismo enlace en Chrome y elige «Instalar aplicación».</p><p className="mt-2">La primera apertura será en línea. Una vez dentro, configura de forma voluntaria tu copia cifrada en <strong>Yasuri → Datos offline</strong> para consultar información sin Internet.</p></details>
   </section>;
 }
 
@@ -170,7 +165,7 @@ function DashboardLayoutContent({
   const { state, toggleSidebar, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
-  const [openNavigationGroups, setOpenNavigationGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(primaryMenuGroups.map(group => [group.label, true])));
+  const [openNavigationGroups, setOpenNavigationGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(richeonModules.map(module => [module.id, true])));
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = [...primaryMenuItems, ...accountMenuItems].find(item => item.path === location) ?? [{ path: "/calidad", label: "Perfil y privacidad" }, { path: "/seguridad/cambiar-contrasena", label: "Cambiar contraseña" }, { path: "/notificaciones", label: "Notificaciones" }, { path: "/datos-offline", label: "Datos offline" }, { path: "/espacio", label: "Espacio" }].find(item => item.path === location);
   const isMobile = useIsMobile();
@@ -249,43 +244,74 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="brand-mark">M</span><span className="font-semibold tracking-tight truncate brand-word">Meximoney</span>
+                  <span className="brand-mark brand-mark-gradient">R</span><span className="font-semibold tracking-tight truncate brand-word text-sidebar-foreground">Richeon</span>
                 </div>
               ) : null}
             </div>
           </SidebarHeader>
 
           <SidebarContent className="gap-0 px-2 py-2">
-            {primaryMenuGroups.map(group => {
-              const isGroupOpen = openNavigationGroups[group.label];
-              return <div className="mb-2" key={group.label}>
-                {!isCollapsed ? <button type="button" className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground hover:bg-accent/50" onClick={() => setOpenNavigationGroups(current => ({ ...current, [group.label]: !current[group.label] }))} aria-expanded={isGroupOpen}><span>{group.label}</span>{isGroupOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}</button> : null}
-                {(isCollapsed || isGroupOpen) ? <SidebarMenu className="py-0.5">
-              {group.items.map(item => {
-                const isActive = location === item.path;
-                const isNotificationsItem = item.path === "/notificaciones";
-                const notificationLabel = unreadNotifications ? `${unreadNotifications} notificaciones sin leer` : "Sin notificaciones sin leer";
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => navigate(item.path)}
-                      tooltip={isNotificationsItem && unreadNotifications ? `${item.label}: ${notificationLabel}` : item.label}
-                      aria-label={isNotificationsItem ? `${item.label}. ${notificationLabel}` : item.label}
-                      className={`h-10 transition-all font-normal`}
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                      <span>{item.label}</span>
-                      {isNotificationsItem && unreadNotifications ? <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[0.62rem] font-bold leading-none text-primary-foreground group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:right-0.5 group-data-[collapsible=icon]:top-0.5" aria-hidden="true">{notificationBadgeLabel(unreadNotifications)}</span> : null}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-                </SidebarMenu> : null}
-              </div>;
-            })}
+            <IconContext.Provider value={{ weight: "duotone" }}>
+              <SidebarMenu className="py-0.5">
+                {richeonModules.map(module => {
+                  const isMultiRoute = module.routes.length > 1;
+                  const isModuleActive = module.routes.some(route => route.path === location);
+                  const isGroupOpen = openNavigationGroups[module.id];
+                  return (
+                    <div className="sidebar-module-group" key={module.id}>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          isActive={isModuleActive && !isMultiRoute}
+                          onClick={() => isMultiRoute ? setOpenNavigationGroups(current => ({ ...current, [module.id]: !current[module.id] })) : navigate(module.routes[0].path)}
+                          tooltip={`${module.brand} — ${module.description}`}
+                          aria-label={module.brand}
+                          aria-expanded={isMultiRoute ? isGroupOpen : undefined}
+                          className={`h-auto py-2 ${isModuleActive ? "sidebar-module-header is-active" : "sidebar-module-header"}`}
+                        >
+                          <span className={`module-badge ${module.badgeClass}`}><module.icon weight="duotone" /></span>
+                          <span className="sidebar-module-text group-data-[collapsible=icon]:hidden">
+                            <strong>{module.brand}</strong>
+                            <small>{module.description}</small>
+                          </span>
+                          {isMultiRoute ? <span className="group-data-[collapsible=icon]:hidden">{isGroupOpen ? <ChevronDown className="sidebar-module-chevron" /> : <ChevronRight className="sidebar-module-chevron" />}</span> : null}
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      {isMultiRoute && isGroupOpen && !isCollapsed ? (
+                        <div className="sidebar-module-children">
+                          {module.routes.map(route => (
+                            <button
+                              key={route.path}
+                              type="button"
+                              onClick={() => navigate(route.path)}
+                              className={`sidebar-module-child ${location === route.path ? "is-active" : ""}`}
+                            >
+                              {route.label}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </SidebarMenu>
+            </IconContext.Provider>
+
+            <div className="my-2 border-t border-sidebar-border" />
+
+            <SidebarMenu className="py-0.5">
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={location === "/asistente"}
+                  onClick={() => navigate("/asistente")}
+                  tooltip="Asistente Richi"
+                  aria-label="Asistente Richi"
+                  className={`h-auto py-2 ${location === "/asistente" ? "sidebar-richi-link" : "sidebar-richi-link"}`}
+                >
+                  <span className="sidebar-richi-avatar"><BotMessageSquare className="size-4" /></span>
+                  <span className="group-data-[collapsible=icon]:hidden">Asistente</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
           </SidebarContent>
 
           <SidebarFooter className="p-3">
@@ -364,7 +390,7 @@ function DashboardLayoutContent({
               <div className="flex items-center gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="tracking-tight text-foreground">
-                    {activeMenuItem?.label ?? "Meximoney"}
+                    {activeMenuItem?.label ?? "Richeon"}
                   </span>
                 </div>
               </div>

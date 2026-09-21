@@ -13,7 +13,7 @@ function rowsFor(type: StatementType, statement: any, currency: string) {
 }
 
 export function buildStatementWorkbook(type: StatementType, statement: any, metadata: { period: string; scope: string; currency: string }) {
-  const sheet = XLSX.utils.aoa_to_sheet([["Meximoney", titles[type]], ["Periodo", metadata.period], ["Ámbito", metadata.scope], ["Moneda", metadata.currency], [], ...rowsFor(type, statement, metadata.currency)]);
+  const sheet = XLSX.utils.aoa_to_sheet([["Richeon", titles[type]], ["Periodo", metadata.period], ["Ámbito", metadata.scope], ["Moneda", metadata.currency], [], ...rowsFor(type, statement, metadata.currency)]);
   sheet["!cols"] = [{ wch: 28 }, { wch: 22 }];
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(book, sheet, titles[type].slice(0, 31));
@@ -30,10 +30,10 @@ export async function exportStatementPdf(type: StatementType, statement: any, me
   const width = doc.internal.pageSize.getWidth();
   doc.setFillColor(0, 91, 81); doc.rect(0, 0, width, 110, "F");
   doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.text(titles[type], 44, 50);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(`Meximoney · Periodo ${metadata.period} · ${metadata.scope} · ${metadata.currency}`, 44, 76);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(`Richeon · Periodo ${metadata.period} · ${metadata.scope} · ${metadata.currency}`, 44, 76);
   let y = 150; doc.setTextColor(28, 56, 54); doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text("Resumen automático", 44, y); y += 30;
   doc.setFont("helvetica", "normal"); doc.setFontSize(11);
   rowsFor(type, statement, metadata.currency).slice(1).forEach(([label, value]) => { doc.setDrawColor(224, 233, 229); doc.line(44, y + 8, width - 44, y + 8); doc.text(label, 44, y); doc.setFont("helvetica", "bold"); doc.text(value, width - 44, y, { align: "right" }); doc.setFont("helvetica", "normal"); y += 28; });
-  doc.setFontSize(9); doc.setTextColor(90, 107, 104); doc.text("Fuente: registros manuales actuales de Meximoney. No es una declaración fiscal.", 44, y + 42);
+  doc.setFontSize(9); doc.setTextColor(90, 107, 104); doc.text("Fuente: registros manuales actuales de Richeon. No es una declaración fiscal.", 44, y + 42);
   doc.save(`meximoney-${type}-${metadata.period}.pdf`);
 }

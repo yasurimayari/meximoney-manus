@@ -67,7 +67,7 @@ export async function exportFinancialPdf(snapshot: any) {
   const { currency, cashFlow, netWorth, liquidity } = buildFinancialReportSummary(snapshot);
   const document = new jsPDF({ unit: "pt", format: "a4" });
   const taxReserve = snapshot.profile?.futureTaxReserveCents || 0;
-  const title = "Informe financiero Meximoney";
+  const title = "Informe financiero Richeon";
   const width = document.internal.pageSize.getWidth();
   let y = 58;
   document.setFillColor(0, 91, 81);
@@ -174,7 +174,7 @@ export async function exportFinancialPdf(snapshot: any) {
   document.setFont("helvetica", "normal");
   document.setFontSize(9);
   document.setTextColor(90, 107, 104);
-  const note = `Este informe organiza exclusivamente los datos manuales de Meximoney. Las cifras consolidadas en ${currency} sólo incluyen partidas con importe original en esa moneda o conversión manual registrada; las partidas pendientes se identifican y no se suman. Los estados mensuales guardados son fotos manuales de los importes registrados al cierre. No es una declaración fiscal, una recomendación de inversión ni una instrucción de pago.`;
+  const note = `Este informe organiza exclusivamente los datos manuales de Richeon. Las cifras consolidadas en ${currency} sólo incluyen partidas con importe original en esa moneda o conversión manual registrada; las partidas pendientes se identifican y no se suman. Los estados mensuales guardados son fotos manuales de los importes registrados al cierre. No es una declaración fiscal, una recomendación de inversión ni una instrucción de pago.`;
   document.text(document.splitTextToSize(note, width - 88), 44, y + 18);
   document.save(`meximoney-informe-${new Date().toISOString().slice(0, 10)}.pdf`);
 }
