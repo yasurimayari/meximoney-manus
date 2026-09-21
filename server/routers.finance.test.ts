@@ -235,7 +235,7 @@ describe("finance.dashboard", () => {
   });
 
   it("guarda el borrador de un gestor bajo la propietaria y exige revisión humana", async () => {
-    const inserted = vi.fn();
+    const inserted = vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 501 }]) });
     mocks.resolveWorkspaceAccess.mockResolvedValue({ ownerId: 73, role: "manager", canCreateDrafts: true, canReview: false });
     mocks.requireDb.mockResolvedValue({
       select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ accepted: true }] }) }) }),

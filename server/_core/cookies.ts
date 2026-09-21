@@ -39,10 +39,15 @@ export function getSessionCookieOptions(
   //       ? hostname
   //       : undefined;
 
+  // SameSite=None is only valid on a Secure cookie -- Chrome silently drops
+  // it otherwise. Over plain http (local dev), fall back to Lax so the
+  // cookie actually gets stored; this only affects requests that can't
+  // attach the X-Meximoney-Session header (plain <img>, the storage proxy).
+  const secure = isSecureRequest(req);
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    sameSite: secure ? "none" : "lax",
+    secure,
   };
 }

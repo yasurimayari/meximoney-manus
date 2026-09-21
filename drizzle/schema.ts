@@ -3,7 +3,7 @@ import { boolean, index, integer, json, pgEnum, pgTable, serial, text, timestamp
 export const usersRoleEnum = pgEnum("users_role", ["user", "admin"]);
 export const passwordResetEventsEventTypeEnum = pgEnum("passwordResetEvents_eventType", ["requested", "email_sent", "email_failed", "password_reset", "password_changed"]);
 export const passwordResetEventsChannelEnum = pgEnum("passwordResetEvents_channel", ["email"]);
-export const financialProfilesTaxRegimeEnum = pgEnum("financialProfiles_taxRegime", ["pfae_general", "resico", "other", "not_applicable"]);
+export const financialProfilesTaxRegimeEnum = pgEnum("financialProfiles_taxRegime", ["pfae_general", "resico", "estimacion_directa_simplificada", "estimacion_directa_normal", "other", "not_applicable"]);
 export const financialProfilesExchangeRatePolicyEnum = pgEnum("financialProfiles_exchangeRatePolicy", ["manual", "manual_confirmed", "unconverted"]);
 export const financialProfilesRiskToleranceEnum = pgEnum("financialProfiles_riskTolerance", ["low", "medium_low", "medium", "medium_high", "high"]);
 export const financialProfilesFinancialKnowledgeLevelEnum = pgEnum("financialProfiles_financialKnowledgeLevel", ["beginner", "intermediate", "advanced"]);

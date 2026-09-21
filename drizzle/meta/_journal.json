@@ -15,6 +15,13 @@
       "when": 1789946136171,
       "tag": "0001_nosy_black_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789996504737,
+      "tag": "0002_oval_miss_america",
+      "breakpoints": true
     }
   ]
 }

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RichiBubble } from "./RichiBubble";
 import { MultiSelectChips } from "./MultiSelectChips";
-import { COUNTRY_OPTIONS, CURRENCY_OPTIONS, INCOME_SOURCE_OPTIONS, OCCUPATION_OPTIONS, RISK_SCENARIO_OPTIONS } from "./pfiTypes";
+import { COUNTRY_OPTIONS, CURRENCY_OPTIONS, INCOME_SOURCE_OPTIONS, OCCUPATION_OPTIONS, RISK_SCENARIO_OPTIONS, taxRegimeOptionsForCountry } from "./pfiTypes";
 import type { PfiAnswers } from "./pfiTypes";
 
 export type ScreenProps = {
@@ -146,7 +146,7 @@ export function ScreenDebtsAccountsPulse({ answers, update }: ScreenProps) {
       </div>
       {answers.hasActiveDebtsDeclared ? (
         <div className="pfi-field-group">
-          <Label>¿Aproximadamente cuántas?</Label>
+          <Label>¿Aproximadamente cuántas deudas activas tienes?</Label>
           <Input type="number" min={0} value={answers.approxDebtCount ?? ""} onChange={event => update({ approxDebtCount: event.target.value ? Number(event.target.value) : null })} />
         </div>
       ) : null}
@@ -159,11 +159,7 @@ export function ScreenDebtsAccountsPulse({ answers, update }: ScreenProps) {
 }
 
 export function ScreenTaxSituation({ answers, update }: ScreenProps) {
-  const options = [
-    { value: "pfae_general", label: "PFAE · Régimen general" },
-    { value: "resico", label: "RESICO" },
-    { value: "other", label: "Otro / no estoy segura" },
-  ] as const;
+  const options = taxRegimeOptionsForCountry(answers.residenceCountries[0]);
   return (
     <>
       <RichiBubble><p>¿Conoces tu régimen fiscal actual? Si no estás segura, no pasa nada — lo resolvemos después.</p></RichiBubble>
@@ -262,7 +258,7 @@ export function ScreenPrivacy({ answers, update }: ScreenProps) {
       <RichiBubble>
         <p>Antes de continuar, quiero ser transparente contigo:</p>
         <p className="mt-3">Guardamos lo que registres manualmente, cifrado y bajo tu control. Puedes borrarlo cuando quieras desde Configuración.</p>
-        <p className="mt-3">Como responsable de Richeon, Yasuri puede acceder a tu información si es necesario para dar soporte o resolver un problema. Cada vez que lo hace, queda un registro visible para ti de cuándo y por qué.</p>
+        <p className="mt-3">Podemos entrar a tu cuenta si necesitas ayuda o hay un problema técnico — siempre queda registrado cuándo y por qué.</p>
       </RichiBubble>
       <label className="pfi-consent">
         <input type="checkbox" checked={answers.consentAccepted} onChange={event => update({ consentAccepted: event.target.checked })} />
@@ -272,7 +268,7 @@ export function ScreenPrivacy({ answers, update }: ScreenProps) {
   );
 }
 
-export function ScreenClosing({ userName, activeModules }: ScreenProps & { activeModules: string[] | null }) {
+export function ScreenClosing({ userName, activeModules, hasAccounts }: ScreenProps & { activeModules: string[] | null; hasAccounts?: boolean }) {
   const moduleLabels: Record<string, string> = {
     coreview: "Panel", controlhub: "ToDo y Calendario", moneylink: "Registros y Cuentas", wealthmap: "Patrimonio", crediscore: "Score",
     debtcenter: "Tarjetas y deudas", bookpro_taxzen: "Libro PFAE", netlink: "Contactos de negocio", lifegoals: "Planificación de objetivos",
@@ -281,7 +277,25 @@ export function ScreenClosing({ userName, activeModules }: ScreenProps & { activ
     <RichiBubble>
       <p>Gracias por contarme todo esto, {userName || "bienvenida"}. Ya tengo lo que necesito para organizar tu espacio.</p>
       {activeModules?.length ? <p className="mt-3">Ya tienes activo: {activeModules.map(key => moduleLabels[key] ?? key).join(", ")}.</p> : null}
-      <p className="mt-3">Para que veas Richeon en acción de inmediato, en Cuentas puedes subir tu último estado de cuenta y en un momento verás tu primer resumen real. Si prefieres no hacerlo ahora, entras igual a un panel vacío pero funcional, y lo haces cuando quieras.</p>
+      {hasAccounts === false
+        ? <p className="mt-3">Para que veas Richeon en acción de inmediato, primero creamos tu primera cuenta — toma un minuto — y luego subes tu último estado de cuenta para ver tu primer resumen real. Si prefieres no hacerlo ahora, entras igual a un panel vacío pero funcional, y lo haces cuando quieras.</p>
+        : <p className="mt-3">Para que veas Richeon en acción de inmediato, en Cuentas puedes subir tu último estado de cuenta y en un momento verás tu primer resumen real. Si prefieres no hacerlo ahora, entras igual a un panel vacío pero funcional, y lo haces cuando quieras.</p>}
     </RichiBubble>
+  );
+}
+
+export function ScreenCreateFirstAccount({ name, currency, onNameChange, onCurrencyChange }: { name: string; currency: string; onNameChange: (value: string) => void; onCurrencyChange: (value: string) => void }) {
+  return (
+    <>
+      <RichiBubble><p>Antes de subir tu estado de cuenta necesito que exista al menos una cuenta a la que asignarlo — toma un minuto. ¿Cómo se llama y en qué moneda opera?</p></RichiBubble>
+      <div className="pfi-field-group">
+        <Label>Nombre de la cuenta</Label>
+        <Input value={name} onChange={event => onNameChange(event.target.value)} placeholder="Ej. Cuenta principal" />
+      </div>
+      <div className="pfi-field-group">
+        <Label>Moneda</Label>
+        <Input value={currency} maxLength={3} onChange={event => onCurrencyChange(event.target.value.toUpperCase())} />
+      </div>
+    </>
   );
 }

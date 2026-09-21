@@ -1,0 +1,2 @@
+ALTER TYPE "public"."financialProfiles_taxRegime" ADD VALUE 'estimacion_directa_simplificada' BEFORE 'other';--> statement-breakpoint
+ALTER TYPE "public"."financialProfiles_taxRegime" ADD VALUE 'estimacion_directa_normal' BEFORE 'other';

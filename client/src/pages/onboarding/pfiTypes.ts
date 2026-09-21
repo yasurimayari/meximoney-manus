@@ -1,3 +1,5 @@
+export type TaxRegime = "pfae_general" | "resico" | "estimacion_directa_simplificada" | "estimacion_directa_normal" | "other" | "not_applicable";
+
 export type PfiAnswers = {
   displayName: string;
   avatarUrl: string;
@@ -10,7 +12,7 @@ export type PfiAnswers = {
   hasActiveDebtsDeclared: boolean | null;
   approxDebtCount: number | null;
   approxAccountCount: number | null;
-  taxRegime: "pfae_general" | "resico" | "other" | "not_applicable" | null;
+  taxRegime: TaxRegime | null;
   riskScenario1Answer: "retiro" | "espero" | "invierto_mas" | null;
   riskScenario2Answer: "retiro" | "espero" | "invierto_mas" | null;
   goals: Array<{ name: string; targetCents: number; targetDate: number | null }>;
@@ -80,3 +82,26 @@ export const RISK_SCENARIO_OPTIONS = [
   { value: "espero", label: "Espero sin hacer nada" },
   { value: "invierto_mas", label: "Aprovecho para poner más" },
 ] as const;
+
+type TaxRegimeOption = { value: TaxRegime; label: string };
+
+const DEFAULT_TAX_REGIME_OPTIONS: readonly TaxRegimeOption[] = [{ value: "other", label: "Otro / no estoy segura" }];
+
+// Un país sin lista propia cae en DEFAULT_TAX_REGIME_OPTIONS. Agregar un país
+// nuevo es solo agregar una entrada aquí -- no toca ScreenTaxSituation.
+export const TAX_REGIME_OPTIONS_BY_COUNTRY: Record<string, readonly TaxRegimeOption[]> = {
+  "México": [
+    { value: "pfae_general", label: "PFAE · Régimen general" },
+    { value: "resico", label: "RESICO" },
+    { value: "other", label: "Otro / no estoy segura" },
+  ],
+  "España": [
+    { value: "estimacion_directa_simplificada", label: "Estimación Directa Simplificada" },
+    { value: "estimacion_directa_normal", label: "Estimación Directa Normal" },
+    { value: "other", label: "Otro / no estoy segura" },
+  ],
+};
+
+export function taxRegimeOptionsForCountry(country: string | undefined): readonly TaxRegimeOption[] {
+  return (country && TAX_REGIME_OPTIONS_BY_COUNTRY[country]) || DEFAULT_TAX_REGIME_OPTIONS;
+}

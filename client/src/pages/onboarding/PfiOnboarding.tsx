@@ -14,6 +14,7 @@ import {
   ScreenClosing,
   ScreenCommunicationStyle,
   ScreenCountriesCurrencies,
+  ScreenCreateFirstAccount,
   ScreenDebtsAccountsPulse,
   ScreenGoals,
   ScreenIncomeSources,
@@ -24,6 +25,7 @@ import {
   ScreenTaxSituation,
   ScreenWelcome,
 } from "./screens";
+import { dashboardPeriodQuery } from "@/lib/dashboardPeriod";
 
 type ScreenKey = "welcome" | "basics" | "knowledge" | "occupation" | "countries" | "income" | "businesses" | "debtsAccounts" | "taxSituation" | "risk" | "goals" | "communication" | "channels" | "privacy" | "closing";
 
@@ -84,9 +86,18 @@ export default function PfiOnboarding() {
 
   const saveStep = trpc.finance.workspace.pfi.saveStep.useMutation();
   const complete = trpc.finance.workspace.pfi.complete.useMutation();
-  const uploadAvatar = trpc.finance.profile.uploadAvatar.useMutation();
+  const uploadAvatar = trpc.finance.workspace.pfi.uploadAvatar.useMutation();
+  const saveFirstAccount = trpc.finance.accounts.save.useMutation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completedModules, setCompletedModules] = useState<string[] | null>(null);
+  const [creatingFirstAccount, setCreatingFirstAccount] = useState(false);
+  const [firstAccountName, setFirstAccountName] = useState("Cuenta principal");
+  const [firstAccountCurrency, setFirstAccountCurrency] = useState("");
+
+  // Solo se necesita una vez que se muestra la pantalla de cierre, para saber
+  // si hay que ofrecer crear la primera cuenta antes de importar un estado.
+  const { data: closingDashboard, isLoading: closingDashboardLoading } = trpc.finance.dashboard.useQuery(dashboardPeriodQuery, { enabled: currentKey === "closing" && Boolean(completedModules) });
+  const hasAccounts = (closingDashboard?.accounts?.length ?? 0) > 0;
 
   const update = (patch: Partial<PfiAnswers>) => setAnswers(current => ({ ...current, ...patch }));
 
@@ -149,7 +160,25 @@ export default function PfiOnboarding() {
     await utils.finance.workspace.get.invalidate();
     await utils.finance.notifications.get.invalidate();
     await utils.finance.dashboard.invalidate();
-    setLocation("/cuentas");
+    setLocation("/cuentas?importar=1");
+  };
+
+  const startCreatingFirstAccount = () => {
+    setFirstAccountCurrency(answers.activeCurrencies[0] || "MXN");
+    setCreatingFirstAccount(true);
+  };
+
+  const createFirstAccountAndContinue = async () => {
+    if (!firstAccountName.trim()) { toast.error("Ponle un nombre a tu cuenta para continuar."); return; }
+    setIsSubmitting(true);
+    try {
+      await saveFirstAccount.mutateAsync({ name: firstAccountName.trim(), type: "bank", scope: "personal", currency: (firstAccountCurrency || "MXN").toUpperCase(), currentValueCents: 0, isLiquid: true, valuationDate: Date.now(), status: "active", notes: null });
+      await goToAccounts();
+    } catch (error: any) {
+      toast.error(error?.message || "No se pudo crear la cuenta.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAvatarSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,7 +188,10 @@ export default function PfiOnboarding() {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result !== "string") return;
-      uploadAvatar.mutate({ dataUrl: reader.result, confirmedPersonalDataConsent: true }, { onSuccess: result => update({ avatarUrl: result.url }) });
+      uploadAvatar.mutate({ dataUrl: reader.result }, {
+        onSuccess: result => update({ avatarUrl: result.url }),
+        onError: error => toast.error(error.message || "No se pudo subir la foto."),
+      });
     };
     reader.readAsDataURL(file);
   };
@@ -181,12 +213,31 @@ export default function PfiOnboarding() {
   })();
 
   if (currentKey === "closing" && completedModules) {
+    if (creatingFirstAccount) {
+      return (
+        <main className="pfi-page">
+          <div className="pfi-shell">
+            <ScreenCreateFirstAccount name={firstAccountName} currency={firstAccountCurrency} onNameChange={setFirstAccountName} onCurrencyChange={setFirstAccountCurrency} />
+            <div className="pfi-actions">
+              <Button type="button" variant="ghost" onClick={() => setCreatingFirstAccount(false)} disabled={isSubmitting}>Volver</Button>
+              <Button type="button" className="bg-[#0058FD] text-white hover:bg-[#0047d1]" onClick={createFirstAccountAndContinue} disabled={isSubmitting || !firstAccountName.trim()}>{isSubmitting ? "Creando…" : "Crear cuenta y continuar"}</Button>
+            </div>
+          </div>
+        </main>
+      );
+    }
     return (
       <main className="pfi-page">
         <div className="pfi-shell">
-          <ScreenClosing answers={answers} update={update} userName={answers.displayName} activeModules={completedModules} />
+          <ScreenClosing answers={answers} update={update} userName={answers.displayName} activeModules={completedModules} hasAccounts={closingDashboardLoading ? undefined : hasAccounts} />
           <div className="pfi-actions">
-            <Button type="button" variant="outline" onClick={goToAccounts}>Subir estado de cuenta</Button>
+            {closingDashboardLoading ? (
+              <span className="pfi-hint">Preparando tu panel…</span>
+            ) : hasAccounts ? (
+              <Button type="button" variant="outline" onClick={goToAccounts}>Subir estado de cuenta</Button>
+            ) : (
+              <Button type="button" variant="outline" onClick={startCreatingFirstAccount}>Crear mi primera cuenta</Button>
+            )}
             <Button type="button" className="bg-[#0058FD] text-white hover:bg-[#0047d1]" onClick={finish}>Ir a mi panel</Button>
           </div>
         </div>

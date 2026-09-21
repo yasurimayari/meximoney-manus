@@ -1,9 +1,10 @@
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { inferImportMapping, inferImportType, parseImportAmount, parseImportDate, parseSpreadsheet, type ImportColumn, type ImportMapping, type SpreadsheetRow } from "@/lib/importSpreadsheet";
 import { formatDate, formatMoney } from "@/lib/finance";
 import { trpc } from "@/lib/trpc";
 import { FileCheck2, FileUp, RefreshCw, SearchCheck, Upload, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 const mappingFields: Array<{ key: ImportColumn; label: string; required?: boolean }> = [
@@ -25,8 +26,8 @@ function selectOptions(headers: string[], selected: string | undefined) {
   return <><option value="">No usar</option>{headers.map(header => <option value={header} key={header}>{header}</option>)}</>;
 }
 
-export function BankStatementReconciliationPanel({ accounts }: { accounts: AccountOption[] }) {
-  const [importOpen, setImportOpen] = useState(false);
+export function BankStatementReconciliationPanel({ accounts, autoOpen = false }: { accounts: AccountOption[]; autoOpen?: boolean }) {
+  const [importOpen, setImportOpen] = useState(autoOpen);
   const [accountId, setAccountId] = useState("");
   const [fileName, setFileName] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
@@ -53,6 +54,10 @@ export function BankStatementReconciliationPanel({ accounts }: { accounts: Accou
     onSuccess: async () => { toast.success("Diferencia actualizada."); await Promise.all([utils.finance.workspace.bankStatements.summary.invalidate(), utils.finance.dashboard.invalidate()]); },
     onError: error => toast.error(error.message),
   });
+
+  useEffect(() => {
+    if (autoOpen) document.getElementById("conciliacion-bancaria")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [autoOpen]);
 
   const selectedAccountRecord = accounts.find(account => String(account.id) === accountId);
   const filteredRows = useMemo(() => {
@@ -125,9 +130,13 @@ export function BankStatementReconciliationPanel({ accounts }: { accounts: Accou
 
     {importOpen ? <div className="rounded-xl border border-primary/20 bg-primary/5 p-4" aria-label="Importar estado de cuenta">
       <div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">Importar estado de cuenta</h3><p className="mt-1 text-sm text-muted-foreground">La vista previa se procesa localmente y sólo se guardan las filas después de confirmar.</p></div><Button type="button" variant="ghost" size="icon" aria-label="Cerrar importación" onClick={resetImport}><X className="size-4" /></Button></div>
+      {!accounts.length ? (
+        <p className="mt-4 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Para importar un estado de cuenta primero necesitas una cuenta registrada — <Link href="/movimientos" className="font-medium text-primary underline">te llevo a crear una</Link>.</p>
+      ) : (<>
       <div className="mt-4 grid gap-3 md:grid-cols-2"><label className="form-field"><span>Cuenta bancaria</span><select value={accountId} onChange={event => setAccountId(event.target.value)}><option value="">Selecciona una cuenta</option>{accounts.filter(account => account.status !== "closed").map(account => <option value={account.id} key={account.id}>{account.name} · {account.currency}</option>)}</select></label><label className="form-field"><span>Archivo CSV o Excel</span><input type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={event => loadFile(event.target.files?.[0])} /></label></div>
       {fileName ? <p className="mt-3 text-sm font-medium text-foreground"><FileCheck2 className="mr-1 inline size-4 text-emerald-600" />{fileName} · {rawRows.length} fila(s)</p> : null}
       {headers.length ? <><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{mappingFields.map(field => <label className="form-field" key={field.key}><span>{field.label}{field.required ? " *" : ""}</span><select value={mapping[field.key] ?? ""} onChange={event => setMapping(current => ({ ...current, [field.key]: event.target.value || undefined }))}>{selectOptions(headers, mapping[field.key])}</select></label>)}</div><div className="mt-4 overflow-x-auto rounded-lg border bg-background"><table className="w-full min-w-[620px] text-xs"><thead className="border-b bg-muted/40 text-left uppercase tracking-wide text-muted-foreground"><tr><th className="p-2">Fila</th>{headers.slice(0, 5).map(header => <th className="p-2" key={header}>{header}</th>)}</tr></thead><tbody>{rawRows.slice(0, 4).map((row, index) => <tr className="border-b last:border-0" key={index}><td className="p-2 text-muted-foreground">{index + 2}</td>{headers.slice(0, 5).map(header => <td className="max-w-[180px] truncate p-2" key={header}>{String(row[header] ?? "")}</td>)}</tr>)}</tbody></table></div><div className="mt-4 flex flex-wrap justify-end gap-2"><Button type="button" variant="ghost" onClick={resetImport}>Cancelar</Button><Button type="button" onClick={submitImport} disabled={importCsv.isPending}><Upload className="size-4" /> {importCsv.isPending ? "Importando…" : "Importar y conciliar"}</Button></div></> : <p className="mt-4 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Selecciona un archivo para detectar sus columnas y revisar las primeras filas.</p>}
+      </>)}
     </div> : null}
 
     {summaryQuery.isLoading ? <p className="text-sm text-muted-foreground">Cargando diferencias de conciliación…</p> : <>

@@ -549,7 +549,7 @@ export const appRouter = router({
             hasActiveDebtsDeclared: z.boolean().optional(),
             approxDebtCount: z.number().int().min(0).max(999).nullable().optional(),
             approxAccountCount: z.number().int().min(0).max(999).nullable().optional(),
-            taxRegime: z.enum(["pfae_general", "resico", "other", "not_applicable"]).optional(),
+            taxRegime: z.enum(["pfae_general", "resico", "estimacion_directa_simplificada", "estimacion_directa_normal", "other", "not_applicable"]).optional(),
             riskScenario1Answer: z.enum(["retiro", "espero", "invierto_mas"]).optional(),
             riskScenario2Answer: z.enum(["retiro", "espero", "invierto_mas"]).optional(),
             communicationStyle: z.enum(["direct", "detailed", "motivational"]).optional(),
@@ -564,6 +564,20 @@ export const appRouter = router({
           }
           await db.insert(financialProfiles).values({ userId: ctx.workspaceAccess.ownerId, ...set }).onConflictDoUpdate({ target: financialProfiles.userId, set });
           return { success: true };
+        }),
+        // Duplica finance.profile.uploadAvatar sobre onboardingProcedure: la
+        // pantalla 2 (foto de perfil) ocurre antes del consentimiento de la
+        // pantalla 13, así que no puede pasar por privateFinanceProcedure.
+        uploadAvatar: onboardingProcedure.input(z.object({ dataUrl: z.string().min(32).max(1_600_000) })).mutation(async ({ ctx, input }) => {
+          const match = input.dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/);
+          if (!match) throw new TRPCError({ code: "BAD_REQUEST", message: "Selecciona una imagen PNG, JPEG o WebP válida." });
+          const bytes = Buffer.from(match[2], "base64");
+          if (bytes.length > 1_000_000) throw new TRPCError({ code: "PAYLOAD_TOO_LARGE", message: "La foto debe pesar menos de 1 MB." });
+          const extension = match[1] === "image/jpeg" ? "jpg" : match[1].split("/")[1];
+          const uploaded = await storagePut(`profiles/${ctx.workspaceAccess.ownerId}/avatar.${extension}`, bytes, match[1]);
+          const db = await requireDb();
+          await db.insert(financialProfiles).values({ userId: ctx.workspaceAccess.ownerId, avatarKey: uploaded.key, avatarUrl: uploaded.url }).onConflictDoUpdate({ target: financialProfiles.userId, set: { avatarKey: uploaded.key, avatarUrl: uploaded.url } });
+          return { url: uploaded.url };
         }),
         // Recibe negocios, objetivos y canales de aviso completos porque sus
         // mutaciones dedicadas (entitySave, goals.save, notifications.savePreferences)
@@ -748,8 +762,8 @@ export const appRouter = router({
           return { success: true, message: existing[0].status === "accepted" ? "Permisos de la persona colaboradora actualizados." : "Invitación existente actualizada." };
         }
         await db.transaction(async tx => {
-          const result = await tx.insert(collaborationInvites).values({ ownerId: ctx.workspaceAccess.ownerId, invitedEmail: input.email, role: input.role, canCreateDrafts: input.canCreateDrafts, canReview: input.canReview, invitedByUserId: ctx.user.id });
-          const inviteId = Number((result as any)?.[0]?.insertId ?? 0) || null;
+          const [result] = await tx.insert(collaborationInvites).values({ ownerId: ctx.workspaceAccess.ownerId, invitedEmail: input.email, role: input.role, canCreateDrafts: input.canCreateDrafts, canReview: input.canReview, invitedByUserId: ctx.user.id }).returning({ id: collaborationInvites.id });
+          const inviteId = result?.id ?? null;
           await tx.insert(workspaceAuditEvents).values({ ownerId: ctx.workspaceAccess.ownerId, actorUserId: ctx.user.id, action: "invite_created", resourceType: "collaboration_invite", resourceId: inviteId, detail: `${input.role}; borradores ${input.canCreateDrafts ? "sí" : "no"}; revisión ${input.canReview ? "sí" : "no"}` });
         });
         return { success: true, message: "Invitación creada. La persona debe registrarse con ese correo y aceptarla desde Meximoney." };
@@ -830,7 +844,7 @@ export const appRouter = router({
           }
           let transactionId = id;
           if (id) await tx.update(financialTransactions).set(payload).where(and(eq(financialTransactions.id, id), eq(financialTransactions.userId, ctx.workspaceAccess.ownerId)));
-          else { const result = await tx.insert(financialTransactions).values({ userId: ctx.workspaceAccess.ownerId, ...payload }); transactionId = Number((result as any)?.[0]?.insertId ?? 0) || undefined; }
+          else { const [result] = await tx.insert(financialTransactions).values({ userId: ctx.workspaceAccess.ownerId, ...payload }).returning({ id: financialTransactions.id }); transactionId = result?.id ?? undefined; }
           if (reduceDebtBalance && payload.debtId && transactionId) {
             const [debt] = await tx.select().from(debts).where(and(eq(debts.id, payload.debtId), eq(debts.userId, ctx.workspaceAccess.ownerId))).limit(1);
             if (!debt) throw new TRPCError({ code: "NOT_FOUND", message: "No se encontró la financiación seleccionada." });
@@ -892,8 +906,8 @@ export const appRouter = router({
           const statementLines = input.rows.map(row => ({ ...row, occurredAt: new Date(row.occurredAt), bankReference: row.bankReference ?? null, description: row.description ?? null }));
           const matches = matchStatementLines(statementLines, existing, input.accountId);
           const result = await db.transaction(async tx => {
-            const insertedImport = await tx.insert(bankStatementImports).values({ userId: ctx.workspaceAccess.ownerId, accountId: input.accountId, fileName: input.fileName, currency: input.currency, periodStart: asDate(input.periodStart), periodEnd: asDate(input.periodEnd), rowCount: input.rows.length });
-            const importId = Number((insertedImport as any)?.[0]?.insertId ?? 0);
+            const [insertedImport] = await tx.insert(bankStatementImports).values({ userId: ctx.workspaceAccess.ownerId, accountId: input.accountId, fileName: input.fileName, currency: input.currency, periodStart: asDate(input.periodStart), periodEnd: asDate(input.periodEnd), rowCount: input.rows.length }).returning({ id: bankStatementImports.id });
+            const importId = insertedImport?.id ?? 0;
             if (!importId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No fue posible crear la importación." });
             await tx.insert(bankStatementRows).values(input.rows.map((row, index) => { const match = matches[index]; return { userId: ctx.workspaceAccess.ownerId, importId, accountId: input.accountId, rowNumber: row.rowNumber, occurredAt: new Date(row.occurredAt), type: row.type, amountCents: row.amountCents, currency: row.currency, bankReference: row.bankReference?.trim() || null, description: row.description?.trim() || null, matchStatus: match.status === "auto_matched" ? "auto_matched" as const : "unmatched" as const, matchedTransactionId: match.transactionId, matchedAt: null, matchedByUserId: null, resolutionNote: null, rawData: row.rawData ?? null }; }));
             return { importId, rowCount: input.rows.length, autoMatchedCount: matches.filter(match => match.status === "auto_matched").length, unmatchedCount: matches.filter(match => match.status !== "auto_matched").length };
@@ -1460,24 +1474,24 @@ export const appRouter = router({
           const acquiredAt = new Date(input.acquiredAt);
           const downPaymentTransferGroupId = input.cashContributionCents > 0 ? randomUUID() : null;
           await db.transaction(async tx => {
-            const assetResult = await tx.insert(investments).values({
+            const [assetResult] = await tx.insert(investments).values({
               userId: ctx.workspaceAccess.ownerId, entityId: input.entityId ?? null, projectId: input.projectId ?? null, goalId: null,
               name: input.name, type: input.assetType, institution: input.institution ?? null, scope: input.scope,
               currency: input.currency, costBasisCents: input.purchaseValueCents, currentValueCents: input.purchaseValueCents,
               reportCurrency: null, reportValueCents: null, exchangeRateMicros: null, exchangeRateDate: null,
               valuationDate: acquiredAt, includeInNetWorth: true, status: "active", notes: input.notes ?? null,
-            });
-            const assetId = Number((Array.isArray(assetResult) ? assetResult[0] : assetResult as unknown as { insertId?: number }).insertId);
+            }).returning({ id: investments.id });
+            const assetId = assetResult?.id ?? 0;
             if (!Number.isInteger(assetId) || assetId <= 0) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No se pudo vincular el activo recién creado." });
-            const debtResult = await tx.insert(debts).values({
+            const [debtResult] = await tx.insert(debts).values({
               userId: ctx.workspaceAccess.ownerId, entityId: input.entityId ?? null, projectId: input.projectId ?? null, contactId: null,
               name: `Financiación · ${input.name}`, creditor: input.creditor ?? null, type: debtType, loanKind, scope: input.scope,
               balanceCents: financedAmountCents, originalAmountCents: financedAmountCents, installmentCents: input.installmentCents || null,
               installmentCount: input.installmentCount ?? null, financedItem: input.name, purchasedAt: acquiredAt, currency: input.currency,
               interestRateBps: input.interestRateBps ?? null, minimumPaymentCents: input.installmentCents, nextDueAt: asDate(input.nextDueAt),
               endDate: asDate(input.endDate), priority: "medium", status: "active", notes: input.notes ?? null,
-            });
-            const debtId = Number((Array.isArray(debtResult) ? debtResult[0] : debtResult as unknown as { insertId?: number }).insertId);
+            }).returning({ id: debts.id });
+            const debtId = debtResult?.id ?? 0;
             if (!Number.isInteger(debtId) || debtId <= 0) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No se pudo vincular la financiación recién creada." });
             if (input.cashContributionCents > 0 && source && downPaymentTransferGroupId) {
               await tx.insert(financialTransactions).values([
@@ -2273,8 +2287,8 @@ export const appRouter = router({
         await db.transaction(async tx => {
           if (taskId) await tx.update(financeTasks).set(payload).where(and(eq(financeTasks.id, taskId), eq(financeTasks.userId, ctx.workspaceAccess.ownerId)));
           else {
-            const result = await tx.insert(financeTasks).values({ userId: ctx.workspaceAccess.ownerId, ...payload });
-            taskId = Number((result as any)[0]?.insertId ?? (result as any).insertId);
+            const [result] = await tx.insert(financeTasks).values({ userId: ctx.workspaceAccess.ownerId, ...payload }).returning({ id: financeTasks.id });
+            taskId = result?.id;
           }
           if (!taskId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No fue posible identificar la tarea guardada." });
           if (normalizedLinks) {
