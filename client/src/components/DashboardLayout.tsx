@@ -258,20 +258,21 @@ function DashboardLayoutContent({
                   const isMultiRoute = module.routes.length > 1;
                   const isModuleActive = module.routes.some(route => route.path === location);
                   const isGroupOpen = openNavigationGroups[module.id];
+                  const displayLabel = module.id === "coreview" ? "Inicio" : module.brand;
                   return (
                     <div className="sidebar-module-group" key={module.id}>
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           isActive={isModuleActive && !isMultiRoute}
                           onClick={() => isMultiRoute ? setOpenNavigationGroups(current => ({ ...current, [module.id]: !current[module.id] })) : navigate(module.routes[0].path)}
-                          tooltip={`${module.brand} — ${module.description}`}
-                          aria-label={module.brand}
+                          tooltip={`${displayLabel} — ${module.description}`}
+                          aria-label={displayLabel}
                           aria-expanded={isMultiRoute ? isGroupOpen : undefined}
                           className={`h-auto py-2 ${isModuleActive ? "sidebar-module-header is-active" : "sidebar-module-header"}`}
                         >
-                          <span className={`module-badge ${module.badgeClass}`}><module.icon weight="duotone" /></span>
+                          <span className="sidebar-nav-icon"><module.icon weight="duotone" /></span>
                           <span className="sidebar-module-text group-data-[collapsible=icon]:hidden">
-                            <strong>{module.brand}</strong>
+                            <strong>{displayLabel}</strong>
                             <small>{module.description}</small>
                           </span>
                           {isMultiRoute ? <span className="group-data-[collapsible=icon]:hidden">{isGroupOpen ? <ChevronDown className="sidebar-module-chevron" /> : <ChevronRight className="sidebar-module-chevron" />}</span> : null}
