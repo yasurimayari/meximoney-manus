@@ -419,7 +419,7 @@ function DesktopTopbar({ unreadNotifications, navigate }: { unreadNotifications:
     <div className="topbar">
       <form className="coreview-search" onSubmit={event => event.preventDefault()}>
         <Search className="size-4 shrink-0" />
-        <input value={searchValue} onChange={event => setSearchValue(event.target.value)} onKeyDown={event => { if (event.key === "Enter") event.preventDefault(); }} placeholder="Buscar transacciones, proyectos, clientes, o hacer una pregunta a Richi…" />
+        <input aria-label="Buscar transacciones, proyectos, clientes, o hacer una pregunta a Richi" value={searchValue} onChange={event => setSearchValue(event.target.value)} onKeyDown={event => { if (event.key === "Enter") event.preventDefault(); }} placeholder="Buscar transacciones, proyectos, clientes, o hacer una pregunta a Richi…" />
         <kbd>⌘K</kbd>
       </form>
       <div className="topbar-actions">
