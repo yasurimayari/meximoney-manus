@@ -43,41 +43,72 @@
 }
 
 :root {
-  /* Richeon: azul de marca #0058FD -> cian #06B6D4 (ver .pfi-* más abajo, fuente de verdad de color) */
-  --primary: oklch(0.49 0.24 264);
-  --primary-foreground: oklch(0.98 0.01 250);
-  --sidebar-primary: oklch(0.72 0.15 220);
-  --sidebar-primary-foreground: oklch(0.16 0.03 250);
-  --chart-1: oklch(0.49 0.24 264);
-  --chart-2: oklch(0.75 0.14 220);
-  --chart-3: oklch(0.7 0.15 70);
-  --chart-4: oklch(0.58 0.19 25);
-  --chart-5: oklch(0.55 0.15 160);
-  --radius: 1rem;
-  --background: oklch(0.974 0.006 260);
-  --foreground: oklch(0.22 0.03 260);
-  --card: oklch(0.995 0.003 260);
-  --card-foreground: oklch(0.22 0.03 260);
-  --popover: oklch(0.995 0.003 260);
-  --popover-foreground: oklch(0.22 0.03 260);
-  --secondary: oklch(0.95 0.015 255);
-  --secondary-foreground: oklch(0.3 0.05 260);
-  --muted: oklch(0.955 0.006 260);
-  --muted-foreground: oklch(0.52 0.02 260);
-  --accent: oklch(0.94 0.02 255);
-  --accent-foreground: oklch(0.3 0.08 264);
-  --destructive: oklch(0.59 0.19 27);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.89 0.012 260);
-  --input: oklch(0.89 0.012 260);
-  --ring: oklch(0.49 0.24 264);
+  /* ---- Richeon design tokens: fuente única de verdad de color/radio/tipografía.
+     Cambiar un valor aquí se propaga a toda la app (sidebar, cards, botones, focus
+     rings) porque todo lo demás en este archivo consume estas variables. ---- */
+  --richeon-bg: #F8FAFD;
+  --richeon-surface: #FFFFFF;
+  --richeon-navy-950: #000D25;
+  --richeon-navy-900: #001A3A;
+  --richeon-navy-800: #002B5C;
+  --richeon-blue-500: #168BFF;
+  --richeon-blue-400: #38A7FF;
+  --richeon-blue-300: #70C5FF;
+  --richeon-success: #24B78A;
+  --richeon-success-soft: #E8F8F2;
+  --richeon-warning: #E8B84A;
+  --richeon-warning-soft: #FFF7DF;
+  --richeon-danger: #E86D67;
+  --richeon-danger-soft: #FFF0EF;
+  --richeon-info: #4B9DFF;
+  --richeon-info-soft: #EDF5FF;
+  --richeon-purple: #7667E8;
+  --richeon-purple-soft: #F0EEFF;
+  --richeon-cyan: #27C4D9;
+  --richeon-cyan-soft: #E8FAFC;
+  --richeon-text: #142033;
+  --richeon-text-secondary: #667085;
+  --richeon-text-muted: #98A2B3;
+  --richeon-border: #E6ECF3;
+  --richeon-radius-sm: 8px;
+  --richeon-radius-md: 12px;
+  --richeon-radius-lg: 16px;
+  --richeon-radius-xl: 20px;
+
+  --primary: var(--richeon-blue-500);
+  --primary-foreground: #FFFFFF;
+  --sidebar-primary: var(--richeon-blue-400);
+  --sidebar-primary-foreground: var(--richeon-navy-950);
+  --chart-1: var(--richeon-blue-500);
+  --chart-2: var(--richeon-cyan);
+  --chart-3: var(--richeon-warning);
+  --chart-4: var(--richeon-danger);
+  --chart-5: var(--richeon-purple);
+  --radius: var(--richeon-radius-lg);
+  --background: var(--richeon-bg);
+  --foreground: var(--richeon-text);
+  --card: var(--richeon-surface);
+  --card-foreground: var(--richeon-text);
+  --popover: var(--richeon-surface);
+  --popover-foreground: var(--richeon-text);
+  --secondary: #EEF3F9;
+  --secondary-foreground: var(--richeon-text);
+  --muted: #EEF3F9;
+  --muted-foreground: var(--richeon-text-secondary);
+  --accent: var(--richeon-info-soft);
+  --accent-foreground: var(--richeon-navy-900);
+  --destructive: var(--richeon-danger);
+  --destructive-foreground: #FFFFFF;
+  --border: var(--richeon-border);
+  --input: var(--richeon-border);
+  --ring: var(--richeon-blue-500);
   /* Sidebar: oscuro de forma fija, independiente del tema claro/oscuro del contenido (identidad Richeon) */
-  --sidebar: oklch(0.17 0.03 260);
-  --sidebar-foreground: oklch(0.9 0.015 255);
-  --sidebar-accent: oklch(0.25 0.04 260);
-  --sidebar-accent-foreground: oklch(0.98 0.01 255);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.65 0.18 250);
+  --sidebar: var(--richeon-navy-950);
+  --sidebar-foreground: #E7EDF5;
+  --sidebar-accent: rgba(22, 139, 255, 0.18);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: var(--richeon-blue-400);
 }
 
 .dark {
@@ -250,7 +281,12 @@
   .topbar-profile-text strong { @apply block truncate text-sm font-semibold; }
   .topbar-profile-text small { @apply block truncate text-xs text-muted-foreground; }
 
-  /* ---- CoreView: cabecera, buscador, KPIs, tarjeta oscura, módulos, panel Richi ---- */
+  /* ---- CoreView: tipografía editorial (serif en H1/H2), números tabulares y sistema
+     de radio/sombra del brief, escopeados a esta página para no alterar el resto de
+     la app (que sigue con la tipografía y componentes ya establecidos). ---- */
+  .coreview-page h1, .coreview-page h2 { font-family: "Playfair Display", Georgia, serif; }
+  .coreview-page strong, .coreview-page b { font-variant-numeric: tabular-nums; }
+  .coreview-page .content-card, .coreview-page .onboarding-card { border-radius: var(--richeon-radius-lg); border-color: var(--richeon-border); box-shadow: 0 4px 18px rgba(20, 40, 70, 0.04); }
   .coreview-greeting { @apply flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between; }
   .coreview-search { @apply flex h-11 w-full max-w-md items-center gap-2 rounded-full border border-border bg-card px-4 text-sm text-muted-foreground shadow-sm transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-ring; }
   .coreview-search input { @apply h-full flex-1 border-0 bg-transparent p-0 text-sm text-foreground outline-none placeholder:text-muted-foreground; }
@@ -258,20 +294,20 @@
   .coreview-layout { @apply grid gap-8 xl:grid-cols-[minmax(0,1fr)_22rem]; }
   .coreview-main { @apply min-w-0 space-y-8; }
   .coreview-kpi-grid { @apply grid gap-4 sm:grid-cols-2 xl:grid-cols-4; }
-  .coreview-kpi-card { @apply flex flex-col gap-3 rounded-2xl border bg-card p-5 shadow-sm; }
+  .coreview-kpi-card { border-radius: var(--richeon-radius-lg); border: 1px solid var(--richeon-border); box-shadow: 0 4px 18px rgba(20, 40, 70, 0.04); @apply flex flex-col gap-3 bg-card p-5; }
   .coreview-kpi-card-head { @apply flex items-center gap-2.5; }
-  .coreview-kpi-card .module-badge { @apply size-8; }
+  .coreview-kpi-card .module-badge { @apply size-[34px]; }
   .coreview-kpi-card .module-badge svg { @apply size-4; }
   .coreview-kpi-card p { @apply text-xs font-semibold text-muted-foreground; }
-  .coreview-kpi-card strong { @apply block text-2xl font-semibold tracking-[-0.04em]; }
+  .coreview-kpi-card strong { @apply block text-2xl font-semibold tracking-[-0.02em]; }
   .coreview-kpi-tint-cashflow { background: linear-gradient(180deg, #C7E8EE33, transparent 60%), var(--card); }
   .coreview-kpi-tint-wealthmap { background: linear-gradient(180deg, #D4EFE033, transparent 60%), var(--card); }
   .coreview-kpi-tint-moneylink { background: linear-gradient(180deg, #C3E4FD33, transparent 60%), var(--card); }
   .coreview-kpi-tint-debtcenter { background: linear-gradient(180deg, #FBB89B33, transparent 60%), var(--card); }
   .coreview-kpi-trend { @apply mt-2 inline-flex items-center gap-1 text-xs font-semibold; }
-  .coreview-kpi-trend.is-up { @apply text-emerald-600; }
-  .coreview-kpi-trend.is-down { @apply text-rose-600; }
-  .coreview-dark-card { @apply relative overflow-hidden rounded-[1.5rem] p-6 text-white shadow-lg md:p-8; background: linear-gradient(150deg, #0B1220, #0F1B33 55%, #0B2540); }
+  .coreview-kpi-trend.is-up { color: var(--richeon-success); }
+  .coreview-kpi-trend.is-down { color: var(--richeon-danger); }
+  .coreview-dark-card { border-radius: 20px; @apply relative overflow-hidden p-6 text-white shadow-lg md:p-8; background: linear-gradient(150deg, var(--richeon-navy-950), #0F1B33 55%, var(--richeon-navy-800)); }
   .coreview-dark-card .card-title-row h2 { @apply text-white; }
   .coreview-dark-card .card-title-row p { @apply text-white/55; }
   .coreview-dark-grid { @apply mt-7 grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-center; }
@@ -288,7 +324,7 @@
   .coreview-donut-dot { @apply size-2 shrink-0 rounded-full; }
   .coreview-donut-legend-row strong { @apply shrink-0 font-semibold text-white; }
   .coreview-modules-grid { @apply grid gap-4; grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr)); }
-  .coreview-module-card { @apply flex items-start gap-3.5 rounded-2xl border bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring; }
+  .coreview-module-card { border-radius: var(--richeon-radius-lg); border: 1px solid var(--richeon-border); box-shadow: 0 4px 18px rgba(20, 40, 70, 0.04); @apply flex items-start gap-3.5 bg-card p-5 transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring; }
   @media (prefers-reduced-motion: reduce) { .coreview-module-card { @apply transition-none hover:translate-y-0; } }
   .coreview-module-card-body { @apply flex min-w-0 flex-1 flex-col self-stretch; }
   .coreview-module-card-body strong { @apply block text-sm font-semibold; }
@@ -304,13 +340,25 @@
   .module-status-available::before { @apply bg-muted-foreground/50; }
   .module-status-soon { @apply border border-dashed border-muted-foreground/35 text-muted-foreground/70; }
   .module-status-soon::before { @apply bg-muted-foreground/35; }
-  .coreview-richi-panel { @apply flex h-fit flex-col gap-4 rounded-[1.5rem] border bg-card p-5 shadow-sm xl:sticky xl:top-[5.5rem]; }
+  .coreview-right-rail { @apply flex h-fit flex-col gap-5; }
+  .coreview-richi-panel { border-radius: 20px; border: 1px solid var(--richeon-blue-300); box-shadow: 0 4px 18px rgba(20, 40, 70, 0.04); @apply flex h-fit flex-col gap-4 bg-card p-5; }
   .coreview-richi-header { @apply flex items-center gap-3; }
   .coreview-richi-header strong { @apply block text-sm font-semibold; }
   .coreview-richi-status { @apply flex items-center gap-1.5 text-[0.68rem] font-medium text-muted-foreground; }
   .coreview-richi-status::before { content: ""; @apply size-1.5 rounded-full bg-emerald-500; }
   .coreview-richi-suggestions { @apply flex flex-wrap gap-1.5; }
   .coreview-richi-suggestion { @apply rounded-full bg-muted px-2.5 py-1.5 text-[0.68rem] font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground; }
+  .coreview-rail-card { border-radius: var(--richeon-radius-lg); border: 1px solid var(--richeon-border); box-shadow: 0 4px 18px rgba(20, 40, 70, 0.04); @apply bg-card p-5; }
+  .coreview-rail-card-head { @apply flex items-center justify-between; }
+  .coreview-rail-card-head strong { @apply text-sm font-semibold; }
+  .coreview-rail-empty { @apply mt-3 text-xs leading-5 text-muted-foreground; }
+  .coreview-rail-list { @apply mt-3 divide-y divide-border/70; }
+  .coreview-rail-row { @apply flex items-center gap-3 py-3 transition-colors first:pt-0 last:pb-0 hover:bg-muted/40; }
+  .coreview-rail-row-body { @apply min-w-0 flex-1; }
+  .coreview-rail-row-body strong { @apply block truncate text-sm font-medium; }
+  .coreview-rail-row-body small { @apply mt-0.5 block truncate text-xs text-muted-foreground; }
+  .coreview-rail-row-value { @apply shrink-0 text-sm font-semibold; }
+  .coreview-rail-account-icon { @apply grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground; }
   .auth-gate { @apply relative grid min-h-screen place-items-center overflow-hidden bg-background px-5 py-10; }.auth-orbit { @apply absolute rounded-full border border-primary/10; }.auth-orbit-one { @apply -left-44 -top-44 size-[32rem]; }.auth-orbit-two { @apply -bottom-64 -right-52 size-[38rem] bg-primary/[0.025]; }.auth-shell { @apply relative z-10 grid w-full max-w-5xl gap-6 lg:grid-cols-[1.15fr_.85fr] lg:items-center; }.auth-intro { @apply rounded-[2rem] bg-primary px-7 py-9 text-primary-foreground shadow-xl md:px-10 md:py-12; background: linear-gradient(135deg, #0042C4, #0058FD 55%, #06B6D4); }.auth-wordmark { @apply flex items-center gap-2 text-sm font-semibold tracking-[-0.03em]; }.auth-logo { @apply grid size-8 place-items-center rounded-lg bg-white/15 text-xs font-bold; }.auth-intro .eyebrow { @apply mt-12 text-cyan-100/75; }.auth-intro h1 { @apply mt-3 text-4xl font-semibold leading-[0.98] tracking-[-0.06em] md:text-5xl; }.auth-intro h1 em { @apply font-normal text-cyan-100/85; }.auth-intro > p:not(.eyebrow) { @apply mt-5 max-w-xl text-sm leading-6 text-cyan-50/80; }.auth-trust-list { @apply mt-8 flex flex-wrap gap-2; }.auth-trust-list span { @apply inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-[0.68rem] font-semibold text-cyan-50/85; }.auth-card { @apply rounded-[2rem] border border-primary/15 bg-card p-7 shadow-xl md:p-9; }.auth-card-icon { @apply grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary; }.auth-card-kicker { @apply mt-6 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-primary; }.auth-card h2 { @apply mt-2 text-2xl font-semibold tracking-[-0.04em]; }.auth-card > p:not(.auth-card-kicker) { @apply mt-3 text-sm leading-6 text-muted-foreground; }.auth-card button { @apply mt-7; }.auth-card-footer { @apply mt-6 flex items-center justify-center gap-2 text-[0.65rem] font-semibold text-muted-foreground; }.auth-card-footer i { @apply size-1 rounded-full bg-primary/40; }
   .auth-tabs { @apply grid w-full grid-cols-2 rounded-xl bg-muted/70 p-1; }.auth-tabs button { @apply mt-0 rounded-lg text-xs; }.auth-form { @apply mt-5 grid gap-3; }.auth-form .form-field small { @apply text-[0.65rem] text-muted-foreground; }.auth-form button { @apply mt-2; }
   .onboarding-page { @apply min-h-screen bg-background px-5 py-8 lg:grid lg:grid-cols-[minmax(0,.9fr)_minmax(36rem,1.1fr)] lg:gap-10 lg:px-12 lg:py-12; }.onboarding-hero { @apply mx-auto flex w-full max-w-xl flex-col justify-center rounded-[2rem] bg-primary px-7 py-9 text-primary-foreground shadow-xl md:px-10 md:py-12; background: linear-gradient(135deg, #0042C4, #0058FD 55%, #06B6D4); }.onboarding-hero .eyebrow { @apply mt-12 text-cyan-100/75; }.onboarding-hero h1 { @apply mt-3 text-4xl font-semibold leading-[0.98] tracking-[-0.06em] md:text-5xl; }.onboarding-hero h1 em { @apply font-normal text-cyan-100/85; }.onboarding-hero > p:not(.eyebrow) { @apply mt-5 text-sm leading-6 text-cyan-50/80; }.onboarding-steps { @apply mt-9 flex flex-wrap gap-2; }.onboarding-steps span { @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-[0.66rem] font-semibold text-cyan-50/60; }.onboarding-steps span b { @apply grid size-4 place-items-center rounded-full bg-white/10 text-[0.6rem]; }.onboarding-steps span.is-active { @apply border-white/30 bg-white/10 text-white; }.onboarding-steps span.is-active b { @apply bg-cyan-100 text-primary; }.onboarding-flow-card { @apply mx-auto mt-6 block w-full max-w-3xl rounded-[2rem] border bg-card p-6 shadow-xl md:mt-0 md:p-9 lg:self-center; }.onboarding-flow-card .form-grid, .onboarding-flow-card .form-field { @apply min-w-0; }.onboarding-flow-card .form-field input, .onboarding-flow-card .form-field select, .onboarding-flow-card .form-field textarea { @apply w-full min-w-0; }.onboarding-title { @apply flex gap-4; }.onboarding-title > svg { @apply mt-0.5 size-10 shrink-0 rounded-2xl bg-primary/10 p-2 text-primary; }.onboarding-title h2 { @apply mt-1 text-2xl font-semibold tracking-[-0.04em]; }.onboarding-title p:not(.eyebrow) { @apply mt-2 text-sm leading-6 text-muted-foreground; }.onboarding-actions { @apply mt-7 flex items-center justify-between gap-3 border-t pt-5; }.onboarding-actions button { @apply mt-0; }.onboarding-entity-list { @apply mt-6 space-y-4; }.onboarding-entity-list article { @apply rounded-2xl border bg-muted/25 p-4; }.entity-card-header { @apply flex items-center justify-between; }.entity-card-header strong { @apply text-sm; }.entity-card-header button { @apply mt-0; }.onboarding-confirm { @apply mt-6 flex items-start gap-3 rounded-2xl border border-primary/15 bg-primary/[0.045] p-5; }.onboarding-confirm svg { @apply mt-0.5 shrink-0 text-primary; }.onboarding-confirm strong { @apply text-sm; }.onboarding-confirm p { @apply mt-1 text-xs leading-5 text-muted-foreground; }.onboarding-consent { @apply mt-5 flex items-start gap-3 rounded-xl bg-muted/60 p-4 text-xs leading-5 text-foreground; }.onboarding-consent input { @apply mt-0.5 size-4 shrink-0 accent-primary; }.onboarding-note { @apply mt-4 text-xs leading-5 text-muted-foreground; }

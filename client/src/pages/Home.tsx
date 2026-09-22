@@ -77,6 +77,7 @@ export default function Home() {
   const creditAlertThreshold = notificationData?.preferences.creditUtilizationThresholdPercent ?? 20;
   const pendingTasks = data.tasks.filter(task => task.status !== "completed" && task.status !== "cancelled").slice().sort((a, b) => (a.dueAt ? new Date(a.dueAt).getTime() : Infinity) - (b.dueAt ? new Date(b.dueAt).getTime() : Infinity));
   const activeGoals = data.goals.filter(goal => goal.status === "active");
+  const activeAccounts = data.accounts.filter(account => account.status === "active");
   const activeDebts = data.debts.filter(debt => debt.status === "active" || debt.status === "review");
   const reportCurrencyDebts = activeDebts.filter(debt => debt.currency === currency);
   const debtBalance = reportCurrencyDebts.reduce((total, debt) => total + debt.balanceCents, 0);
@@ -90,7 +91,7 @@ export default function Home() {
   const expenseCategories = buildExpenseCategories(data);
   const expenseCategoriesTotal = expenseCategories.reduce((total, item) => total + item.value, 0);
 
-  return <div className="space-y-9">
+  return <div className="coreview-page space-y-9">
     <div className="coreview-greeting">
       <div><p className="eyebrow">Espacio privado · {currency}</p><h1 className="mt-1 text-3xl font-semibold tracking-[-0.04em]">Hola, {user?.name?.split(" ")[0] || "de nuevo"}</h1><p className="mt-1 text-sm text-muted-foreground">Aquí tienes un resumen de tu situación financiera.</p></div>
       <span className="period-chip">{formatDate(data.dashboard.periodStart, { month: "long", year: "numeric" })}</span>
@@ -210,25 +211,62 @@ export default function Home() {
         {habitsData?.preferences.enabled && habitsData.preferences.showOnDashboard ? <section className="content-card"><div className="card-title-row"><div><h2>Hábitos voluntarios</h2><p>Seguimiento manual, separado de tu Score.</p></div><Link href="/habitos" className="text-link">Abrir hábitos</Link></div><HabitsPanel habits={habitsData.habits} /></section> : null}
       </div>
 
-      <aside className="coreview-richi-panel">
-        <div className="coreview-richi-header">
-          <span className="sidebar-richi-avatar"><CheckCircle2 className="size-4" /></span>
-          <div><strong>Richi Copilot</strong><span className="coreview-richi-status">En línea</span></div>
+      <aside className="coreview-right-rail">
+        <div className="coreview-richi-panel">
+          <div className="coreview-richi-header">
+            <span className="sidebar-richi-avatar"><CheckCircle2 className="size-4" /></span>
+            <div><strong>Richi Copilot</strong><span className="coreview-richi-status">En línea</span></div>
+          </div>
+          <AIChatBox
+            messages={richiMessages}
+            onSendMessage={sendRichiMessage}
+            isLoading={richiChat.isPending}
+            height="360px"
+            placeholder="Pregúntale a Richi…"
+            emptyStateMessage="Hola, ¿en qué puedo ayudarte hoy?"
+            suggestedPrompts={richiSuggestedPrompts}
+            className="border-0 shadow-none"
+          />
         </div>
-        <AIChatBox
-          messages={richiMessages}
-          onSendMessage={sendRichiMessage}
-          isLoading={richiChat.isPending}
-          height="520px"
-          placeholder="Pregúntale a Richi…"
-          emptyStateMessage="Hola, ¿en qué puedo ayudarte hoy?"
-          suggestedPrompts={richiSuggestedPrompts}
-          className="border-0 shadow-none"
-        />
+
+        <div className="coreview-rail-card">
+          <div className="coreview-rail-card-head"><strong>Próximas tareas</strong><Link href="/todo" className="text-link">Ver todas</Link></div>
+          {pendingTasks.length === 0 ? (
+            <p className="coreview-rail-empty">No hay tareas pendientes.</p>
+          ) : (
+            <div className="coreview-rail-list">
+              {pendingTasks.slice(0, 4).map(task => (
+                <Link href="/todo" key={task.id} className="coreview-rail-row">
+                  <span className={`priority-dot priority-${task.priority}`} />
+                  <span className="coreview-rail-row-body"><strong>{task.title}</strong><small>{task.dueAt ? `Vence ${formatDate(task.dueAt)}` : "Sin fecha límite"} · {scopeLabel[task.scope]}</small></span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="coreview-rail-card">
+          <div className="coreview-rail-card-head"><strong>Tus cuentas</strong><Link href="/cuentas" className="text-link">Ver todas</Link></div>
+          {activeAccounts.length === 0 ? (
+            <p className="coreview-rail-empty">Aún no registras cuentas manuales.</p>
+          ) : (
+            <div className="coreview-rail-list">
+              {activeAccounts.slice(0, 4).map(account => (
+                <Link href="/cuentas" key={account.id} className="coreview-rail-row">
+                  <span className="coreview-rail-account-icon"><WalletCards className="size-4" /></span>
+                  <span className="coreview-rail-row-body"><strong>{account.name || "Cuenta sin nombre"}</strong><small>{accountTypeLabel[account.type] ?? account.type} · {account.currency}</small></span>
+                  <strong className="coreview-rail-row-value"><MoneyText cents={account.currentValueCents} currency={account.currency} /></strong>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </aside>
     </div>
   </div>;
 }
+
+const accountTypeLabel: Record<string, string> = { cash: "Efectivo", bank: "Cuenta bancaria", investment: "Inversión", pension: "Jubilación", property: "Inmueble", business: "Empresa", other: "Otro" };
 
 function HabitsPanel({ habits }: { habits: Array<{ id: number; title: string; isActive: boolean; checkins: Array<{ completedAt: Date | string }> }> }) {
   const metrics = habitMetrics(habits);
