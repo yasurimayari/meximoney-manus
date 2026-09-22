@@ -76,7 +76,7 @@ export default function DashboardLayout({
         <div className="auth-orbit auth-orbit-two" />
         <div className="auth-shell">
           <section className="auth-intro">
-            <div className="auth-wordmark"><span className="auth-logo">R</span><span>Richeon</span></div>
+            <div className="auth-wordmark"><img src="/brand/richeon-mark.webp" alt="" className="auth-logo" /><span>Richeon</span></div>
             <p className="eyebrow">Finanzas manuales · espacio privado</p>
             <h1>Tu dinero, tu ritmo,<br /><em>tu claridad.</em></h1>
             <p>Organiza y analiza tus finanzas personales y empresariales sin conectar bancos, compartir credenciales ni ejecutar pagos.</p>
@@ -245,7 +245,7 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="brand-mark brand-mark-gradient">R</span><span className="font-semibold tracking-tight truncate brand-word text-sidebar-foreground">Richeon</span>
+                  <img src="/brand/richeon-mark.webp" alt="" className="brand-mark" /><span className="font-semibold tracking-tight truncate brand-word text-sidebar-foreground">Richeon</span>
                 </div>
               ) : null}
             </div>

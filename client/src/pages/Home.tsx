@@ -21,8 +21,18 @@ import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { habitMetrics } from "@/lib/habitMetrics";
 
-function MetricCard({ badgeClass, tintClass, icon: Icon, label, value, note }: { badgeClass: string; tintClass: string; icon: typeof WalletCards; label: string; value: ReactNode; note: ReactNode }) {
-  return <article className={`coreview-kpi-card ${tintClass}`}><div className="coreview-kpi-card-head"><span className={`module-badge ${badgeClass}`}><Icon className="size-4" /></span><p>{label}</p></div><strong>{value}</strong><small>{note}</small></article>;
+function MetricCard({ badgeClass, tintClass, icon: Icon, label, value, note, trendPercent }: { badgeClass: string; tintClass: string; icon: typeof WalletCards; label: string; value: ReactNode; note: ReactNode; trendPercent?: number | null }) {
+  return <article className={`coreview-kpi-card ${tintClass}`}>
+    <div className="coreview-kpi-card-head"><span className={`module-badge ${badgeClass}`}><Icon className="size-4" /></span><p>{label}</p></div>
+    <strong>{value}</strong>
+    {trendPercent !== undefined && trendPercent !== null ? (
+      <span className={`coreview-kpi-trend ${trendPercent >= 0 ? "is-up" : "is-down"}`}>
+        {trendPercent >= 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownLeft className="size-3.5" />}
+        {Math.abs(trendPercent).toFixed(0)}% vs. mes anterior
+      </span>
+    ) : null}
+    <small>{note}</small>
+  </article>;
 }
 
 const flowChartConfig: ChartConfig = { ingresos: { label: "Ingresos", color: "#06B6D4" }, gastos: { label: "Gastos", color: "#0058FD" } };
@@ -91,6 +101,13 @@ export default function Home() {
   const expenseCategories = buildExpenseCategories(data);
   const expenseCategoriesTotal = expenseCategories.reduce((total, item) => total + item.value, 0);
 
+  // Tendencia real del flujo neto: mes vigente vs. mes anterior, derivada de la
+  // misma serie que ya alimenta el gráfico (no es una cifra inventada).
+  const [previousMonth, currentMonth] = monthlySeries.slice(-2);
+  const netFlowTrendPercent = previousMonth && currentMonth && previousMonth.ahorro !== 0
+    ? ((currentMonth.ahorro - previousMonth.ahorro) / Math.abs(previousMonth.ahorro)) * 100
+    : null;
+
   return <div className="coreview-page space-y-9">
     <div className="coreview-greeting">
       <div><p className="eyebrow">Espacio privado · {currency}</p><h1 className="mt-1 text-3xl font-semibold tracking-[-0.04em]">Hola, {user?.name?.split(" ")[0] || "de nuevo"}</h1><p className="mt-1 text-sm text-muted-foreground">Aquí tienes un resumen de tu situación financiera.</p></div>
@@ -110,7 +127,7 @@ export default function Home() {
         <section><div className="section-heading"><div><p className="eyebrow">Resumen del periodo · {currency}</p><h2>Tu situación actual</h2></div><span className="period-chip">{formatDate(data.dashboard.periodStart, { month: "long", year: "numeric" })}</span></div>
           <IconContext.Provider value={{ weight: "duotone" }}>
             <div className="coreview-kpi-grid mt-4">
-              <MetricCard badgeClass="module-cashflow" tintClass="coreview-kpi-tint-cashflow" icon={CircleDollarSign} label="Flujo neto" value={<MoneyText cents={data.dashboard.cashFlow.netCashFlowCents} currency={currency} />} note={<><MoneyText cents={data.dashboard.cashFlow.incomeCents} currency={currency} /> ingresos · <MoneyText cents={displayAmountCents(data.dashboard.cashFlow.expenseCents, "expense")} currency={currency} /> gastos</>} />
+              <MetricCard badgeClass="module-cashflow" tintClass="coreview-kpi-tint-cashflow" icon={CircleDollarSign} label="Flujo neto" value={<MoneyText cents={data.dashboard.cashFlow.netCashFlowCents} currency={currency} />} note={<><MoneyText cents={data.dashboard.cashFlow.incomeCents} currency={currency} /> ingresos · <MoneyText cents={displayAmountCents(data.dashboard.cashFlow.expenseCents, "expense")} currency={currency} /> gastos</>} trendPercent={netFlowTrendPercent} />
               <MetricCard badgeClass="module-wealthmap" tintClass="coreview-kpi-tint-wealthmap" icon={Landmark} label="Patrimonio neto" value={<MoneyText cents={data.dashboard.netWorth.netWorthCents} currency={currency} />} note={<><MoneyText cents={data.dashboard.netWorth.assetCents} currency={currency} /> activos · <MoneyText cents={displayAmountCents(data.dashboard.netWorth.liabilityCents, "liability")} currency={currency} /> deudas</>} />
               <MetricCard badgeClass="module-moneylink" tintClass="coreview-kpi-tint-moneylink" icon={WalletCards} label="Liquidez disponible" value={<MoneyText cents={data.dashboard.liquidity.liquidCents} currency={currency} />} note={data.dashboard.liquidity.coverageMonths === null ? "Registra gastos esenciales para estimar cobertura" : `${data.dashboard.liquidity.coverageMonths.toFixed(1)} meses de cobertura estimada`} />
               <MetricCard badgeClass="module-debtcenter" tintClass="coreview-kpi-tint-debtcenter" icon={CircleDollarSign} label="Deuda activa" value={<MoneyText cents={displayAmountCents(debtBalance, "liability")} currency={currency} />} note={pendingDebtCurrencyCount ? `${reportCurrencyDebts.length} en ${currency} · ${pendingDebtCurrencyCount} pendiente de valorar` : `${activeDebts.length} obligaciones activas o por revisar`} />
@@ -261,6 +278,15 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        <Link href="/asistente" className="coreview-opportunity-card">
+          <span className="coreview-opportunity-icon"><TrendingUp className="size-4" /></span>
+          <span className="coreview-opportunity-body">
+            <strong>Pídele a Richi que revise tu flujo de caja</strong>
+            <p>Pregúntale por oportunidades de ahorro o revisión a partir de tus registros manuales.</p>
+          </span>
+          <span className="coreview-opportunity-cta">Hablar con Richi <ChevronRight className="size-3.5" /></span>
+        </Link>
       </aside>
     </div>
   </div>;
